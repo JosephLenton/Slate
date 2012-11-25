@@ -4,6 +4,18 @@
     var changer = document.createElement('div');
 
     window.slate.util = {
+        isFunction: function( r ) {
+            return typeof r === 'function' || ( r instanceof Function );
+        },
+
+        isString: function( str ) {
+            return typeof str === 'string' || ( str instanceof String );
+        },
+
+        isArray: function( arr ) {
+            return typeof arr === 'array' || ( arr instanceof Array );
+        },
+
         htmlSafe : function(str) {
             changer.innerHTML = '';
             changer.appendChild(document.createTextNode(str));

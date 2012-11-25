@@ -22,7 +22,7 @@
             var bar = new window.slate.lib.TerminalBar( barDom, executor );
             bar.focus();
 
-            window.slate.commands.bindCommands( executor, onSuccess, onError );
+            window.slate.commands.bindCommands( onSuccess, onError );
         }
     }
 })();

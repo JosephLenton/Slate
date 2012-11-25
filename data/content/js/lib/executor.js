@@ -150,12 +150,14 @@
         window[varSuccess] = onSuccess;
         window[varError  ] = onError  ;
 
+        cmd = window.escape( cmd );
+
         return [
                 "try {",
                 '    var __slate_result = ' + js  + "",
-                '    window["' + varSuccess + '"]( "' + cmd + '", __slate_result )',
+                '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), __slate_result )',
                 '} catch ( ex ) {',
-                '    window["' + varError   + '"]( "' + cmd + '", ex )',
+                '    window["' + varError   + '"]( window.unescape("' + cmd + '"), ex )',
                 '}',
                 '',
                 'delete window["' + varSuccess + '"];',
@@ -170,6 +172,7 @@
         var scriptId = uniqueScriptId();
         var script = document.createElement('script');
         var html = buildCommand( js, cmd, scriptId, onSuccess, onError );
+        console.log( html );
 
         script.id = scriptId;
         script.innerHTML = html;

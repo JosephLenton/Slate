@@ -9,10 +9,31 @@
         }
     }
 
+    /**
+     * A marker type, which allows you to wrap a string,
+     * and this is then dumped directly to the display.
+     * 
+     * So no alterations are made to this content.
+     */
+    var RawHtml = function( html ) {
+        this.html = html;
+    }
+    RawHtml.prototype.getHtml = function() {
+        return this.html;
+    }
+    RawHtml.prototype.toString = function() {
+        return Object.prototype.toString( this.html );
+    }
+
     var newFormatResult = function( handlers ) {
         var formatResult = function( r ) {
-            if ( r === window.slate.IGNORE_RESULT ) {
+            // test for internal types
+            if ( r instanceof RawHtml ) {
+                return r.getHtml();
+            } else if ( r === window.slate.IGNORE_RESULT ) {
                 return '';
+
+            // test for in-built display types
             } else if ( r === undefined ) {
                 return "undefined"
             } else if ( r === null  ) {
@@ -22,9 +43,9 @@
             } else if ( r === false ) {
                 return "false"
             } else if (                           (r instanceof Boolean) ) {
-                return '"' + r + '"'
+                return '' + r
             } else if ( typeof r === 'string'  || (r instanceof String ) ) {
-                return '"' + r + '"'
+                return '"' + window.slate.util.htmlSafe(r) + '"'
             } else if ( typeof r === 'number'  || (r instanceof Number ) ) {
                 return ''  + r
             } else if ( typeof r === 'object' ) {
@@ -56,7 +77,9 @@
         }
 
         var formatResultOuter = function( r ) {
-            if ( r === window.slate.IGNORE_RESULT ) {
+            if ( r instanceof RawHtml ) {
+                return r.getHtml();
+            } else if ( r === window.slate.IGNORE_RESULT ) {
                 return '';
             } else {
                 var handler = getHandler(handlers, r);
@@ -85,8 +108,12 @@
     var onSuccessError = function( cmd, r, onDisplay, formatResult, successError ) {
         if ( ! onDisplay ) throw new Error("falsy onDisplay function given");
 
+        if ( cmd !== undefined ) {
+            cmd = window.slate.util.htmlSafe( cmd );
+        }
+
         successError(
-                window.slate.util.htmlSafe( cmd ),
+                cmd,
                 formatResult( r ),
                 onDisplay
         );
@@ -143,6 +170,10 @@
             return function(cmd, html) {
                 onSuccessError( cmd, html, display, newFormatResult(handlers), onError );
             }
+        },
+
+        rawHtml: function( html ) {
+            return new RawHtml( html );
         }
     };
 })(window);
