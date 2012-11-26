@@ -1,4 +1,10 @@
 
+/* Generic Highlighting */
+
+.slate-error {
+    color: #e33;
+}
+
 /* Syntax Highlighting */
 
 .slate-null {

@@ -4,14 +4,14 @@
     var slate = window.slate = window.slate || {};
 
     slate.commands = {
-        bindCommands : function( clear, onSuccess, onError, loaders ) {
+        bindCommands : function( clear, onDisplay, loaders ) {
             var commands = {};
 
             var safe = function( callback ) {
                 try {
                     callback();
                 } catch ( ex ) {
-                    onError( undefined, ex );
+                    onDisplay( undefined, ex );
                 }
             }
 
@@ -121,7 +121,7 @@
 
                 if ( r !== '' ) {
                     setTimeout( function() {
-                        onSuccess( undefined, window.slate.lib.formatter.rawHtml(r) );
+                        onDisplay( undefined, window.slate.lib.formatter.rawHtml(r) );
                     }, 1 );
                 }
 
@@ -131,7 +131,7 @@
             commands.echo = function() {
                 for ( var i = 0; i < arguments.length; i++ ) {
                     setTimeout( function() {
-                        onSuccess( undefined, arguments[i] );
+                        onDisplay( undefined, arguments[i] );
                     }, 1 );
                 }
 
@@ -141,12 +141,12 @@
             var read = function( path, callback ) {
                 window.exports.fs.readFile( path, function(err, data) {
                     if ( err ) {
-                        onError( undefined, new Error('file not found ' + err.path) );
+                        onDisplay( undefined, new Error('file not found ' + err.path) );
                     } else {
                         try {
-                            onSuccess( undefined, slate.lib.formatter.rawHtml( callback(data) ) );
+                            onDisplay( undefined, slate.lib.formatter.rawHtml( callback(data) ) );
                         } catch ( ex ) {
-                            onError( undefined, ex );
+                            onDisplay( undefined, ex );
                         }
                     }
                 } );
@@ -195,7 +195,7 @@
                                 }
                             } catch ( ex ) {
                                 setTimeout( function() {
-                                    onError( undefined, ex );
+                                    onDisplay( undefined, ex );
                                 }, 1 );
                             }
                         } else {
@@ -235,7 +235,7 @@
 
                         return commands.cwd();
                     } catch ( ex ) {
-                        onError( undefined, es );
+                        onDisplay( undefined, es );
                         return window.slate.IGNORE_RESULT;
                     }
                 // if user did nothing, we do nothing
@@ -280,7 +280,7 @@
                         var results = [];
 
                         if ( ex ) {
-                            onError( undefined, ex );
+                            onDisplay( undefined, ex );
                         } else {
                             safe( function() {
                                 for ( var i = 0; i < files.length; i++ ) {
@@ -304,7 +304,7 @@
                                     });
                                 }
 
-                                onSuccess( undefined, resultsToString(results) );
+                                onDisplay( undefined, resultsToString(results) );
                             } );
                         }
                     } );

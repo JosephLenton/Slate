@@ -165,14 +165,15 @@
                         }
 
                         var name = window.slate.util.identifyFunction( f );
-
                         var strFun = f.toString();
                         var args = '';
+
                         if ( strFun.indexOf('function') !== -1 ) {
                             var firstParen = strFun.indexOf( '(' );
+
                             args = strFun.substring(
                                     firstParen,
-                                    strFun.indexOf( ')' )+1
+                                    strFun.indexOf( ')' ) + 1
                             );
                         }
 
@@ -188,9 +189,13 @@
                         return name + args + propStr;
                     }
                 },
+
                 {
                     type: Error,
+
                     fun: function(ex, format, isDev) {
+                        var str = '';
+
                         if ( ex.stack ) {
                             if ( ! isDev ) {
                                 var stack = ex.stack.split( "\n" );
@@ -204,17 +209,20 @@
                                     }
                                 }
 
-                                return slate.util.htmlSafe(
+                                str = slate.util.htmlSafe(
                                         stack.slice( 0, endIndex+1 ).join( "\n" )
                                 )
                             } else {
-                                return slate.util.htmlSafe( ex.stack );
+                                str = slate.util.htmlSafe( ex.stack );
                             }
                         } else {
-                            return slate.util.htmlSafe( ex.message || ex.description );
+                            str = slate.util.htmlSafe( ex.message || ex.description );
                         }
+
+                        return '<span class="slate-error">' + str + '</span>';
                     }
                 },
+
                 newTabbingHandler( Array , "[", "]", function(r, str) { return r.length + ':' + str; } ),
                 newTabbingHandler( Object, "{", "}" )
         ]

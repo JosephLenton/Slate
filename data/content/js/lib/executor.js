@@ -146,47 +146,65 @@
     /*
      * I want the system to be fully asynchronous,
      * which means I cannot use global state.
-     * However I have to pass the onSuccess and onError into
-     * a text string, which is then executed. You cannot do
+     * 
+     * However I have to pass the onDisplay into the script
+     * (a text string), which is then executed. You cannot do
      * that without global state (as far as I know).
      * 
      * So instead I generate unique variables,
      * use the callbacks, and then clear them later.
      */
-    var buildCommand = function( js, cmd, scriptId, onSuccess, onError ) {
-        var varSuccess = uniqueVar(),
-            varError   = uniqueVar();
+    var buildCommand = function( js, cmd, scriptId, onDisplay ) {
+        var varDisplay = uniqueVar();
 
-        window[varSuccess] = onSuccess;
-        window[varError  ] = onError  ;
+        window[varDisplay] = onDisplay;
 
         cmd = window.escape( cmd );
 
-        var dumpResult = true;
+        var dumpResult = true,
+            grabVar = '__slate_result';
 
         if ( js.search( /^[ \n\t]*;/ ) === -1 ) {
-            var matches = js.match( /^[ \n\t]*[a-zA-Z0-9_$]+/ );
+            var matches = js.match( /^[ \n\t]*[a-zA-Z_$][a-zA-Z0-9_$]*/ );
 
             if ( matches !== null ) {
                 var match = matches[0].trim();
 
                 if ( match === 'var' ) {
-                    js = js.replace( /^[ \n\t]*var/, '' );
+                    var parts = js.match( /^[ \n\t]*var[ \n\t]+[a-zA-Z_$][a-zA-Z_0-9$]*/ );
+
+                    if ( parts && parts.length > 0 ) {
+                        var varName = parts[0].
+                                replace(/^[ \n\t]*/, '').
+                                replace(/[ \n\t]+/, ' ').
+                                split( ' ' )[1];
+
+                        grabVar = varName;
+                    } else {
+                        dumpResult = false;
+                    }
                 } else if ( KEYWORDS.hasOwnProperty( match ) ) {
                     dumpResult = KEYWORDS[ match ];
+
+                    if ( dumpResult ) {
+                        js = '    var __slate_result = ' + js + "\n"
+                    }
+                } else {
+                    js = '    var __slate_result = ' + js + "\n"
                 }
+            } else {
+                js = '    var __slate_result = ' + js + "\n"
             }
         } else {
             dumpResult = false;
         }
 
         if ( dumpResult ) {
-            js =
-                    '    var __slate_result = ' + js + "\n" +
-                    '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), __slate_result )';
+            js +=   "\n" +
+                    '    window["' + varDisplay + '"]( window.unescape("' + cmd + '"), ' + grabVar + ' )';
         } else {
             js +=   "\n" +
-                    '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), window.slate.IGNORE_RESULT )';
+                    '    window["' + varDisplay + '"]( window.unescape("' + cmd + '"), window.slate.IGNORE_RESULT )';
         }
 
         return [
@@ -194,11 +212,10 @@
                 "try {",
                     js,
                 '} catch ( ex ) {',
-                '    window["' + varError   + '"]( window.unescape("' + cmd + '"), ex )',
+                '    window["' + varDisplay + '"]( window.unescape("' + cmd + '"), ex )',
                 '}',
                 '',
-                'delete window["' + varSuccess + '"];',
-                'delete window["' + varError   + '"];',
+                'delete window["' + varDisplay + '"];',
                 '',
                 'var script = document.getElementById("' + scriptId + '");',
                 'if ( script ) { script.parentNode.removeChild( script ); }',
@@ -206,10 +223,10 @@
         ].join("\n")
     }
 
-    var injectCommand = function( head, js, cmd, onSuccess, onError ) {
+    var injectCommand = function( head, js, cmd, onDisplay ) {
         var scriptId = uniqueScriptId();
         var script = document.createElement('script');
-        var html = buildCommand( js, cmd, scriptId, onSuccess, onError );
+        var html = buildCommand( js, cmd, scriptId, onDisplay );
         console.log( html );
 
         script.id = scriptId;
@@ -218,7 +235,7 @@
         try {
             head.appendChild( script );
         } catch ( ex ) {
-            onError( cmd, ex );
+            onDisplay( cmd, ex );
 
             script = document.getElementById( scriptId );
             if ( script ) {
@@ -367,14 +384,14 @@
         return js;
     }
 
-    var executeInner = function( head, type, cmd, post, onSuccess, onError ) {
-        if ( cmd.trim() !== '' ) {
+    var executeInner = function( head, type, cmd, post, onDisplay ) {
+        if ( cmd && cmd.trim() !== '' ) {
             try {
                 var js = compileCode( type, cmd );
 
-                injectCommand( head, js, cmd, onSuccess, onError );
+                injectCommand( head, js, cmd, onDisplay );
             } catch ( ex ) {
-                onError( cmd, ex );
+                onDisplay( cmd, ex );
             }
 
             if ( post ) {
@@ -384,12 +401,15 @@
     }
 
     window.slate.lib.executor = {
-        newExecutor: function( head, onSuccess, onError ) {
-            if ( ! onSuccess ) throw new Error( 'falsy onSuccess function given' );
-            if ( ! onError   ) throw new Error( 'falsy onError function given' );
+        newExecutor: function( head, onDisplay ) {
+            if ( ! onDisplay ) throw new Error( 'falsy onDisplay function given' );
 
             return function( type, cmd, post ) {
-                executeInner( head, type, cmd, post, onSuccess, onError );
+                executeInner( head, type, cmd, post, function(cmd, r) {
+                    onDisplay( cmd, r, function(cmd, onDisplay) {
+                        executeInner( head, type, cmd, undefined, onDisplay );
+                    })
+                } )
             }
         }
     }

@@ -1,6 +1,8 @@
 "use strict";
 
 (function(window) {
+    var ENTER_KEY = 13;
+
     var getHandler = function( handlers, r ) {
         for ( var i = 0; i < handlers.length; i++ ) {
             if ( r instanceof handlers[i].type ) {
@@ -77,18 +79,21 @@
         }
 
         var formatResultOuter = function( r ) {
+            var html = '';
+
             if ( r instanceof RawHtml ) {
-                return r.getHtml();
+                html = r.getHtml();
             } else if ( r === window.slate.IGNORE_RESULT ) {
-                return '';
+                return r;
             } else {
                 var handler = getHandler( handlers, r );
+
                 if ( handler ) {
                     if ( handler.pre ) {
                         handler.pre( r, isDev );
                     }
 
-                    return handler.fun( r, formatResult, isDev );
+                    html = handler.fun( r, formatResult, isDev );
                 } else {
                     /*
                      * Whlst the formatResult will try teh handler again,
@@ -97,78 +102,75 @@
                      * So if the handler is hit a second time,
                      * it's an unknown object.
                      */
-                    return formatResult( r );
+                    html = formatResult( r );
                 }
             }
+
+            return '<div class="slate-result">' + html + '</div>';
         }
 
         return formatResultOuter;
     }
 
-    var onSuccessError = function( cmd, r, onDisplay, formatResult, successError ) {
-        if ( ! onDisplay ) throw new Error("falsy onDisplay function given");
+    var generateCommandHtml = function( cmd, isError, reRun ) {
+        var input = document.createElement( 'div' );
 
-        if ( cmd !== undefined ) {
-            cmd = window.slate.util.htmlSafe( cmd );
-        }
+        input.className = 'slate-cmd' +
+                ( isError ? ' slate-error' : '' );
+        input.innerHTML = window.slate.util.htmlSafe( cmd );
+        input.setAttribute( 'contenteditable', true );
+        input.setAttribute( 'wrap', 'off' );
 
-        successError(
-                cmd,
-                formatResult( r ),
-                onDisplay
-        );
+        input.addEventListener( 'keypress', function(ev) {
+            if ( ev.keyCode === ENTER_KEY ) {
+                reRun();
+
+                ev.stopPropagation();
+                ev.preventDefault();
+            }
+        } );
+
+        return input;
     }
 
-    var onSuccess = function( cmd, r, display ) {
-        var html = '';
+    var onDisplay = function( cmd, r, reRun, formatResult, displayFun ) {
+        var isError = ( r instanceof Error ),
+            rHtml = formatResult( r );
+
+        var replaceResult = null;
 
         if ( cmd !== undefined && cmd !== window.slate.IGNORE_RESULT ) {
-                html +=
-                        '<div class="slate-cmd">' +
-                            cmd +
-                        '</div>'
+            var reRunCommand = function() {
+                reRun( cmdHtml.innerHTML, function(cmd, r) {
+                    onDisplay( undefined, r, undefined,
+
+                        formatResult,
+
+                        function( html ) {
+                            if ( replaceResult ) {
+                                replaceResult( html );
+                            }
+                        }
+                    )
+                } )
+            }
+
+            var cmdHtml = generateCommandHtml( cmd, isError, reRunCommand );
+
+            displayFun( cmdHtml, reRunCommand )
         }
 
-        if ( r !== window.slate.IGNORE_RESULT ) {
-                html +=
-                        '<div class="slate-result">' +
-                            r +
-                        '</div>'
+        if ( rHtml !== window.slate.IGNORE_RESULT ) {
+            replaceResult = displayFun( rHtml )
         }
-
-        display( html );
-    }
-
-    var onError = function( cmd, ex, display ) {
-        var html = '';
-
-        if ( cmd !== undefined && cmd !== window.slate.IGNORE_RESULT ) {
-                html +=
-                        '<div class="slate-cmd slate-error">' +
-                            cmd +
-                        '</div>'
-        }
-
-        if ( ex ) {
-                html +=
-                        '<div class="slate-result slate-error">' +
-                            ex +
-                        '</div>'
-        }
-
-        display( html );
     }
 
     window.slate.lib.formatter = {
-        newOnSuccess: function(handlers, display, isDev) {
-            return function(cmd, html) {
-                onSuccessError( cmd, html, display, newFormatResult(handlers, isDev), onSuccess );
-            }
-        },
+        newDisplayFormat: function(handlers, displayFun, isDev) {
+            handlers = newFormatResult( handlers, isDev );
 
-        newOnError: function(handlers, display, isDev) {
-            return function(cmd, html) {
-                onSuccessError( cmd, html, display, newFormatResult(handlers, isDev), onError );
+            return function(cmd, r, reRun) {
+                onDisplay( cmd, r, reRun, handlers, displayFun );
             }
         },
 

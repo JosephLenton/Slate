@@ -12,13 +12,11 @@
             var clear     = window.slate.lib.content.newClear( displayDom ),
                 display   = window.slate.lib.content.newDisplay( displayDom );
 
-            var onSuccess = window.slate.lib.formatter.newOnSuccess( handlers, display, isDev ),
-                onError   = window.slate.lib.formatter.newOnError( handlers, display, isDev );
+            var onDisplay = window.slate.lib.formatter.newDisplayFormat( handlers, display, isDev );
 
             var executor = window.slate.lib.executor.newExecutor(
                     document.getElementsByTagName('head')[0],
-                    onSuccess,
-                    onError
+                    onDisplay
             );
             
             var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
@@ -34,8 +32,7 @@
 
             window.slate.commands.bindCommands(
                     clear,
-                    onSuccess,
-                    onError,
+                    onDisplay,
                     window.slate.data.loaders
             );
         }

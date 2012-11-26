@@ -17,6 +17,7 @@ body {
 
 .slate-cmd,
 .slate-result,
+.slate-content-item-refresh,
 .slate-bar-input,
 .slate-bar-type {
     font-family: "DejaVu Sans Mono", consolas;
@@ -45,10 +46,15 @@ body {
     overflow: hidden;
     overflow-y: auto;
 }
-    .slate-content-item {
+    .slate-content-item,
+    .slate-content-item-contents {
         float: left;
 
         width: 100%;
+    }
+    .slate-content-item {
+        position: relative;
+
         opacity: 0;
 
         -webkit-transition: opacity 100ms linear 0;
@@ -58,31 +64,60 @@ body {
     .slate-content-item.slate-show {
         opacity: 1;
     }
-        .slate-cmd,
-        .slate-result {
-            width: 100%;
-            color: #aaa;
-
-            float  : left;
+        .slate-content-item-contents {
         }
-        .slate-cmd {
+            .slate-cmd,
+            .slate-result {
+                width: 100%;
+
+                float  : left;
+            }
+            .slate-cmd {
+                color: #999;
+                border: none;
+            }
+            .slate-cmd:before {
+                content: ">> ";
+            }
+            .slate-result {
+                color: #bbb;
+                padding-left: 40px;
+
+                white-space: pre;
+            }
+
+            .slate-cmd.slate-error {
+                color: #d6a;
+            }
+        .slate-content-item-refresh {
+            position: absolute;
+            right: 3px;
+            top: 0;
+            padding: 3px 7px 5px 6px;
+
+            background: transparent;
+            border-radius: 100px;
+
+            font-size: 20px;
+            line-height: 21px;
+
+            -webkit-transition: background 100ms linear 0s, color 100ms linear 0s;
+               -moz-transition: background 100ms linear 0s, color 100ms linear 0s;
+                    transition: background 100ms linear 0s, color 100ms linear 0s;
+        }
+        .slate-content-item-refresh,
+        .slate-content-item-refresh:active,
+        .slate-content-item-refresh:hover,
+        .slate-content-item-refresh:focus {
             color: #888;
         }
-        .slate-cmd:before {
-            content: ">> ";
+        .slate-content-item-refresh:hover {
+            background: #333;
+            color: #fff;
         }
-        .slate-result {
-            color: #bbb;
-            padding-left: 40px;
-
-            white-space: pre;
-        }
-
-        .slate-cmd.slate-error {
-            color: #d6a;
-        }
-        .slate-result.slate-error {
-            color: #e33;
+        .slate-content-item-refresh:before {
+            /* a unicode refresh symbol */
+            content: "\21BA";
         }
 
 .slate-bar {
