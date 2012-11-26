@@ -25,7 +25,11 @@
         return Object.prototype.toString( this.html );
     }
 
-    var newFormatResult = function( handlers ) {
+    var span = function( klass, r ) {
+        return '<span class="' + klass + '">' + r + '</span>';
+    }
+
+    var newFormatResult = function( handlers, isDev ) {
         var formatResult = function( r ) {
             // test for internal types
             if ( r instanceof RawHtml ) {
@@ -35,24 +39,20 @@
 
             // test for in-built display types
             } else if ( r === undefined ) {
-                return "undefined"
+                return span( 'slate-undefined', "undefined" );
             } else if ( r === null  ) {
-                return "null"
-            } else if ( r === true  ) {
-                return "true"
-            } else if ( r === false ) {
-                return "false"
-            } else if (                           (r instanceof Boolean) ) {
-                return '' + r
+                return span( 'slate-null', "null" );
+            } else if ( r === true || r === false || (r instanceof Boolean) ) {
+                return span( 'slate-boolean', r );
             } else if ( typeof r === 'string'  || (r instanceof String ) ) {
-                return '"' + window.slate.util.htmlSafe(r) + '"'
+                return span( 'slate-string', '"' + window.slate.util.htmlSafe(r) + '"' )
             } else if ( typeof r === 'number'  || (r instanceof Number ) ) {
-                return ''  + r
+                return span( 'slate-number', r )
             } else if ( typeof r === 'object' ) {
                 var handler = getHandler( handlers, r );
 
                 if ( handler ) {
-                    return handler.fun( r, formatResult );
+                    return handler.fun( r, formatResult, isDev );
                 }
             }
 
@@ -82,13 +82,13 @@
             } else if ( r === window.slate.IGNORE_RESULT ) {
                 return '';
             } else {
-                var handler = getHandler(handlers, r);
+                var handler = getHandler( handlers, r );
                 if ( handler ) {
                     if ( handler.pre ) {
-                        handler.pre( r );
+                        handler.pre( r, isDev );
                     }
 
-                    return handler.fun( r, formatResult );
+                    return handler.fun( r, formatResult, isDev );
                 } else {
                     /*
                      * Whlst the formatResult will try teh handler again,
@@ -160,15 +160,15 @@
     }
 
     window.slate.lib.formatter = {
-        newOnSuccess: function(handlers, display) {
+        newOnSuccess: function(handlers, display, isDev) {
             return function(cmd, html) {
-                onSuccessError( cmd, html, display, newFormatResult(handlers), onSuccess );
+                onSuccessError( cmd, html, display, newFormatResult(handlers, isDev), onSuccess );
             }
         },
 
-        newOnError: function(handlers, display) {
+        newOnError: function(handlers, display, isDev) {
             return function(cmd, html) {
-                onSuccessError( cmd, html, display, newFormatResult(handlers), onError );
+                onSuccessError( cmd, html, display, newFormatResult(handlers, isDev), onError );
             }
         },
 

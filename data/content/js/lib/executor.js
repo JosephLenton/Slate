@@ -92,35 +92,45 @@
         RIGHT_BRACE = 125,
         TILDA = 126;
 
+    /**
+     * A mapping of keywords.
+     * 
+     * The presence of a keyword in this object,
+     * makes it a keyword.
+     * 
+     * If it maps to 'true', then the keyword can return
+     * a value. 'false' does not, such as 'if' or 'throw'.
+     */
     var KEYWORDS = {
-            'instanceof'    : true,
             'typeof'        : true,
-            'break'         : true,
-            'do'            : true,
             'new'           : true,
-            'var'           : true,
-            'case'          : true,
-            'else'          : true,
-            'return'        : true,
-            'void'          : true,
-            'catch'         : true,
-            'finally'       : true,
-
-            'continue'      : true,
-            'for'           : true,
-            'switch'        : true,
-            'while'         : true,
             'this'          : true,
-            'with'          : true,
-            'debugger'      : true,
             'function'      : true,
-            'throw'         : true,
-            'default'       : true,
-            'if'            : true,
-
-            'try'           : true,
             'delete'        : true,
-            'in'            : true
+
+            'instanceof'    : false,
+            'break'         : false,
+            'do'            : false,
+            'var'           : false,
+            'case'          : false,
+            'else'          : false,
+            'return'        : false,
+            'void'          : false,
+            'catch'         : false,
+            'finally'       : false,
+
+            'continue'      : false,
+            'for'           : false,
+            'switch'        : false,
+            'while'         : false,
+            'with'          : false,
+            'debugger'      : false,
+            'throw'         : false,
+            'default'       : false,
+            'if'            : false,
+
+            'try'           : false,
+            'in'            : false
     }
 
     var increment = 1;
@@ -152,15 +162,37 @@
 
         cmd = window.escape( cmd );
 
-        if ( js.search( /^[ \n\t]*var\b/ ) === -1 ) {
-            js = '__slate_result = ' + js;
+        var dumpResult = true;
+
+        if ( js.search( /^[ \n\t]*;/ ) === -1 ) {
+            var matches = js.match( /^[ \n\t]*[a-zA-Z0-9_$]+/ );
+
+            if ( matches !== null ) {
+                var match = matches[0].trim();
+
+                if ( match === 'var' ) {
+                    js = js.replace( /^[ \n\t]*var/, '' );
+                } else if ( KEYWORDS.hasOwnProperty( match ) ) {
+                    dumpResult = KEYWORDS[ match ];
+                }
+            }
+        } else {
+            dumpResult = false;
+        }
+
+        if ( dumpResult ) {
+            js =
+                    '    var __slate_result = ' + js + "\n" +
+                    '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), __slate_result )';
+        } else {
+            js +=   "\n" +
+                    '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), window.slate.IGNORE_RESULT )';
         }
 
         return [
                 "var __slate_result = undefined",
                 "try {",
                     js,
-                '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), __slate_result )',
                 '} catch ( ex ) {',
                 '    window["' + varError   + '"]( window.unescape("' + cmd + '"), ex )',
                 '}',
@@ -310,18 +342,19 @@
 
         // if the cmd is a global function, just call it
         // i.e. 'cwd' or 'ls'
-        var trimCmd = cmd.trim();
+        var trimJs = js.trim();
+
         if (
-              ! KEYWORDS.hasOwnProperty(trimCmd) &&
-                trimCmd.replace( /[a-zA-Z_$][a-zA-Z_$0-9]*/, '' ).length === 0
+              ! KEYWORDS.hasOwnProperty(trimJs) &&
+                trimJs.search( /^[a-zA-Z_$][a-zA-Z_$0-9]*$/, '' ) !== -1
         ) {
-            var f = window[cmd.trim()];
+            var f = window[ trimJs ];
 
             if (
                     typeof f === 'function' ||
                     (f instanceof Function)
             ) {
-                cmd += '()'
+                js += '()'
             }
         }
 
@@ -335,16 +368,18 @@
     }
 
     var executeInner = function( head, type, cmd, post, onSuccess, onError ) {
-        try {
-            var js = compileCode( type, cmd );
+        if ( cmd.trim() !== '' ) {
+            try {
+                var js = compileCode( type, cmd );
 
-            injectCommand( head, js, cmd, onSuccess, onError );
-        } catch ( ex ) {
-            onError( cmd, ex );
-        }
+                injectCommand( head, js, cmd, onSuccess, onError );
+            } catch ( ex ) {
+                onError( cmd, ex );
+            }
 
-        if ( post ) {
-            setTimeout( post, 1 );
+            if ( post ) {
+                setTimeout( post, 1 );
+            }
         }
     }
 

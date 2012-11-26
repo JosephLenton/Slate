@@ -20,8 +20,9 @@ body {
 .slate-bar-input,
 .slate-bar-type {
     font-family: "DejaVu Sans Mono", consolas;
-    font-size: 18px;
-    font-weight: 100px;
+    font-family: "Segoe UI","Segoe WP","Helvetica Neue",'RobotoRegular',sans-serif;
+    font-size: 21px;
+    font-weight: 400;
 }
 
 .slate-content {
@@ -124,7 +125,7 @@ body {
         display: inline-block;
     }
     .slate-bar-input {
-        margin-top: 8px;
+        margin-top: 7px;
 
         width: 100%;
 

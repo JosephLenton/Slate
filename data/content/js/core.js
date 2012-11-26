@@ -88,6 +88,24 @@
         }
     }
 
+    var isDevFlag = false;
+    slate.setDevelopment = function( isDev ) {
+        isDevFlag = !! isDev;
+    }
+    slate.isDevelopment = function() {
+        return isDevFlag;
+    }
+
+    var language = 'coffee';
+    slate.setLanguage = function( lang ) {
+        if ( lang !== 'js' && lang !== 'coffee' ) throw new Error( "unsupported language given, must be 'js' or 'coffee'" );
+
+        language = lang;
+    }
+    slate.getLanguage = function() {
+        return language;
+    }
+
     slate.data = {
         loaders: (function() {
             var newTextLoader = function( callback ) {
@@ -172,9 +190,26 @@
                 },
                 {
                     type: Error,
-                    fun: function(ex) {
+                    fun: function(ex, format, isDev) {
                         if ( ex.stack ) {
-                            return slate.util.htmlSafe( ex.stack );
+                            if ( ! isDev ) {
+                                var stack = ex.stack.split( "\n" );
+                                var endIndex = stack.length;
+
+                                for ( var i = stack.length-1; i >= 0; i-- ) {
+                                    endIndex = i;
+
+                                    if ( stack[i].search( /http:\/\/appjs\// ) === -1 ) {
+                                        break;
+                                    }
+                                }
+
+                                return slate.util.htmlSafe(
+                                        stack.slice( 0, endIndex+1 ).join( "\n" )
+                                )
+                            } else {
+                                return slate.util.htmlSafe( ex.stack );
+                            }
                         } else {
                             return slate.util.htmlSafe( ex.message || ex.description );
                         }

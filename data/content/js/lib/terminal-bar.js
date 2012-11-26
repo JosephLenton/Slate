@@ -1,7 +1,8 @@
 "use strict";
 
 (function(window) {
-    var ENTER_KEY   = 13,
+    var TAB_KEY     = 9,
+        ENTER_KEY   = 13,
         DOWN_KEY    = 40,
         UP_KEY      = 38,
         ESCAPE_KEY  = 27;
@@ -42,8 +43,8 @@
         this.index = this.stack.length;
     }
 
-    var TerminalBar = function( dom, buttonDom, execute ) {
-        if ( ! dom     ) throw new Error( 'undefined dom object given' );
+    var TerminalBar = function( dom, buttonDom, execute, defaultType ) {
+        if ( ! dom     ) throw new Error( 'undefined dom object given'     );
         if ( ! execute ) throw new Error( 'undefined execute object given' );
 
         this.dom = dom;
@@ -61,7 +62,7 @@
             }
         }
 
-        buttonDom.addEventListener( 'click', function(ex) {
+        var switchType = function(ex) {
             if ( type === 'coffee' ) {
                 setType( 'js'     );
             } else {
@@ -69,9 +70,11 @@
             }           
 
             ex.preventDefault();
-        } );
+        };
 
-        setType( 'coffee' );
+        buttonDom.addEventListener( 'click', switchType );
+
+        setType( defaultType );
 
         var undoStack = new UndoStack();
 
@@ -116,9 +119,14 @@
 
                     self.setText( '' );
                     undoStack.toEnd();
+                } else if ( ex.keyCode === TAB_KEY ) {
+                    switchType( ex );
+
+                    handled = true;
                 }
 
                 if ( handled ) {
+                    ex.stopPropagation();
                     ex.preventDefault();
                 }
             } );

@@ -130,7 +130,9 @@
 
             commands.echo = function() {
                 for ( var i = 0; i < arguments.length; i++ ) {
-                    onSuccess( undefined, arguments[i] );
+                    setTimeout( function() {
+                        onSuccess( undefined, arguments[i] );
+                    }, 1 );
                 }
 
                 return window.slate.IGNORE_RESULT;
@@ -316,10 +318,10 @@
                         var isFun   = slate.util.isFunction( path[k] );
 
                         var type =
-                                isProto &&  isFun ? 'prototype-function' :
-                                isProto && !isFun ? 'prototype-property' :
-                               !isProto &&  isFun ? 'object-function'    :
-                               !isProto && !isFun ? 'object-property'    :
+                                isProto &&  isFun ? 'slate-prototype-function' :
+                                isProto && !isFun ? 'slate-prototype-property' :
+                               !isProto &&  isFun ? 'slate-object-function'    :
+                               !isProto && !isFun ? 'slate-object-property'    :
                                                     ''                   ;
 
                         results.push({

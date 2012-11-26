@@ -3,6 +3,8 @@
 (function() {
     document.onreadystatechange = function () {
         if (document.readyState === "complete") {
+            var isDev     = window.slate.isDevelopment();
+
             var handlers = slate.data.formatHandlers;
 
             var displayDom = document.getElementsByClassName( 'slate-content' )[0];
@@ -10,8 +12,8 @@
             var clear     = window.slate.lib.content.newClear( displayDom ),
                 display   = window.slate.lib.content.newDisplay( displayDom );
 
-            var onSuccess = window.slate.lib.formatter.newOnSuccess( handlers, display ),
-                onError   = window.slate.lib.formatter.newOnError( handlers, display );
+            var onSuccess = window.slate.lib.formatter.newOnSuccess( handlers, display, isDev ),
+                onError   = window.slate.lib.formatter.newOnError( handlers, display, isDev );
 
             var executor = window.slate.lib.executor.newExecutor(
                     document.getElementsByTagName('head')[0],
@@ -22,7 +24,12 @@
             var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
                 typeDom = document.getElementsByClassName( 'slate-bar-type' )[0];
 
-            var bar = new window.slate.lib.TerminalBar( barDom, typeDom, executor );
+            var bar = new window.slate.lib.TerminalBar(
+                    barDom,
+                    typeDom,
+                    executor,
+                    window.slate.getLanguage()
+            );
             bar.focus();
 
             window.slate.commands.bindCommands(

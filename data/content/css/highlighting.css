@@ -1,4 +1,24 @@
 
+/* Syntax Highlighting */
+
+.slate-null {
+    color: #b97;
+}
+.slate-undefined {
+    color: #88a;
+}
+.slate-boolean {
+    color: #b71;
+}
+.slate-string {
+    color: #161;
+}
+.slate-number {
+    color: #d51;
+}
+
+/* directory */
+
 .slate-hidden-directory {
     color: #3a3;
 }
@@ -11,3 +31,19 @@
 .slate-file {
     color: #7bf;
 }
+
+/* Object / Prototype */
+
+.slate-prototype-function {
+    color: #795598;
+}
+.slate-prototype-property {
+    color: #3a5a9a;
+}
+.slate-object-function {
+    color: #533072;
+}
+.slate-object-property {
+    color: #304668;
+}
+
