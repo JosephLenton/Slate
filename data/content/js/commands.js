@@ -4,7 +4,7 @@
     var slate = window.slate = window.slate || {};
 
     slate.commands = {
-        bindCommands : function( clear, onDisplay, loaders ) {
+        bindCommands : function( clear, onDisplay, loaders, isDev ) {
             var commands = {};
 
             var safe = function( callback ) {
@@ -14,6 +14,27 @@
                     onDisplay( undefined, ex );
                 }
             }
+
+            commands.sleep = function( timeout ) {
+                var i;
+                if ( slate.util.isNumeric(timeout) ) {
+                    timeout = parseInt( timeout );
+                    i = 1;
+                } else {
+                    timeout = 1000;
+                    i = 0;
+                }
+
+                for ( ; i < arguments.length; i++ ) {
+                    var f = arguments[i];
+
+                    if ( slate.util.isFunction(f) ) {
+                        setTimeout( f, timeout );
+                    }
+                }
+
+                return slate.IGNORE_RESULT;
+            },
 
             commands.help = function() {
                 var str = '';
@@ -80,7 +101,7 @@
                 if ( col !== undefined && arguments.length > 0 ) {
                     if (
                             arguments.length === 4 &&
-                            slate.util.isNumberStr(arguments[0]) &&
+                            slate.util.isNumeric(arguments[0]) &&
                             slate.util.isNumberStr(arguments[1]) &&
                             slate.util.isNumberStr(arguments[2]) &&
                             slate.util.isNumberStr(arguments[3])
@@ -224,7 +245,7 @@
             }
 
             commands.cwd = function() {
-                return window.process.cwd();
+                return slate.util.absoluteUrl( '.' );
             }
 
             commands.cd = function( path ) {
@@ -267,7 +288,7 @@
             }
 
             commands.ls = function( path ) {
-                if ( path === undefined ) {
+                if ( arguments.length === 0 ) {
                     path = ".";
                 }
 
@@ -310,7 +331,7 @@
                     } );
 
                     return window.slate.IGNORE_RESULT;
-                } else {
+                } else if ( path ) {
                     var results = [];
 
                     for ( var k in path ) {
@@ -331,6 +352,25 @@
                     }
 
                     return resultsToString( results );
+                } else {
+                    return window.slate.IGNORE_RESULT;
+                }
+            }
+
+            if ( isDev ) {
+                commands.reloadCss = function() {
+                    var styles = document.getElementsByTagName( 'link' );
+                    var timestamp = '?v=' + Date.now();
+
+                    for ( var i = 0; i < styles.length; i++ ) {
+                        var style = styles[i];
+
+                        if ( style.href ) {
+                            style.href = style.href.replace(/\?.*$/, '') + timestamp;
+                        }
+                    }
+
+                    return slate.IGNORE_RESULT;
                 }
             }
 

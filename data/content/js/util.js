@@ -7,6 +7,8 @@
         return arguments.constructor;
     })();
 
+    var anchor = document.createElement( 'a' );
+
     window.slate.util = {
         isFunction: function( r ) {
             return typeof r === 'function' || ( r instanceof Function );
@@ -16,7 +18,7 @@
          * Returns true if the value is like a number.
          * This is either an actual number, or a string which represents one.
          */
-        isNumberStr: function( str ) {
+        isNumeric: function( str ) {
             return ( typeof str === 'number' ) ||
                    ( str instanceof Number   ) ||
                    ( String(str).search( /^\s*(\+|-)?((\d+(\.\d+)?)|(\.\d+))\s*$/ ) !== -1 )
@@ -38,6 +40,27 @@
 
         isArray: function( arr ) {
             return typeof arr === 'array' || ( arr instanceof Array );
+        },
+
+        absoluteUrl: function( url ) {
+            anchor.href = url;
+
+            // remove double slashes, and the file:// uri
+            var href = anchor.href.
+                    replace( /^file:\/\//, '' ).
+                    replace( /\/(\/)+/, '/' );
+
+            // for windows
+            if ( href.search(/^\/+[A-Z]:\//) !== -1 ) {
+                href = href.replace( /^\/+/, '' );
+            }
+
+            // remove a trailing slash
+            if ( href.length > 1 ) {
+                href = href.replace( /\/$/, '' );
+            }
+
+            return href;
         },
 
         htmlSafe : function(str) {

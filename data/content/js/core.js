@@ -114,36 +114,22 @@
                 }
             }
 
-            var new64Loader = function( callback ) {
-                return function( path, read ) {
-                    read( path, function(data) {
-                        return callback( new window.exports.Buffer(data).toString('base64') )
-                    } )
-                }
-            }
-
-            var newImageLoader = function( type ) {
-                return new64Loader( function(data) {
-                    return '<div class="slate-embed-img">' +
-                                '<img src="data:image/' + type + ';base64,' +
-                                    data +
-                                '">' +
-                            '</div>'
-                } );
+            var imageLoader = function( path ) {
+                return '<div class="slate-embed-img">' +
+                            '<img src="' + path + '">' +
+                        '</div>'
             }
 
             var loaders = {
-                    'png'  : newImageLoader( 'png' ),
-                    'jpg'  : newImageLoader( 'jpg' ),
-                    'jpeg' : newImageLoader( 'jpg' ),
-                    'gif'  : newImageLoader( 'gif' ),
-                    'bmp'  : newImageLoader( 'bmp' ),
+                    'png'  : imageLoader,
+                    'jpg'  : imageLoader,
+                    'jpeg' : imageLoader,
+                    'gif'  : imageLoader,
+                    'bmp'  : imageLoader,
 
-                    'html' : new64Loader( function(html) {
-                        return '<iframe frameborder="no" class="slate-embed-html" src="data:text/html;base64,' +
-                                        html +
-                                '">';
-                    } )
+                    'html' : function( path ) {
+                        return '<iframe frameborder="no" class="slate-embed-html" src="' + path + '">';
+                    }
             }
 
             return loaders;
