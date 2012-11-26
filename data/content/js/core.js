@@ -124,7 +124,7 @@
 
             var newImageLoader = function( type ) {
                 return new64Loader( function(data) {
-                    return '<div class="slate-center slate-embed-img">' +
+                    return '<div class="slate-embed-img">' +
                                 '<img src="data:image/' + type + ';base64,' +
                                     data +
                                 '">' +
