@@ -33,10 +33,113 @@
             }
             commands.clear = commands.cls;
 
+            var newColorHtml = function( colors ) {
+                if (
+                        colors[0] < 0 || colors[0] > 255 ||
+                        colors[1] < 0 || colors[1] > 255 ||
+                        colors[2] < 0 || colors[2] > 255 ||
+                        colors[3] < 0 || colors[3] > 1
+                ) {
+                    throw new Error('invalid color given');
+                }
+
+                var strColor = 'rgba( ' + colors.join(', ') + ')';
+
+                return '<div class="slate-embed-color" style="background: ' + strColor + ';"></div>';
+            }
+
+            var colorHexToArray = function(hex) {
+                if ( hex.replace( /(#?)[a-fA-F0-9]{3,}([a-fA-F0-9]{3,})?/, '') !== '' ) {
+                    throw new Error( "invalid hex value given: " + hex );
+                }
+                if ( hex.charAt(0) === '#' ) {
+                    hex = hex.substring( 1 );
+                }
+
+                var colors = [];
+                if ( hex.length === 3 ) {
+                    for ( var i = 0; i < 3; i++ ) {
+                        var h = hex.charAt(i);
+                        colors[i] = parseInt( '0x' + h + h );
+                    }
+                } else if ( hex.length === 6 ) {
+                    for ( var i = 0; i < 6; i += 2 ) {
+                        var h = hex.charAt(i) + hex.charAt(i+1);
+                        colors[i/2] = parseInt( '0x' + h );
+                    }
+                } else {
+                    throw new Error( "invalid hex value given: " + hex );
+                }
+
+                colors[3] = 1;
+
+                return colors;
+            }
+
+            var colorInternal = function( col ) {
+                if ( col !== undefined && arguments.length > 0 ) {
+                    if (
+                            arguments.length === 4 &&
+                            slate.util.isNumberStr(arguments[0]) &&
+                            slate.util.isNumberStr(arguments[1]) &&
+                            slate.util.isNumberStr(arguments[2]) &&
+                            slate.util.isNumberStr(arguments[3])
+                    ) {
+                        return newColorHtml([ arguments[0], arguments[1], arguments[2], arguments[3] ]);
+                    } else if (
+                            arguments.length === 3 &&
+                            slate.util.isNumberStr(arguments[0]) &&
+                            slate.util.isNumberStr(arguments[1]) &&
+                            slate.util.isNumberStr(arguments[2])
+                    ) {
+                        return newColorHtml([ arguments[0], arguments[1], arguments[2], 1 ]);
+                    } else if ( arguments.length > 1 ) {
+                        var str = '';
+
+                        for ( var i = 0; i < arguments.length; i++ ) {
+                            str += colorInternal( arguments[i] );
+                        }
+
+                        return str;
+                    } else if ( slate.util.isArrayArguments(col) ) {
+                        return colorInternal.apply( null, col );
+                    } else if ( slate.util.isString(col) ) {
+                        return newColorHtml( colorHexToArray(col) );
+                    } else {
+                        throw new Error("unknown color item given");
+                    }
+                } else {
+                    return '';
+                }
+            }
+
+            commands.color = function( col ) {
+                var r = '';
+                if ( col !== undefined && arguments.length > 0 ) {
+                    r = colorInternal.apply( null, arguments );
+                }
+
+                if ( r !== '' ) {
+                    setTimeout( function() {
+                        onSuccess( undefined, window.slate.lib.formatter.rawHtml(r) );
+                    }, 1 );
+                }
+
+                return window.slate.IGNORE_RESULT;
+            }
+
+            commands.echo = function() {
+                for ( var i = 0; i < arguments.length; i++ ) {
+                    onSuccess( undefined, arguments[i] );
+                }
+
+                return window.slate.IGNORE_RESULT;
+            }
+
             var read = function( path, callback ) {
                 window.exports.fs.readFile( path, function(err, data) {
                     if ( err ) {
-                        onError( undefined, err );
+                        onError( undefined, new Error('file not found ' + err.path) );
                     } else {
                         try {
                             onSuccess( undefined, slate.lib.formatter.rawHtml( callback(data) ) );

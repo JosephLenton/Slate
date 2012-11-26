@@ -19,9 +19,10 @@
                     onError
             );
             
-            var barDom = document.getElementsByClassName( 'slate-bar-input' )[0];
+            var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
+                typeDom = document.getElementsByClassName( 'slate-bar-type' )[0];
 
-            var bar = new window.slate.lib.TerminalBar( barDom, executor );
+            var bar = new window.slate.lib.TerminalBar( barDom, typeDom, executor );
             bar.focus();
 
             window.slate.commands.bindCommands(

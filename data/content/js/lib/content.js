@@ -8,7 +8,16 @@
         if ( ! dom ) throw new Error( "undefined dom object given" );
 
         return function( html ) {
-            dom.insertAdjacentHTML( 'beforeend', html );
+            var div = document.createElement( 'div' );
+            div.innerHTML = html;
+
+            div.className = 'slate-content-item';
+
+            setTimeout( function() {
+                div.className += ' slate-show';
+            } );
+
+            dom.appendChild( div );
             dom.scrollTop = dom.scrollHeight;
         }
     }

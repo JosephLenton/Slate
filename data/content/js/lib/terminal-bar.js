@@ -42,12 +42,36 @@
         this.index = this.stack.length;
     }
 
-    var TerminalBar = function( dom, execute ) {
+    var TerminalBar = function( dom, buttonDom, execute ) {
         if ( ! dom     ) throw new Error( 'undefined dom object given' );
         if ( ! execute ) throw new Error( 'undefined execute object given' );
 
-        var self = this;
         this.dom = dom;
+
+        var self = this;
+
+        var type;
+        var setType = function( t ) {
+            type = t;
+
+            if ( type === 'js' ) {
+                buttonDom.className = buttonDom.className.replace( /( ?)slate-coffee/, '' ) + ' slate-js';
+            } else {
+                buttonDom.className = buttonDom.className.replace( /( ?)slate-js/, '' ) + ' slate-coffee';
+            }
+        }
+
+        buttonDom.addEventListener( 'click', function(ex) {
+            if ( type === 'coffee' ) {
+                setType( 'js'     );
+            } else {
+                setType( 'coffee' );
+            }           
+
+            ex.preventDefault();
+        } );
+
+        setType( 'coffee' );
 
         var undoStack = new UndoStack();
 
@@ -56,7 +80,7 @@
                 if ( ex.keyCode === ENTER_KEY ) {
                     var cmd = self.dom.textContent;
 
-                    execute( cmd, function() {
+                    execute( type, cmd, function() {
                         undoStack.add( cmd );
 
                         self.setText( '' );

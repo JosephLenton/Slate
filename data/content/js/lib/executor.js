@@ -152,9 +152,14 @@
 
         cmd = window.escape( cmd );
 
+        if ( js.search( /^[ \n\t]*var\b/ ) === -1 ) {
+            js = '__slate_result = ' + js;
+        }
+
         return [
+                "var __slate_result = undefined",
                 "try {",
-                '    var __slate_result = ' + js  + "",
+                    js,
                 '    window["' + varSuccess + '"]( window.unescape("' + cmd + '"), __slate_result )',
                 '} catch ( ex ) {',
                 '    window["' + varError   + '"]( window.unescape("' + cmd + '"), ex )',
@@ -164,7 +169,8 @@
                 'delete window["' + varError   + '"];',
                 '',
                 'var script = document.getElementById("' + scriptId + '");',
-                'if ( script ) { script.parentNode.removeChild( script ); }'
+                'if ( script ) { script.parentNode.removeChild( script ); }',
+                '__slate_result = undefined;'
         ].join("\n")
     }
 
@@ -291,6 +297,17 @@
      * @throws Error A parse error if the code does not compile into CoffeeScript.
      */
     var coffeeToJs = function( cmd ) {
+        var js = CoffeeScript.compile( cmd );
+
+        js = js.replace( /^\(function\(\)\ {([ \t\n]*)/, '' ).
+                replace( /((;)?[ \t\n]*)\}\)\.call\(this\);[ \n\t]*$/g, '' );
+
+        return js;
+    }
+
+    var compileCode = function( type, cmd ) {
+        var js = cmd;
+
         // if the cmd is a global function, just call it
         // i.e. 'cwd' or 'ls'
         var trimCmd = cmd.trim();
@@ -308,19 +325,18 @@
             }
         }
 
-        var js = CoffeeScript.compile( cmd );
-
-        js = js.replace( /^\(function\(\)\ {([ \t\n]*)/, '' ).
-                replace( /((;)?[ \t\n]*)\}\)\.call\(this\);[ \n\t]*$/g, '' );
+        if ( type === 'coffee' ) {
+            js = coffeeToJs( js );
+        }
 
         errorIfUnsafeJS( js );
 
         return js;
     }
 
-    var executeInner = function( head, cmd, post, onSuccess, onError ) {
+    var executeInner = function( head, type, cmd, post, onSuccess, onError ) {
         try {
-            var js = coffeeToJs( cmd );
+            var js = compileCode( type, cmd );
 
             injectCommand( head, js, cmd, onSuccess, onError );
         } catch ( ex ) {
@@ -337,8 +353,8 @@
             if ( ! onSuccess ) throw new Error( 'falsy onSuccess function given' );
             if ( ! onError   ) throw new Error( 'falsy onError function given' );
 
-            return function( cmd, post ) {
-                executeInner( head, cmd, post, onSuccess, onError );
+            return function( type, cmd, post ) {
+                executeInner( head, type, cmd, post, onSuccess, onError );
             }
         }
     }

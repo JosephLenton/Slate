@@ -90,15 +90,28 @@
 
     slate.data = {
         loaders: (function() {
-            var newImageLoader = function( type ) {
+            var newTextLoader = function( callback ) {
+                return function( path, read ) {
+                    read( path, callback );
+                }
+            }
+
+            var new64Loader = function( callback ) {
                 return function( path, read ) {
                     read( path, function(data) {
-                        console.log( new window.exports.Buffer(data).toString('base64') );
-                        return '<img class="slate-load-image" src="data:image/png;base64,' +
-                                    new window.exports.Buffer(data).toString('base64') +
-                                '">';
-                    } );
+                        return callback( new window.exports.Buffer(data).toString('base64') )
+                    } )
                 }
+            }
+
+            var newImageLoader = function( type ) {
+                return new64Loader( function(data) {
+                    return '<div class="slate-center slate-embed-img">' +
+                                '<img src="data:image/' + type + ';base64,' +
+                                    data +
+                                '">' +
+                            '</div>'
+                } );
             }
 
             var loaders = {
@@ -106,7 +119,13 @@
                     'jpg'  : newImageLoader( 'jpg' ),
                     'jpeg' : newImageLoader( 'jpg' ),
                     'gif'  : newImageLoader( 'gif' ),
-                    'bmp'  : newImageLoader( 'bmp' )
+                    'bmp'  : newImageLoader( 'bmp' ),
+
+                    'html' : new64Loader( function(html) {
+                        return '<iframe frameborder="no" class="slate-embed-html" src="data:text/html;base64,' +
+                                        html +
+                                '">';
+                    } )
             }
 
             return loaders;
