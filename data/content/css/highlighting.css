@@ -1,0 +1,13 @@
+
+.slate-hidden-directory {
+    color: #3a3;
+}
+.slate-hidden-file {
+    color: #46c;
+}
+.slate-directory {
+    color: #6e6;
+}
+.slate-file {
+    color: #7bf;
+}
