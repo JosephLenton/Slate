@@ -19,7 +19,8 @@
     window.on('ready', function(){
         window.exports = {
                 child_process: require('child_process'),
-                fs           : require('fs')
+                fs           : require('fs'),
+                Buffer       : require('buffer').Buffer
         }
 
         window.exec = window.exports.child_process.exec;

@@ -89,6 +89,29 @@
     }
 
     slate.data = {
+        loaders: (function() {
+            var newImageLoader = function( type ) {
+                return function( path, read ) {
+                    read( path, function(data) {
+                        console.log( new window.exports.Buffer(data).toString('base64') );
+                        return '<img class="slate-load-image" src="data:image/png;base64,' +
+                                    new window.exports.Buffer(data).toString('base64') +
+                                '">';
+                    } );
+                }
+            }
+
+            var loaders = {
+                    'png'  : newImageLoader( 'png' ),
+                    'jpg'  : newImageLoader( 'jpg' ),
+                    'jpeg' : newImageLoader( 'jpg' ),
+                    'gif'  : newImageLoader( 'gif' ),
+                    'bmp'  : newImageLoader( 'bmp' )
+            }
+
+            return loaders;
+        })(),
+
         formatHandlers: [
                 {
                     type: Function,

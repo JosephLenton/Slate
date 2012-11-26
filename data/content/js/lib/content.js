@@ -14,6 +14,9 @@
     }
 
     window.slate.lib.content = {
-        newDisplay : newDisplay
+        newDisplay : newDisplay,
+        newClear   : function( dom ) {
+            dom.innerHTML = '';
+        }
     }
 })(window);

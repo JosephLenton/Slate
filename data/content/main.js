@@ -6,7 +6,9 @@
             var handlers = slate.data.formatHandlers;
 
             var displayDom = document.getElementsByClassName( 'slate-content' )[0];
-            var display = window.slate.lib.content.newDisplay( displayDom );
+
+            var clear     = window.slate.lib.content.newClear( displayDom ),
+                display   = window.slate.lib.content.newDisplay( displayDom );
 
             var onSuccess = window.slate.lib.formatter.newOnSuccess( handlers, display ),
                 onError   = window.slate.lib.formatter.newOnError( handlers, display );
@@ -22,7 +24,12 @@
             var bar = new window.slate.lib.TerminalBar( barDom, executor );
             bar.focus();
 
-            window.slate.commands.bindCommands( onSuccess, onError );
+            window.slate.commands.bindCommands(
+                    clear,
+                    onSuccess,
+                    onError,
+                    window.slate.data.loaders
+            );
         }
     }
 })();
