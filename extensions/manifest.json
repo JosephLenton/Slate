@@ -1,0 +1,21 @@
+{
+    "name": "modify headers",
+    "description": "modifies incoming headers",
+    "version": "1",
+
+    "manifest_version": 2,
+
+    "background": {
+        "scripts": [ "modify_response.js" ]
+    },
+
+    "permissions": [
+            "tabs",
+            "<all_urls>",
+            "http://*/*" ,
+            "*://*/*",
+            "webRequest",
+            "webRequestBlocking"
+    ]
+} 
+
