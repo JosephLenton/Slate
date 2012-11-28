@@ -34,7 +34,8 @@
                     (
                             arr !== undefined &&
                             arr !== null &&
-                            arr.constructor === argsConstructor
+                            arr.constructor === argsConstructor &&
+                            arr.length !== undefined
                     )
         },
 

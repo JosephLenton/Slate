@@ -227,7 +227,6 @@
         var scriptId = uniqueScriptId();
         var script = document.createElement('script');
         var html = buildCommand( js, cmd, scriptId, onDisplay );
-        console.log( html );
 
         script.id = scriptId;
         script.innerHTML = html;
@@ -401,11 +400,19 @@
     }
 
     window.slate.lib.executor = {
-        newExecutor: function( head, onDisplay ) {
+        newExecutor: function( head, onDisplay, formatters ) {
             if ( ! onDisplay ) throw new Error( 'falsy onDisplay function given' );
 
             return function( type, cmd, post ) {
                 executeInner( head, type, cmd, post, function(cmd, r) {
+                    if ( r ) {
+                        var handler = slate.lib.formatter.getHandler( formatters, r );
+
+                        if ( handler && ! handler.format_returns ) {
+                            r = new slate.lib.formatter.ignoreHandler( r );
+                        }
+                    }
+
                     onDisplay( cmd, r, function(cmd, onDisplay) {
                         executeInner( head, type, cmd, undefined, onDisplay );
                     })

@@ -202,7 +202,7 @@
                             onDisplay( new Error('file not found ' + err.path) );
                         } else {
                             try {
-                                onDisplay( slate.lib.formatter.rawHtml( callback(data) ) );
+                                onDisplay( callback(data) );
                             } catch ( ex ) {
                                 onDisplay( ex );
                             }
@@ -235,10 +235,10 @@
                                         read
                         );
 
-                        if ( loaderResult ) {
-                            onDisplay( slate.lib.formatter.rawHtml(loaderResult) );
-                        } else {
-                            return slate.IGNORE_RESULT;
+                        if ( loaderResult !== undefined ) {
+                            onDisplay( loaderResult );
+
+                            return loaderResult;
                         }
                     } catch ( ex ) {
                         onDisplay( ex );
@@ -251,11 +251,17 @@
             }
 
             var applyLoader = function( path, mime, onDisplay ) {
-                if ( ! (mime && tryLoader(path, undefined, mime, onDisplay)) ) {
-                    read( path, function(data, mime) {
-                        return generateTextHtml( data ); 
-                    } );
+                if ( mime ) {
+                    var r = tryLoader( path, undefined, mime, onDisplay );
+
+                    if ( r ) {
+                        return r;
+                    }
                 }
+
+                read( path, function(data, mime) {
+                    return generateTextHtml( data ); 
+                } );
             }
 
             /**
@@ -267,8 +273,6 @@
              *  - an array of any of the above
              */
             commands.load = function( path ) {
-                var str = '';
-
                 for ( var i = 0; i < arguments.length; i++ ) {
                     var path = arguments[i];
 
@@ -283,24 +287,18 @@
                         }
                     } else if ( slate.util.isString(path) ) {
                         if ( path.search(/^http(s?):\/\//) !== -1 ) {
-                            applyLoader( path, undefined, onDisplay );
+                            return applyLoader( path, undefined, onDisplay );
                         } else {
                             if ( path.search(/^file:\/\//) !== -1 ) {
                                 path = slate.util.absoluteUrl( path );
                             }
 
-                            var lastDot   = path.lastIndexOf('.');
+                            var lastDot   = path.lastIndexOf( '.' );
                             var extension = path.substring( lastDot+1 );
 
-                            applyLoader( path, extension, onDisplay );
+                            return applyLoader( path, extension, onDisplay );
                         }
                     }
-                }
-
-                return window.slate.IGNORE_RESULT;
-
-                if ( str !== '' ) {
-                    onDisplay( window.slate.lib.formatter.rawHtml(str) );
                 }
             }
 
@@ -402,6 +400,9 @@
                 }
             }
 
+            /*
+             * TODO layout the structure of the item in a table or something.
+             */
             commands.describe = function( item ) {
                 if ( item ) {
                     for ( var k in obj ) {
@@ -441,6 +442,12 @@
                     }
 
                     return slate.IGNORE_RESULT;
+                }
+
+                commands.log = function() {
+                    for ( var i = 0; i < arguments.length; i++ ) {
+                        console.log( arguments[i] );
+                    }
                 }
             }
 

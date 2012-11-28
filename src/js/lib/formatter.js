@@ -27,6 +27,13 @@
         return Object.prototype.toString( this.html );
     }
 
+    function IgnoreHandler( r ) {
+        this.object = r;
+    }
+    IgnoreHandler.prototype.getObject = function() {
+        return this.object;
+    }
+
     var span = function( klass, r ) {
         return '<span class="' + klass + '">' + r + '</span>';
     }
@@ -36,6 +43,8 @@
             // test for internal types
             if ( r instanceof RawHtml ) {
                 return r.getHtml();
+            } else if ( r instanceof IgnoreHandler ) {
+                return r.getObject();
             } else if ( r === window.slate.IGNORE_RESULT ) {
                 return '';
 
@@ -83,6 +92,8 @@
 
             if ( r instanceof RawHtml ) {
                 html = r.getHtml();
+            } else if ( r instanceof IgnoreHandler ) {
+                return r.getObject();
             } else if ( r === undefined || r === window.slate.IGNORE_RESULT ) {
                 return window.slate.IGNORE_RESULT;
             } else {
@@ -94,6 +105,10 @@
                     }
 
                     html = handler.fun( r, formatResult, isDev );
+
+                    if ( handler.post ) {
+                        handler.post( r, isDev );
+                    }
                 } else if ( typeof r === 'object' ) {
                     html = slate.util.identify( r );
                 } else {
@@ -177,6 +192,8 @@
     }
 
     window.slate.lib.formatter = {
+        getHandler: getHandler,
+
         newDisplayFormat: function(handlers, displayFun, isDev) {
             handlers = newFormatResult( handlers, isDev );
 
@@ -187,6 +204,10 @@
 
         rawHtml: function( html ) {
             return new RawHtml( html );
+        },
+
+        ignoreHandler: function( r ) {
+            return new IgnoreHandler( r );
         }
     };
 })(window);

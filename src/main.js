@@ -37,7 +37,7 @@
                 }
             }
 
-            dom.addEventListener( 'keydown'   , disableMetaKeys );
+            dom.addEventListener( 'keydown', disableMetaKeys );
         }
 
         if (document.readyState === "complete") {
@@ -63,11 +63,16 @@
             var clear      = window.slate.lib.content.newClear( displayDom ),
                 display    = window.slate.lib.content.newDisplay( displayDom );
 
-            var onDisplay  = window.slate.lib.formatter.newDisplayFormat( handlers, display, isDev );
+            var onDisplay  = window.slate.lib.formatter.newDisplayFormat(
+                    handlers,
+                    display,
+                    isDev
+            );
 
             var executor   = window.slate.lib.executor.newExecutor(
                     document.getElementsByTagName('head')[0],
-                    onDisplay
+                    onDisplay,
+                    handlers
             );
             
             var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
