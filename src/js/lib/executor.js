@@ -408,7 +408,7 @@
                     if ( r ) {
                         var handler = slate.lib.formatter.getHandler( formatters, r );
 
-                        if ( handler && ! handler.format_returns ) {
+                        if ( handler && handler.format_returns === false ) {
                             r = new slate.lib.formatter.ignoreHandler( r );
                         }
                     }
