@@ -41,7 +41,7 @@
         }
 
         if (document.readyState === "complete") {
-            var fs = new slate.obj.FileSystem(),
+            var fs = new slate.fs.FileSystem(),
                 timestamp = '?v=' + Date.now();
 
             // load in the extension files

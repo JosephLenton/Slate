@@ -5,8 +5,17 @@
 
     var getHandler = function( handlers, r ) {
         for ( var i = 0; i < handlers.length; i++ ) {
-            if ( r instanceof handlers[i].type ) {
-                return handlers[i];
+            var handler = handlers[i];
+            var type = handler.type;
+
+            if ( slate.util.isArray(type) ) {
+                for ( var i = 0; i < type.length; i++ ) {
+                    if ( r instanceof type[i] ) {
+                        return handler;
+                    }
+                }
+            } else if ( r instanceof handler.type ) {
+                return handler;
             }
         }
     }

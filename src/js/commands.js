@@ -390,7 +390,7 @@
                         ( item instanceof String )
                 ) {
                     // list directories
-                    new slate.obj.FileSystem().list( item, callback );
+                    new slate.fs.FileSystem().list( item, callback );
                 } else if ( item ) {
                     for ( var k in item ) {
                         callback( new slate.obj.Property(item, k) );

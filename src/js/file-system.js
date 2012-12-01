@@ -260,8 +260,10 @@
         }
     }
 
-    slate.obj.FileSystem = FileSystem;
-    slate.obj.File       = File;
-    slate.obj.Dir        = Dir;
+    slate.fs = {
+            FileSystem : FileSystem,
+            File       : File,
+            Dir        : Dir
+    }
 })( slate );
 

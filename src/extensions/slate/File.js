@@ -5,7 +5,7 @@
  */
 (function( slate ) {
     slate.addFormatHandler({
-            type: slate.obj.File,
+            type: slate.fs.File,
 
             fun: function( f ) {
                 return '<span class="slate-file">' +
@@ -15,7 +15,7 @@
     });
 
     slate.addFormatHandler({
-            type: slate.obj.Dir,
+            type: slate.fs.Dir,
 
             fun: function( f ) {
                 return '<span class="slate-directory">' +

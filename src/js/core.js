@@ -4,6 +4,16 @@
 (function() {
     var slate = window.slate = window.slate || {};
 
+    /**
+     * Where data is internall stored.
+     * 
+     * Essentially slate.core's variables.
+     */
+    slate.data = {
+        loaders: {},
+        formatHandlers: [ ]
+    };
+
     /*
      * Slate API
      * 
@@ -67,22 +77,50 @@
      *  - pre A function to call before 'fun', it is called once for every bout of displaying.
      *  - post A function to call after 'fun', it is called once for every bout of displaying.
      *  - format_returns Optional, and defaults to true. When set to false, items returned to the terminal are not formatted. Only those sent to the display are formatted.
+     *
+     * There is also a shorthand version, which is designed for the common case.
+     * For this you pass in a type, and a function, and that's it.
+     *
+     *  slate.addFormatHandler( Error, function(err) {
+     *      // return err html here
+     *  } );
      */
     slate.addFormatHandler = function( handler ) {
-        if ( ! handler ) {
-            throw new Error( "null or no handler provided" );
-        } else if ( arguments.length > 1 ) {
-            slate.addFormatHandler( arguments );
+        assert( handler, "null or no handler provided" );
+
+        if ( arguments.length > 1 ) {
+            if (
+                    arguments.length === 2 &&
+                    slate.util.isFunction(arguments[1])
+            ) {
+                slate.addFormatHandler({
+                    type: arguments[0],
+                    fun : arguments[1]
+                })
+            } else {
+                slate.addFormatHandler( arguments );
+            }
         } else if ( slate.util.isArrayArguments(handler) ) {
             for ( var i = 0; i < handler.length; i++ ) {
                 slate.addFormatHandler( handler[i] );
             }
         } else {
-            if ( ! handler.type ) throw new Error( "missing 'type' on format handler" );
-            if ( ! handler.fun  ) throw new Error( "missing 'fun' on format handler"  );
+            assert( handler.type, "missing 'type' on format handler" );
+            assert( handler.fun , "missing 'fun' on format handler"  );
 
-            if ( ! slate.util.isFunction(handler.type) ) throw new Error( "'type' property given, is not a constructor" );
-            if ( ! slate.util.isFunction(handler.fun ) ) throw new Error( "'fun' property given, is not a function"  );
+            if ( slate.util.isArray(handler.type) ) {
+                var arr = handler.type;
+
+                assert( arr.length > 0, "No types supplied for format handler (it's an empty array)" );
+
+                for ( var i = 0; i < arr.length; i++ ) {
+                    assertFun( arr[i], "type property given in 'type' array, is not a constructor" );
+                }
+            } else {
+                assertFun( handler.type, "'type' property given, is not a constructor" );
+            }
+
+            assertFun( handler.fun, "'fun' property given, is not a function"  );
 
             slate.data.formatHandlers.push( handler );
         }
@@ -111,8 +149,8 @@
                 slate.addLoader( type[i], action );
             } 
         } else {
-            if ( ! slate.util.isString(type)     ) throw new Error( "invalid type given, must be a string" );
-            if ( ! slate.util.isFunction(action) ) throw new Error( "invalid action given, must be a function" );
+            assertString( type, "invalid type given, must be a string" );
+            assertFun( action , "invalid action given, must be a function" );
 
             slate.data.loaders[ type ] = action;
         }
@@ -120,39 +158,8 @@
         return slate;
     }
 
-    slate.data = {
-        loaders: {},
-        /*
-        loaders: (function() {
-            var newTextLoader = function( callback ) {
-                return function( path, read ) {
-                    read( path, callback );
-                }
-            }
-
-            var imageLoader = function( path ) {
-                return '<div class="slate-embed-img">' +
-                            '<img src="' + path + '">' +
-                        '</div>'
-            }
-
-            var loaders = {
-                    'png'  : imageLoader,
-                    'jpg'  : imageLoader,
-                    'jpeg' : imageLoader,
-                    'gif'  : imageLoader,
-                    'bmp'  : imageLoader
-            }
-
-            return loaders;
-        })(),
-        */
-
-        formatHandlers: [ ]
-    };
-
     slate.obj = {
-    } ;
+    };
 
     slate.lib = {
     };
