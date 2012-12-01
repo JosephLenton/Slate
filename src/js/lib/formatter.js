@@ -9,8 +9,8 @@
             var type = handler.type;
 
             if ( slate.util.isArray(type) ) {
-                for ( var i = 0; i < type.length; i++ ) {
-                    if ( r instanceof type[i] ) {
+                for ( var j = 0; j < type.length; j++ ) {
+                    if ( r instanceof type[j] ) {
                         return handler;
                     }
                 }
