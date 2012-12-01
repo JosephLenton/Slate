@@ -58,7 +58,7 @@
             this.src = src;
 
             this.dom.setAttribute( 'src', src );
-            bindLoading( this, dom );
+            bindLoading( this, this.dom );
         }
     }
 
