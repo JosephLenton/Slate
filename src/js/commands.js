@@ -315,19 +315,17 @@
             }
 
             commands.cd = function( path ) {
-                if ( path !== undefined ) {
+                if ( path === undefined ) {
+                    onDisplay( commands.cwd() );
+                } else {
                     // change working directory
                     try {
                         window.process.chdir( path );
 
-                        return commands.cwd();
+                        onDisplay( commands.cwd() );
                     } catch ( ex ) {
-                        onDisplay( es );
-                        return window.slate.IGNORE_RESULT;
+                        onDisplay( ex );
                     }
-                // if user did nothing, we do nothing
-                } else {
-                    return window.slate.IGNORE_RESULT;
                 }
             }
 
