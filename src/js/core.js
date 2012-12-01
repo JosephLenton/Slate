@@ -100,16 +100,29 @@
      */
     slate.IGNORE_RESULT = { ignore: true };
 
+    /**
+     * Example usage:
+     *  slate.addLoader( 'png', function(path, read) { } );
+     *  slate.addLoader( ['jpg', 'jpeg'], function(path, read) { } );
+     */
     slate.addLoader = function( type, action ) {
-        if ( ! slate.util.isString(type)     ) throw new Error( "invalid type given, must be a string" );
-        if ( ! slate.util.isFunction(action) ) throw new Error( "invalid action given, must be a function" );
+        if ( slate.util.isArray(type) && slate.util.isFunction(action) ) {
+            for ( var i = 0; i < type.length; i++ ) {
+                slate.addLoader( type[i], action );
+            } 
+        } else {
+            if ( ! slate.util.isString(type)     ) throw new Error( "invalid type given, must be a string" );
+            if ( ! slate.util.isFunction(action) ) throw new Error( "invalid action given, must be a function" );
 
-        slate.data.loaders[ type ] = action;
+            slate.data.loaders[ type ] = action;
+        }
 
         return slate;
     }
 
     slate.data = {
+        loaders: {},
+        /*
         loaders: (function() {
             var newTextLoader = function( callback ) {
                 return function( path, read ) {
@@ -133,6 +146,7 @@
 
             return loaders;
         })(),
+        */
 
         formatHandlers: [ ]
     };
