@@ -4,14 +4,70 @@
     var slate = window.slate = window.slate || {};
 
     slate.commands = {
+        commands: {},
+
+        addEach: function( command, fun ) {
+            if ( arguments.length === 2 ) {
+                slate.add( command, function( arr, display ) {
+                    if ( slate.util.isArray(arr) ) {
+                        var r;
+
+                        for ( var i = 0; i < arr.length; i++ ) {
+                            r = fun( arr[i], display );
+                        }
+
+                        return r;
+                    } else {
+                        return fun( arr, display );
+                    }
+                }
+            } else if ( arguments.length === 1 ) {
+                for ( var k in command ) {
+                    if ( command.hasOwnProperty(k) ) {
+                        slate.commands.addEach( k, command[k] );
+                    }
+                }
+            } else {
+                throw new Error( "Too many parameters given" );
+            }
+        },
+
+        /**
+         * Adds a new command to be executed.
+         */
+        add: function( command, fun ) {
+            if ( arguments.length === 1 ) {
+                for ( var k in command ) {
+                    if ( command.hasOwnProperty(k) ) {
+                        slate.commands.commands[k] = command[k];
+                    }
+                }
+            } else if ( arguments.length === 2 ) {
+                if ( slate.util.isArray(command) ) {
+                    assert( arguments.length === 2, "Incorrect number of arguments given for commands.add" )
+
+                    for ( var i = 0; i < command.length; i++ ) {
+                        slate.commands.add( command[i], fun );
+                    }
+                } else {
+                    assertString( name, "Name must be a string" );
+                    assertFun( fun, "Command function is not a function" );
+
+                    slate.commands.commands[name] = fun;
+                }
+            } else {
+                throw new Error( "Too many parameters given" );
+            }
+        },
+
         bindCommands : function( clear, onDisplayFun, loaders, isDev ) {
+            var commands = slate.commands.commands || {};
+
             var onDisplay = function( v ) {
                 setTimeout( function() {
                     onDisplayFun( undefined, v );
                 }, 1 );
             }
-
-            var commands = {};
 
             var safe = function( callback ) {
                 try {
@@ -42,125 +98,10 @@
                 return slate.IGNORE_RESULT;
             },
 
-            commands.help = function() {
-                var str = '';
-
-                for ( var k in commands ) {
-                    if ( commands.hasOwnProperty(k) ) {
-                        str += k + "\n";
-                    }
-                }
-
-                return slate.lib.formatter.rawHtml( str );
-            }
-            commands.man = commands.help;
-
             commands.cls = function() {
                 clear()
             }
             commands.clear = commands.cls;
-
-            var newColorHtml = function( colors ) {
-                if (
-                        colors[0] < 0 || colors[0] > 255 ||
-                        colors[1] < 0 || colors[1] > 255 ||
-                        colors[2] < 0 || colors[2] > 255 ||
-                        colors[3] < 0 || colors[3] > 1
-                ) {
-                    throw new Error('invalid color given');
-                }
-
-                var strColor = 'rgba( ' + colors.join(', ') + ')';
-
-                return '<div class="slate-embed-color" style="background: ' + strColor + ';"></div>';
-            }
-
-            var colorHexToArray = function(hex) {
-                if ( hex.replace( /(#?)[a-fA-F0-9]{3,}([a-fA-F0-9]{3,})?/, '') !== '' ) {
-                    throw new Error( "invalid hex value given: " + hex );
-                }
-                if ( hex.charAt(0) === '#' ) {
-                    hex = hex.substring( 1 );
-                }
-
-                var colors = [];
-                if ( hex.length === 3 ) {
-                    for ( var i = 0; i < 3; i++ ) {
-                        var h = hex.charAt(i);
-                        colors[i] = parseInt( '0x' + h + h );
-                    }
-                } else if ( hex.length === 6 ) {
-                    for ( var i = 0; i < 6; i += 2 ) {
-                        var h = hex.charAt(i) + hex.charAt(i+1);
-                        colors[i/2] = parseInt( '0x' + h );
-                    }
-                } else {
-                    throw new Error( "invalid hex value given: " + hex );
-                }
-
-                colors[3] = 1;
-
-                return colors;
-            }
-
-            var colorInternal = function( col ) {
-                if ( col !== undefined && arguments.length > 0 ) {
-                    if (
-                            arguments.length === 4 &&
-                            slate.util.isNumeric(arguments[0]) &&
-                            slate.util.isNumberStr(arguments[1]) &&
-                            slate.util.isNumberStr(arguments[2]) &&
-                            slate.util.isNumberStr(arguments[3])
-                    ) {
-                        return newColorHtml([ arguments[0], arguments[1], arguments[2], arguments[3] ]);
-                    } else if (
-                            arguments.length === 3 &&
-                            slate.util.isNumberStr(arguments[0]) &&
-                            slate.util.isNumberStr(arguments[1]) &&
-                            slate.util.isNumberStr(arguments[2])
-                    ) {
-                        return newColorHtml([ arguments[0], arguments[1], arguments[2], 1 ]);
-                    } else if ( arguments.length > 1 ) {
-                        var str = '';
-
-                        for ( var i = 0; i < arguments.length; i++ ) {
-                            str += colorInternal( arguments[i] );
-                        }
-
-                        return str;
-                    } else if ( slate.util.isArrayArguments(col) ) {
-                        return colorInternal.apply( null, col );
-                    } else if ( slate.util.isString(col) ) {
-                        return newColorHtml( colorHexToArray(col) );
-                    } else {
-                        throw new Error("unknown color item given");
-                    }
-                } else {
-                    return '';
-                }
-            }
-
-            commands.color = function( col ) {
-                var r = '';
-
-                if ( col !== undefined && arguments.length > 0 ) {
-                    r = colorInternal.apply( null, arguments );
-                }
-
-                if ( r !== '' ) {
-                    onDisplay( window.slate.lib.formatter.rawHtml(r) );
-                }
-
-                return window.slate.IGNORE_RESULT;
-            }
-
-            commands.echo = function() {
-                for ( var i = 0; i < arguments.length; i++ ) {
-                    onDisplay( arguments[i] );
-                }
-
-                return window.slate.IGNORE_RESULT;
-            }
 
             var read = function( path, callback ) {
                 if ( path.search(/http(s?):\/\//) !== -1 ) {

@@ -4,7 +4,7 @@
  * Sets the HTML formatters for files and directories.
  */
 (function( slate ) {
-    slate.addFormatHandler({
+    slate.html({
             type: slate.fs.File,
 
             fun: function( f ) {
@@ -14,7 +14,7 @@
             }
     });
 
-    slate.addFormatHandler({
+    slate.html({
             type: slate.fs.Dir,
 
             fun: function( f ) {

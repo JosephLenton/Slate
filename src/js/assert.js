@@ -11,7 +11,7 @@
  * Note that 0 and empty strings, will not cause failure.
  */
 function assert( foo, msg ) {
-    if ( foo === undefined || foo === null ) {
+    if ( foo === undefined || foo === null || foo === false ) {
         throw new Error( msg );
     }
 }

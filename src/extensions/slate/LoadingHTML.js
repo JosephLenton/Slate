@@ -177,15 +177,15 @@
 
     /* Hook them into Slate */
 
-    slate.addLoader([ 'png', 'jpg', 'jpeg' ], function(path, read) {
+    slate.loader([ 'png', 'jpg', 'jpeg' ], function(path, read) {
         return new Image( path );
     })
 
-    slate.addLoader( 'html', function(path, read) {
+    slate.loader( 'html', function(path, read) {
         return new Page( path );
     })
 
-    slate.addFormatHandler({
+    slate.html({
             type: [ Page, Image ],
 
             fun: function( obj ) {

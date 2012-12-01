@@ -10,8 +10,8 @@
      * Essentially slate.core's variables.
      */
     slate.data = {
-        loaders: {},
-        formatHandlers: [ ]
+            loaders: {},
+            formatHandlers: []
     };
 
     /*
@@ -41,9 +41,111 @@
         return isDevFlag;
     }
 
+    slate.removeCSS = function() {
+        var styles = document.getElementsByClassName( 'custom-slate-css' );
+
+        for ( var i = 0; i < styles.length; i++ ) {
+            var style = styles[i];
+
+            style.parentNode.removeChild( style );
+        }
+    }
+
+    var generateStyles( name, props ) {
+        assert( name, "No name provided" );
+
+        var str = '';
+
+        if ( arguments.length === 1 ) {
+            if ( slate.util.isString(name) ) {
+                str = name;
+            } else {
+                for ( var k in props ) {
+                    if ( props.hasOwnProperty(k) ) {
+                        var rule = props[k];
+
+                        str += k + " {\n";
+
+                        for ( var k2 in rule ) {
+                            if ( rule.hasOwnProperty(k) ) {
+                                var val = rule[k2];
+                                str += k2 + ': ' + val;
+
+                                if ( slate.util.isNumber(val) ) {
+                                    str += 'px';
+                                }
+
+                                str += ";\n";
+                            }
+                        }
+
+                        str += "}\n";
+                    }
+                }
+            }
+        } else if ( arguments.length === 2 ) {
+            if ( slate.util.isString(name) ) {
+                assert( props, "No properties provided" );
+            } else {
+                str = name + " {\n";
+
+                for ( var k in props ) {
+                    if ( props.hasOwnProperty(k) ) {
+                        var val = props[k];
+
+                        str += k + ': ' + val;
+
+                        if ( slate.util.isNumber(val) ) {
+                            str += 'px';
+                        }
+
+                        str += ";\n";
+                    }
+                }
+
+                str += "}\n";
+            }
+        }
+
+        return str;
+    }
+
+    /**
+     * Example Usage
+     *
+     *  slate.css( '.embed-color', {
+     *      width: 80,
+     *      height: 80,
+     *      float: 'left'
+     *  } );
+     *
+     *  slate.css({
+     *          embed_color: {
+     *              width: 80,
+     *              height: 80,
+     *              float: 'left'
+     *          }
+     *  })
+     *
+     */
+    slate.css = function( name, props ) {
+        assert( arguments.length > 0, "No arguments provided" );
+
+        var str = generateStyles( name, props );
+        assert( str !== '', "Empty CSS rule given" );
+
+        var style = document.createElement('style');
+        style.className = 'custom-slate-css';
+        style.innerHTML = str;
+
+        document.head.appendChild( style );
+
+        return slate;
+    }
+
     var language = 'coffee';
     slate.setLanguage = function( lang ) {
-        if ( lang !== 'js' && lang !== 'coffee' ) throw new Error( "unsupported language given, must be 'js' or 'coffee'" );
+        assert( lang === 'js' || lang === 'coffee', "unsupported language given, must be 'js' or 'coffee'" );
 
         language = lang;
 
@@ -81,11 +183,11 @@
      * There is also a shorthand version, which is designed for the common case.
      * For this you pass in a type, and a function, and that's it.
      *
-     *  slate.addFormatHandler( Error, function(err) {
+     *  slate.html( Error, function(err) {
      *      // return err html here
      *  } );
      */
-    slate.addFormatHandler = function( handler ) {
+    slate.html = function( handler ) {
         assert( handler, "null or no handler provided" );
 
         if ( arguments.length > 1 ) {
@@ -93,16 +195,16 @@
                     arguments.length === 2 &&
                     slate.util.isFunction(arguments[1])
             ) {
-                slate.addFormatHandler({
+                slate.html({
                     type: arguments[0],
                     fun : arguments[1]
                 })
             } else {
-                slate.addFormatHandler( arguments );
+                slate.html( arguments );
             }
         } else if ( slate.util.isArrayArguments(handler) ) {
             for ( var i = 0; i < handler.length; i++ ) {
-                slate.addFormatHandler( handler[i] );
+                slate.html( handler[i] );
             }
         } else {
             assert( handler.type, "missing 'type' on format handler" );
@@ -138,12 +240,20 @@
      */
     slate.IGNORE_RESULT = { ignore: true };
 
+    slate.commandEach = function( name, fun ) {
+        slate.commands.addEach( name, fun );
+    }
+
+    slate.command = function( name, fun ) {
+        slate.commands.add( name, fun );
+    }
+
     /**
      * Example usage:
      *  slate.addLoader( 'png', function(path, read) { } );
      *  slate.addLoader( ['jpg', 'jpeg'], function(path, read) { } );
      */
-    slate.addLoader = function( type, action ) {
+    slate.loader = function( type, action ) {
         if ( slate.util.isArray(type) && slate.util.isFunction(action) ) {
             for ( var i = 0; i < type.length; i++ ) {
                 slate.addLoader( type[i], action );

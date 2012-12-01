@@ -17,7 +17,7 @@
 
     slate.obj.Property = Property;
 
-    slate.addFormatHandler({
+    slate.html({
             type: Property,
 
             fun: function(obj) {

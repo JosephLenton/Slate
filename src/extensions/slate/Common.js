@@ -75,7 +75,7 @@
         }
     }
 
-    slate.addFormatHandler([
+    slate.html([
             {
                 type: Function,
 
