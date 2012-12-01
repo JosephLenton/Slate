@@ -29,7 +29,7 @@
         }
 
         return slate.lib.formatter.rawHtml( str );
-    } );}
+    } );
 
     slate.command( [ 'head', 'first' ], function(arr, display) {
         if ( slate.util.isArray(arr) ) {

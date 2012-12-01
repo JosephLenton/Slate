@@ -6,6 +6,16 @@
     slate.commands = {
         commands: {},
 
+        /**
+         * Acts the same as commands.add,
+         * however this ensures that only one value
+         * is ever processed at a time.
+         *
+         * So if this is given an array of values,
+         * then this will run them one by one.
+         * If the function is given one value,
+         * then it is processed as normal.
+         */
         addEach: function( command, fun ) {
             if ( arguments.length === 2 ) {
                 slate.add( command, function( arr, display ) {
@@ -20,7 +30,7 @@
                     } else {
                         return fun( arr, display );
                     }
-                }
+                } )
             } else if ( arguments.length === 1 ) {
                 for ( var k in command ) {
                     if ( command.hasOwnProperty(k) ) {
@@ -34,6 +44,28 @@
 
         /**
          * Adds a new command to be executed.
+         *
+         * Example Usage:
+         *
+         *      commands.add({
+         *          help: function( r, onDisplay ) {
+         *              // todo
+         *          },
+         *          sleep: function( r, onDisplay ) {
+         *              // todo
+         *          },
+         *          load: function( r, onDisplay ) {
+         *              // todo
+         *          }
+         *      });
+         *
+         *      commands.add( 'help', function(r, onDisplay) {
+         *          // todo
+         *      });
+         *
+         *      commands.add( ['man', 'help'], function(r, onDisplay) {
+         *          // todo
+         *      });
          */
         add: function( command, fun ) {
             if ( arguments.length === 1 ) {
@@ -50,10 +82,10 @@
                         slate.commands.add( command[i], fun );
                     }
                 } else {
-                    assertString( name, "Name must be a string" );
+                    assertString( command, "Name must be a string" );
                     assertFun( fun, "Command function is not a function" );
 
-                    slate.commands.commands[name] = fun;
+                    slate.commands.commands[command] = fun;
                 }
             } else {
                 throw new Error( "Too many parameters given" );
@@ -62,6 +94,7 @@
 
         bindCommands : function( clear, onDisplayFun, loaders, isDev ) {
             var commands = slate.commands.commands || {};
+            console.log( commands );
 
             var onDisplay = function( v ) {
                 setTimeout( function() {
@@ -241,14 +274,6 @@
                         }
                     }
                 }
-            }
-
-            commands.exit = function() {
-                window.close();
-            }
-
-            commands.dev = function() {
-                window.frame.openDevTools();
             }
 
             commands.cwd = function() {

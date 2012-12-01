@@ -10,6 +10,10 @@
     var anchor = document.createElement( 'a' );
 
     window.slate.util = {
+        isNumber: function( n ) {
+            return typeof n === 'number' || ( n instanceof Number );
+        },
+
         isFunction: function( r ) {
             return typeof r === 'function' || ( r instanceof Function );
         },

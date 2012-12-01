@@ -115,9 +115,9 @@
     } );
 
     slate.css( 'slate-embed-color', {
-            width  : 80;
-            height : 80;
-            float  : 'left';
+            width  : 80,
+            height : 80,
+            float  : 'left'
     } );
 
     slate.html({
@@ -127,7 +127,7 @@
             return '<div class="slate-embed-color" style="background: ' +
                     obj.cssColor +
                     ';"></div>' ;
-        } ),
+        },
 
         format_return: false
     });

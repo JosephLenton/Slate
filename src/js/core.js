@@ -37,6 +37,7 @@
 
         return slate;
     }
+
     slate.isDevelopment = function() {
         return isDevFlag;
     }
@@ -51,7 +52,7 @@
         }
     }
 
-    var generateStyles( name, props ) {
+    var generateStyles = function( name, props ) {
         assert( name, "No name provided" );
 
         var str = '';
@@ -84,9 +85,9 @@
                 }
             }
         } else if ( arguments.length === 2 ) {
+            assert( props, "No properties provided" );
+
             if ( slate.util.isString(name) ) {
-                assert( props, "No properties provided" );
-            } else {
                 str = name + " {\n";
 
                 for ( var k in props ) {
@@ -104,6 +105,8 @@
                 }
 
                 str += "}\n";
+            } else {
+                throw new Error("I don't understand the CSS parameters given");
             }
         }
 
@@ -241,22 +244,34 @@
     slate.IGNORE_RESULT = { ignore: true };
 
     slate.commandEach = function( name, fun ) {
-        slate.commands.addEach( name, fun );
+        if ( arguments.length === 1 ) {
+            slate.commands.addEach( name );
+        } else {
+            slate.commands.addEach( name, fun );
+        }
+
+        return slate;
     }
 
     slate.command = function( name, fun ) {
-        slate.commands.add( name, fun );
+        if ( arguments.length === 1 ) {
+            slate.commands.add( name );
+        } else {
+            slate.commands.add( name, fun );
+        }
+
+        return slate;
     }
 
     /**
      * Example usage:
-     *  slate.addLoader( 'png', function(path, read) { } );
-     *  slate.addLoader( ['jpg', 'jpeg'], function(path, read) { } );
+     *  slate.loader( 'png', function(path, read) { } );
+     *  slate.loader( ['jpg', 'jpeg'], function(path, read) { } );
      */
     slate.loader = function( type, action ) {
         if ( slate.util.isArray(type) && slate.util.isFunction(action) ) {
             for ( var i = 0; i < type.length; i++ ) {
-                slate.addLoader( type[i], action );
+                slate.loader( type[i], action );
             } 
         } else {
             assertString( type, "invalid type given, must be a string" );
