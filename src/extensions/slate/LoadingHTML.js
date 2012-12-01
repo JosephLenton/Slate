@@ -43,6 +43,10 @@
      * i.e. an image, or an iframe.
      */
     var LoadingHTML = function( dom, src ) {
+        if ( arguments.length === 0 ) {
+            return;
+        }
+
         this.src = '';
         this.dom = dom;
 
@@ -67,6 +71,8 @@
 
         slate.LoadingHTML.call( this, document.createElement('img'), src );
     }
+
+    Image.prototype = new LoadingHTML;
 
     Image.prototype.onLoad = function( dom ) {
         this.width  = dom.width ;
@@ -99,6 +105,8 @@
 
         LoadingHTML.call( this, iframe, src );
     }
+
+    Page.prototype = new LoadingHTML;
 
     Page.prototype.onLoad = function( iframe ) {
         this.document = iframe.contentDocument || contentWindow.document ;
