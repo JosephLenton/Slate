@@ -19,6 +19,18 @@
             }
     });
 
+    slate.command( ['help', 'man'], function() {
+        var str = '';
+
+        for ( var k in commands ) {
+            if ( commands.hasOwnProperty(k) ) {
+                str += k + "\n";
+            }
+        }
+
+        return slate.lib.formatter.rawHtml( str );
+    } );}
+
     slate.command( [ 'head', 'first' ], function(arr, display) {
         if ( slate.util.isArray(arr) ) {
             if ( arr.length > 0 ) {
