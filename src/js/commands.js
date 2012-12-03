@@ -18,17 +18,17 @@
          */
         addEach: function( command, fun ) {
             if ( arguments.length === 2 ) {
-                slate.add( command, function( arr, display ) {
+                slate.command( command, function( arr, display, state ) {
                     if ( slate.util.isArray(arr) ) {
                         var r;
 
                         for ( var i = 0; i < arr.length; i++ ) {
-                            r = fun( arr[i], display );
+                            r = fun( arr[i], display, state );
                         }
 
                         return r;
                     } else {
-                        return fun( arr, display );
+                        return fun( arr, display, state );
                     }
                 } )
             } else if ( arguments.length === 1 ) {
@@ -92,207 +92,71 @@
             }
         },
 
-        bindCommands : function( clear, onDisplayFun, loaders, isDev ) {
+        bindCommands : function( clear, onDisplayFun, loaders, fileSystem, isDev ) {
             var commands = slate.commands.commands || {};
-            console.log( commands );
 
-            var onDisplay = function( v ) {
-                setTimeout( function() {
-                    onDisplayFun( undefined, v );
-                }, 1 );
-            }
+            var wrapCommand = function(commandFun, onDisplay) {
+                return function( args, callback ) {
+                    var callback = null,
+                        paramsLen = arguments.length;
 
-            var safe = function( callback ) {
-                try {
-                    callback();
-                } catch ( ex ) {
-                    onDisplay( ex );
-                }
-            }
+                    /*
+                     * Iterate from last argument,
+                     * to all *but* the first parameter
+                     * First parameter is never a callback!
+                     */
+                    for ( var i = arguments.length-1; i >= 1; i-- ) {
+                        if ( slate.util.isFunction(arguments[i]) ) {
+                            callback = arguments[i];
+                            paramsLen = i;
 
-            commands.sleep = function( timeout ) {
-                var i;
-                if ( slate.util.isNumeric(timeout) ) {
-                    timeout = parseInt( timeout );
-                    i = 1;
-                } else {
-                    timeout = 1000;
-                    i = 0;
-                }
-
-                for ( ; i < arguments.length; i++ ) {
-                    var f = arguments[i];
-
-                    if ( slate.util.isFunction(f) ) {
-                        setTimeout( f, timeout );
-                    }
-                }
-
-                return slate.IGNORE_RESULT;
-            },
-
-            commands.cls = function() {
-                clear()
-            }
-            commands.clear = commands.cls;
-
-            var read = function( path, callback ) {
-                if ( path.search(/http(s?):\/\//) !== -1 ) {
-                    slate.util.ajaxGet( path, function(err, data, mime) {
-                        if ( err ) {
-                            onDisplay( err );
-                        } else {
-                            if ( mime ) {
-                                mime = mime.
-                                        replace( /^[a-zA-Z]+\//, '' ).
-                                        replace( /;.*$/, '' );
-                            } else {
-                                var lastDot   = path.lastIndexOf('.'),
-                                    lastSlash = Math.max(
-                                            path.lastIndexOf('/'),
-                                            path.lastIndexOf("\\")
-                                    );
-
-                                if ( lastDot > lastSlash ) {
-                                    mime = path.substring( lastDot + 1 );
-                                } else {
-                                    mime = null;
-                                }
-                            }
-
-                            if ( ! tryLoader(path, data, mime, onDisplay) ) {
-                                onDisplay(
-                                        undefined,
-                                        slate.lib.formatter.rawHtml(
-                                                generateTextHtml( data )
-                                        )
-                                ); 
-                            }
+                            break;
                         }
-                    } );
-                } else {
-                    slate.util.ajaxGet( path, function(err, data, mime) {
-                        if ( err ) {
-                            onDisplay( new Error('file not found ' + err.path) );
-                        } else {
-                            try {
-                                onDisplay( callback(data) );
-                            } catch ( ex ) {
-                                onDisplay( ex );
-                            }
-                        }
-                    } )
-                }
-            }
-
-            var generateTextHtml = function(data) {
-                return '<pre class="slate-textfile">' +
-                            slate.util.htmlSafe( data ) +
-                        '</pre>'
-            }
-
-            var newReader = function(path) {
-                return function( callback ) {
-                    read( path, callback );
-                }
-            }
-
-            var tryLoader = function( path, data, mime, onDisplay ) {
-                var loader = loaders[ mime ];
-
-                if ( loader ) {
-                    try {
-                        var loaderResult = loader(
-                                path,
-                                data ?
-                                        function(path, callback) { callback(data); } :
-                                        read
-                        );
-
-                        if ( loaderResult !== undefined ) {
-                            onDisplay( loaderResult );
-
-                            return loaderResult;
-                        }
-                    } catch ( ex ) {
-                        onDisplay( ex );
                     }
 
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-
-            var applyLoader = function( path, mime, onDisplay ) {
-                if ( mime ) {
-                    var r = tryLoader( path, undefined, mime, onDisplay );
-
-                    if ( r ) {
-                        return r;
+                    if ( callback === null ) {
+                        callback = onDisplay;
                     }
-                }
 
-                read( path, function(data, mime) {
-                    return generateTextHtml( data ); 
-                } );
-            }
+                    var params = undefined;
 
-            /**
-             * Loads ...
-             *  - a text file, gets dumped in a pre
-             *  - images
-             *  - html files, inputted in a HTML frame
-             *  - an url, inputted in a HTML frame
-             *  - an array of any of the above
-             */
-            commands.load = function( path ) {
-                for ( var i = 0; i < arguments.length; i++ ) {
-                    var path = arguments[i];
+                    if ( paramsLen === 1 ) {
+                        params = arguments[0];
+                    } else if ( paramsLen > 1 ) {
+                        params = new Array( paramsLen );
 
-                    // array
-                    if ( slate.util.isArray(path) ) {
-                        for ( var k in path ) {
-                            var p = path[k];
-
-                            if ( p ) {
-                                commands.load( p );
-                            }
+                        for ( var i = 0; i < paramsLen; i++ ) {
+                            params[i] = arguments[i];
                         }
-                    } else if ( slate.util.isString(path) ) {
-                        if ( path.search(/^http(s?):\/\//) !== -1 ) {
-                            return applyLoader( path, undefined, onDisplay );
-                        } else {
-                            if ( path.search(/^file:\/\//) !== -1 ) {
-                                path = slate.util.absoluteUrl( path );
-                            }
+                    }
 
-                            var lastDot   = path.lastIndexOf( '.' );
-                            var extension = path.substring( lastDot+1 );
-
-                            return applyLoader( path, extension, onDisplay );
-                        }
+                    if ( params instanceof Error ) {
+                        onDisplayFun( params );
+                    } else {
+                        return commandFun( params, callback, state );
                     }
                 }
             }
 
-            commands.cwd = function() {
-                return slate.util.absoluteUrl( '.' );
-            }
+            var state = {
+                    isDev: isDev,
 
-            commands.cd = function( path ) {
-                if ( path === undefined ) {
-                    onDisplay( commands.cwd() );
-                } else {
-                    // change working directory
-                    try {
-                        window.process.chdir( path );
+                    fs   : fileSystem,
 
-                        onDisplay( commands.cwd() );
-                    } catch ( ex ) {
-                        onDisplay( ex );
+                    onDisplay: onDisplay,
+                    clearDisplay: function() {
+                        throw new Error("state.clear not yet implemented");
+                        // todo, get the terminal context passed in,
+                        // and clear it with this.
+                    },
+
+                    wrap: function( cmd, onDisplay ) {
+                        if ( ! onDisplay ) {
+                            onDisplay = state.onDisplay;
+                        }
+
+                        return wrapCommand( cmd, onDisplayFun );
                     }
-                }
             }
 
             var resultsToString = function( results ) {
@@ -317,53 +181,6 @@
                 return window.slate.lib.formatter.rawHtml( str );
             }
 
-            commands.ls = function() {
-                var callback = onDisplay;
-
-                var end;
-                if ( slate.util.isFunction(arguments.length[ arguments.length-1 ]) ) {
-                    callback = arguments[ arguments.length-1 ];
-                    end = arguments.length-1;
-                } else {
-                    end = arguments.length;
-                }
-
-                if (
-                        arguments.length === 0 ||
-                        ( arguments.length === 1 && callback !== onDisplay )
-                ) {
-                    var r = lsInner( '.', callback );
-
-                    if ( r ) {
-                        callback( r );
-                    }
-                } else {
-                    for ( var i = 0; i < end; i++ ) {
-                        var r = lsInner( arguments[i], callback );
-
-                        if ( r !== undefined ) {
-                            callback( r );
-                        }
-                    }
-                }
-
-                return undefined;
-            }
-
-            var lsInner = function( item, callback ) {
-                if (
-                        typeof item === 'string' ||
-                        ( item instanceof String )
-                ) {
-                    // list directories
-                    new slate.fs.FileSystem().list( item, callback );
-                } else if ( item ) {
-                    for ( var k in item ) {
-                        callback( new slate.obj.Property(item, k) );
-                    }
-                }
-            }
-
             /*
              * TODO layout the structure of the item in a table or something.
              */
@@ -378,7 +195,7 @@
                                 isProto && !isFun ? 'slate-prototype-property' :
                                !isProto &&  isFun ? 'slate-object-function'    :
                                !isProto && !isFun ? 'slate-object-property'    :
-                                                    ''                   ;
+                                                    ''                         ;
 
                         results.push({
                                 type: type,
@@ -392,32 +209,19 @@
                 }
             }
 
-            if ( isDev ) {
-                commands.reloadCss = function() {
-                    var styles = document.getElementsByTagName( 'link' );
-                    var timestamp = '?v=' + Date.now();
+            var onDisplay = (function(onDisplay) {
+                return function() {
+                    var args = arguments;
 
-                    for ( var i = 0; i < styles.length; i++ ) {
-                        var style = styles[i];
-
-                        if ( style.href ) {
-                            style.href = style.href.replace(/\?.*$/, '') + timestamp;
-                        }
-                    }
-
-                    return slate.IGNORE_RESULT;
+                    setTimeout( function() {
+                        onDisplay.apply( null, args );
+                    }, 1 );
                 }
-
-                commands.log = function() {
-                    for ( var i = 0; i < arguments.length; i++ ) {
-                        console.log( arguments[i] );
-                    }
-                }
-            }
+            })(onDisplay)
 
             for ( var k in commands ) {
                 if ( commands.hasOwnProperty(k) ) {
-                    window[k] = commands[k];
+                    window[k] = wrapCommand( commands[k], onDisplayFun )
                 }
             }
         }

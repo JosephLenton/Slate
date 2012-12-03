@@ -62,6 +62,20 @@
         }
     }
 
+    function PlainText( content ) {
+        this.content = content;
+
+        var pre = document.createElement( 'pre' );
+        pre.className = 'slate-textfile';
+        pre.innerText = content;
+
+        LoadingHTML.call( this, pre, src );
+    }
+
+    PlainText.prototype = new LoadingHTML;
+
+    PlainText.load = function() { /* do nothing */ }
+
     /**
      * A HTML Image, which is displayed, or wraps an existing image element.
      */
@@ -69,7 +83,7 @@
         this.width  = 0;
         this.height = 0;
 
-        slate.LoadingHTML.call( this, document.createElement('img'), src );
+        LoadingHTML.call( this, document.createElement('img'), src );
     }
 
     Image.prototype = new LoadingHTML;
@@ -177,6 +191,12 @@
 
     /* Hook them into Slate */
 
+    slate.loader( 'text', function(path, read) {
+        read( function(content) {
+            return new PlainText( path, content );
+        } );
+    } );
+
     slate.loader([ 'png', 'jpg', 'jpeg' ], function(path, read) {
         return new Image( path );
     })
@@ -186,7 +206,7 @@
     })
 
     slate.html({
-            type: [ Page, Image ],
+            type: [ PlainText, Page, Image ],
 
             fun: function( obj ) {
                 return obj.toHTML();

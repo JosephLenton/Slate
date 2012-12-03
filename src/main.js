@@ -40,60 +40,90 @@
             dom.addEventListener( 'keydown', disableMetaKeys );
         }
 
-        if (document.readyState === "complete") {
+        function loadExtensions( root, whenDone ) {
             var fs = new slate.fs.FileSystem(),
                 timestamp = '?v=' + Date.now();
 
+            var errors = [];
+            var count = 0;
+            var whenLoaded = function() {
+                count--;
+
+                if ( count === 0 && whenDone ) {
+                    whenDone( errors );
+                }
+            }
+            var errorLoaded = function() {
+                errors.push( new Error("failed to load extension " + this.src) );
+                whenLoaded();
+            }
+
             // load in the extension files
-            fs.filesRecursive( 'extensions', function(file) {
-                file.extension('js', function(file) {
-                    var script = document.createElement( 'script' );
-                    script.src = file.path + timestamp;
+            fs.filesRecursive( root,
+                    function(file) {
+                        file.extension('js', function(file) {
+                            count++;
 
-                    document.head.appendChild( script );
-                } );
-            } );
+                            var script = document.createElement( 'script' );
+                            script.src = file.path + timestamp;
 
-            var isDev      = window.slate.isDevelopment();
+                            script.onload  = whenLoaded;
+                            script.onerror = errorLoaded;
 
-            var handlers   = slate.data.formatHandlers;
+                            document.head.appendChild( script );
+                        } );
+                    }
+            )
+        }
 
-            var displayDom = document.getElementsByClassName( 'slate-content' )[0];
+        if (document.readyState === "complete") {
+            loadExtensions( 'extensions', function( errors ) {
+                var isDev      = window.slate.isDevelopment();
 
-            var clear      = window.slate.lib.content.newClear( displayDom ),
-                display    = window.slate.lib.content.newDisplay( displayDom );
+                var handlers   = slate.data.formatHandlers;
 
-            var onDisplay  = window.slate.lib.formatter.newDisplayFormat(
-                    handlers,
-                    display,
-                    isDev
-            );
+                var displayDom = document.getElementsByClassName( 'slate-content' )[0];
 
-            var executor   = window.slate.lib.executor.newExecutor(
-                    document.getElementsByTagName('head')[0],
-                    onDisplay,
-                    handlers
-            );
-            
-            var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
-                typeDom = document.getElementsByClassName( 'slate-bar-type'  )[0];
+                var clear      = window.slate.lib.content.newClear( displayDom ),
+                    display    = window.slate.lib.content.newDisplay( displayDom );
 
-            var bar = new window.slate.lib.TerminalBar(
-                    barDom,
-                    typeDom,
-                    executor,
-                    window.slate.getLanguage()
-            );
-            bar.focus();
+                var onDisplay  = window.slate.lib.formatter.newDisplayFormat(
+                        handlers,
+                        display,
+                        isDev
+                );
 
-            window.slate.commands.bindCommands(
-                    clear,
-                    onDisplay,
-                    window.slate.data.loaders,
-                    isDev
-            );
+                var executor   = window.slate.lib.executor.newExecutor(
+                        document.getElementsByTagName('head')[0],
+                        onDisplay,
+                        handlers
+                );
+                
+                var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
+                    typeDom = document.getElementsByClassName( 'slate-bar-type'  )[0];
 
-            initializeGlobalCommands( document.getElementsByTagName('body')[0], isDev )
+                var bar = new window.slate.lib.TerminalBar(
+                        barDom,
+                        typeDom,
+                        executor,
+                        window.slate.getLanguage()
+                );
+                bar.focus();
+
+                window.slate.commands.bindCommands(
+                        clear,
+                        function( r ) { onDisplay( undefined, r ); },
+                        window.slate.data.loaders,
+                        new slate.fs.FileSystem(),
+                        isDev
+                );
+
+                for ( var i = 0; i < errors.length; i++ ) {
+                    onDisplay( undefined, errors[i] );
+                }
+
+                initializeGlobalCommands( document.getElementsByTagName('body')[0], isDev )
+            } )
         }
     }
 })();

@@ -76,26 +76,24 @@
             return slate.util.ajax( 'POST', url, callback, data );
         },
 
+        ajaxHead: function( url, callback ) {
+            return slate.util.ajax( 'HEAD', url, callback );
+        },
+
         ajax: function( type, url, callback, data ) {
             try {
                 var ajaxObj = new window.XMLHttpRequest();
 
                 ajaxObj.onreadystatechange = function() {
                     if ( ajaxObj.readyState === 4 ) {
-                        console.log( this.getAllResponseHeaders() );
-
                         var err    = undefined,
-                            result = undefined,
-                            mime   = this.getResponseHeader( 'content-type' ),
                             status = ajaxObj.status;
 
                         if ( ! (status >= 200 && status < 300 || status === 304) ) {                    
-                            err    = new Error( "error connecting to url " + slate.util.htmlSafe(url) + ', ' + status );
-                        } else {
-                            result = ajaxObj.responseText;
+                            err = new Error( "error connecting to url " + slate.util.htmlSafe(url) + ', ' + status );
                         }
 
-                        callback( err, result, mime );
+                        callback( err, ajaxObj, url );
                     }
                 }
 
