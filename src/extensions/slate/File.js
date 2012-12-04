@@ -71,7 +71,7 @@
             type: slate.fs.File,
 
             fun: function( f ) {
-                return '<span class="slate-file">' + 'kdkddkdkdk'  +
+                return '<span class="slate-file">' + 
                             slate.util.htmlSafe( f.name ) +
                         '</span>';
             }

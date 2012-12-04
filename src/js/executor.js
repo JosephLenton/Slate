@@ -432,9 +432,9 @@
                             ! isIdentifierLetter(src.charCodeAt(i-1)) &&
                             ! isIdentifierLetter(src.charCodeAt(i+8))
                     ) {
-                        console.log( 'found' );
                         var position = i;
-                        var isNamedFunction = false;
+                        var isNamedFunction   = false,
+                            hasHitParenthesis = false;
 
                         /*
                          * Skip past 'function', 
@@ -448,8 +448,13 @@
                          */
                         i += 7+1;
                         while ( i < len && src.charCodeAt(i) !== LEFT_BRACE ) {
-                            if ( !isNamedFunction && isIdentifierLetter(src.charCodeAt(i)) ) {
-                                console.log('is named');
+                            if ( !hasHitParenthesis && src.charCodeAt(i) === LEFT_PAREN ) {
+                                hasHitParenthesis = true;
+                            } else if (
+                                    ! hasHitParenthesis &&
+                                    ! isNamedFunction &&
+                                      isIdentifierLetter(src.charCodeAt(i))
+                            ) {
                                 isNamedFunction = true;
                             }
 
@@ -470,7 +475,7 @@
                                 funBraceCount++;
                             }
                         } else {
-                            if ( funInfoI !== 0 ) {
+                            if ( funBraceCount !== 0 ) {
                                 funInfo[ funInfoI++ ] = funBraceCount;
                             }
 

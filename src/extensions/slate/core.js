@@ -40,7 +40,7 @@
                     timeout = 1000;
                 }
 
-                setTimeout( timeout, display );
+                setTimeout( display, timeout );
             }
     });
 

@@ -84,9 +84,11 @@
      */
     function FileDir( path, name, isDir ) {
         this.path = path;
-        this.name = path.
-                replace( /\/+$/, '' ).               // remove any ending slashes
-                replace( /^([^\/]|\/)*[\/]+/, '' );  // remove anything before the name
+        this.name = unescape(
+                path.
+                        replace( /\/+$/, '' ).              // remove any ending slashes
+                        replace( /^([^\/]|\/)*[\/]+/, '' )  // remove anything before the name
+        )
 
         this.isFile      = false;
         this.isDirectory = false;

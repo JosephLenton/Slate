@@ -108,7 +108,7 @@
                      * to all *but* the first parameter
                      * First parameter is never a callback!
                      */
-                    for ( var i = arguments.length-1; i >= 1; i-- ) {
+                    for ( var i = arguments.length-1; i >= 0; i-- ) {
                         if ( slate.util.isFunction(arguments[i]) ) {
                             callback = arguments[i];
                             paramsLen = i;
