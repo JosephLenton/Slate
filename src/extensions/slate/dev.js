@@ -4,7 +4,16 @@
  * Development related functions.
  */
 (function() {
-    function reloadCss() {
+    function reload() {
+        reloadCSS();
+        reloadScripts();
+    }
+
+    function reloadScripts() {
+        slate.main.reloadExtensions();
+    }
+
+    function reloadCSS() {
         var styles = document.getElementsByTagName( 'link' );
         var timestamp = '?v=' + Date.now();
 
@@ -17,14 +26,18 @@
         }
     }
 
-    function log() {
-        for ( var i = 0; i < arguments.length; i++ ) {
-            console.log( arguments[i] );
-        }
+    function log( params, onDisplay ) {
+        console.log( params );
+
+        onDisplay( params );
+        return params;
     }
 
     slate.command({
-            log: log,
-            reloadCss: reloadCss
+            reloadCSS: reloadCSS,
+            reloadScripts: reloadScripts,
+            reload: reload,
+
+            log: log
     })
 })();

@@ -92,8 +92,11 @@
             }
         },
 
-        bindCommands : function( clear, onDisplayFun, loaders, fileSystem, isDev ) {
+        bindCommands : function( clear, display, loaders, fileSystem, isDev ) {
             var commands = slate.commands.commands || {};
+            var onDisplayFun = function(r) {
+                setTimeout( function() { display(r); }, 1 );
+            }
 
             var wrapCommand = function(commandFun, onDisplay) {
                 return function( args, callback ) {

@@ -87,6 +87,9 @@
         LOWER_Y = 121,
         LOWER_Z = 122,
 
+        UPPER_A = 65,
+        UPPER_Z = 90,
+
         LEFT_BRACE = 123,
         BAR = 124,
         RIGHT_BRACE = 125,
@@ -243,6 +246,24 @@
         }
     }
 
+    /*
+     * Yes I know, this is not a full identifier check,
+     * but it's good enough bearing in mind the alternative
+     * is to spend hours working this out, and I just don't
+     * have time.
+     *
+     * If the character is outside of ASCII, then it's
+     * probably a valid identifier, or invalid syntax,
+     * and so would be caught already.
+     */
+    var isIdentifierLetter = function(c) {
+        return ( LOWER_A <= c && c <= LOWER_Z ) ||
+               ( UPPER_A <= c && c <= UPPER_Z ) ||
+               ( ZERO    <= c && c <= NINE    ) ||
+               ( c === UNDERSCORE             ) ||
+               ( c > 126 )
+    }
+
     /**
      * Searches through the given JS to ensure that comments
      * and strings are valid. If they are not, errors are thrown.
@@ -258,83 +279,250 @@
      * The other states, single-quote, multi-line comment,
      * and single-line comments, work in a similar fashion.
      */
-    var errorIfUnsafeJS = function (src) {
-        var inSingleComment = false;
-        var inMultiComment  = false;
-        var inDoubleString  = false;
-        var inSingleString  = false;
+    var compileJS = function (src) {
+        var trimSrc = src.trim();
 
-        // note that i is incremented within the code as well as within the for.
-        for (
-                var i = 0, len = src.length;
-                i < len;
-                i++
+        // if the cmd is a global function, just call it
+        // i.e. 'cwd' or 'ls'
+        if (
+              ! KEYWORDS.hasOwnProperty(trimSrc) &&
+                trimSrc.search( /^[a-zA-Z_$][a-zA-Z_$0-9]*$/, '' ) !== -1
         ) {
-            var c = src.charCodeAt(i);
+            var f = window[ trimSrc ];
 
-            // these are in order of precedence
-            if ( inDoubleString ) {
-                if (
-                                      c === DOUBLE_QUOTE &&
-                        src.charCodeAt(i-1) !== BACKSLASH
-                ) {
-                    inDoubleString = false;
+            if (
+                    typeof f === 'function' ||
+                    (f instanceof Function)
+            ) {
+                src += '()'
+            }
+        } else {
+            var inSingleComment = false;
+            var inMultiComment  = false;
+            var inDoubleString  = false;
+            var inSingleString  = false;
+
+            var funInfo = [];
+            var funInfoI = 0;
+            var funBraceCount = 0;
+
+            var appends = [];
+
+            var PRE_FUN_WRAP   = 1,
+                POST_FUN_WRAP  = 2,
+                PRE_FUN_NAMED  = 3,
+                POST_FUN_NAMED = 4;
+
+            // note that i is incremented within the code as well as within the for.
+            for (
+                    var i = 0, len = src.length;
+                    i < len;
+                    i++
+            ) {
+                var c = src.charCodeAt(i);
+
+                // these are in order of precedence
+                if ( inDoubleString ) {
+                    if (
+                                          c === DOUBLE_QUOTE &&
+                            src.charCodeAt(i-1) !== BACKSLASH
+                    ) {
+                        inDoubleString = false;
+                    }
+                } else if ( inSingleString ) {
+                    if (
+                                          c === SINGLE_QUOTE &&
+                            src.charCodeAt(i-1) !== BACKSLASH
+                    ) {
+                        inSingleString = false;
+                    }
+                } else if ( inSingleComment ) {
+                    if ( c === SLASH_N ) {
+                        inSingleComment = false;
+                    }
+                } else if ( inMultiComment ) {
+                    if (
+                                           c === STAR &&
+                            src.charCodeAt(i+1) === SLASH
+                    ) {
+                        inMultiComment = false;
+
+                        i++;
+                    }
+                // enter state
+                } else {
+                    /*
+                     * Look to enter a new type of block,
+                     * such as comments, strings, inlined-JS code.
+                     */
+
+                    // multi-line comment
+                    if (
+                            c === SLASH &&
+                            src.charCodeAt(i+1) === STAR
+                    ) {
+                        inMultiComment = true;
+
+                        i++;
+                    } else if (
+                            c === SLASH &&
+                            src.charCodeAt(i+1) === SLASH
+                    ) {
+                        inSingleComment = true;
+
+                        i++;
+                    // look for strings
+                    } else if (c === DOUBLE_QUOTE) {
+                        inDoubleString = true;
+                    } else if (c === SINGLE_QUOTE) {
+                        inSingleString = true;
+                        
+                    /*
+                     * Track when we enter a brace,
+                     * so we can account for them when looking
+                     * for a functions closing brace.
+                     *
+                     * For example to deal with ...
+                     *
+                     *     function() {
+                     *         while ( true ) {
+                     *             // stuff here
+                     *         }
+                     *     }
+                     *
+                     */
+                    } else if (c === LEFT_BRACE) {
+                        if ( funBraceCount !== 0 ) {
+                            funBraceCount++;
+                        }
+                    // look for the end of a defined function
+                    } else if (c === RIGHT_BRACE) {
+                        if ( funBraceCount !== 0 ) {
+                            funBraceCount--;
+
+                            // end of function
+                            if ( funBraceCount === 0 ) {
+                                appends.push({
+                                        index: i,
+                                        type : POST_FUN_WRAP
+                                })
+
+                                /*
+                                 * Check if we are still inside a different function.
+                                 */
+                                if ( funInfoI !== 0 ) {
+                                    funBraceCount   = funInfo[ --funInfoI ];
+                                }
+                            }
+                        }
+
+                    // look for '\bfunction\b'
+                    } else if (
+                            c === LOWER_F &&
+                            src.charCodeAt(i+1) === LOWER_U &&
+                            src.charCodeAt(i+2) === LOWER_N &&
+                            src.charCodeAt(i+3) === LOWER_C &&
+                            src.charCodeAt(i+4) === LOWER_T &&
+                            src.charCodeAt(i+5) === LOWER_I &&
+                            src.charCodeAt(i+6) === LOWER_O &&
+                            src.charCodeAt(i+7) === LOWER_N &&
+
+                            // ensure it is not a part of a larger identifier,
+                            // i.e. _function or function9
+                            ! isIdentifierLetter(src.charCodeAt(i-1)) &&
+                            ! isIdentifierLetter(src.charCodeAt(i+8))
+                    ) {
+                        console.log( 'found' );
+                        var position = i;
+                        var isNamedFunction = false;
+
+                        /*
+                         * Skip past 'function', 
+                         * and 1 more character to get to the character after.
+                         *
+                         * Then look for an identifier, such as ...
+                         *
+                         *     function foo
+                         *
+                         * and the opening brace.
+                         */
+                        i += 7+1;
+                        while ( i < len && src.charCodeAt(i) !== LEFT_BRACE ) {
+                            if ( !isNamedFunction && isIdentifierLetter(src.charCodeAt(i)) ) {
+                                console.log('is named');
+                                isNamedFunction = true;
+                            }
+
+                            i++;
+                        }
+
+                        if ( isNamedFunction ) {
+                            appends.push({
+                                    index: position,
+                                    type : PRE_FUN_NAMED
+                            })
+                            appends.push({
+                                    index: i,
+                                    type : POST_FUN_NAMED
+                            })
+
+                            if ( funBraceCount !== 0 ) {
+                                funBraceCount++;
+                            }
+                        } else {
+                            if ( funInfoI !== 0 ) {
+                                funInfo[ funInfoI++ ] = funBraceCount;
+                            }
+
+                            appends.push({
+                                    index: position,
+                                    type : PRE_FUN_WRAP
+                            })
+
+                            funBraceCount = 1;
+                        }
+                    }
                 }
-            } else if ( inSingleString ) {
-                if (
-                                      c === SINGLE_QUOTE &&
-                        src.charCodeAt(i-1) !== BACKSLASH
-                ) {
-                    inSingleString = false;
-                }
-            } else if ( inSingleComment ) {
-                if ( c === SLASH_N ) {
-                    inSingleComment = false;
-                }
-            } else if ( inMultiComment ) {
-                if (
-                                       c === STAR &&
-                        src.charCodeAt(i+1) === SLASH
-                ) {
-                    inMultiComment = false;
+            }
 
-                    i++;
-                }
-            // enter state
-            } else {
-                /*
-                 * Look to enter a new type of block,
-                 * such as comments, strings, inlined-JS code.
-                 */
+            if ( inMultiComment ) {
+                throw new SyntaxError("comment is never closed");
+            } else if ( inSingleString || inDoubleString ) {
+                throw new SyntaxError("string is never closed");
+            }
 
-                // multi-line comment
-                if (
-                        c === SLASH &&
-                        src.charCodeAt(i+1) === STAR
-                ) {
-                    inMultiComment = true;
+            if ( appends.length > 0 ) {
+                var offset = 0;
 
-                    i++;
-                } else if (
-                        c === SLASH &&
-                        src.charCodeAt(i+1) === SLASH
-                ) {
-                    inSingleComment = true;
+                for ( var i = 0; i < appends.length; i++ ) {
+                    var append = appends[i];
 
-                    i++;
-                // look for strings
-                } else if (c === DOUBLE_QUOTE) {
-                    inDoubleString = true;
-                } else if (c === SINGLE_QUOTE) {
-                    inSingleString = true;
+                    var type  = append.type;
+                    var index = append.index + offset;
+
+                    var str = '';
+
+                    if ( type === PRE_FUN_WRAP ) {
+                        str = '__wrap(';
+                        src = src.substring( 0, index ) + str + src.substring( index );
+                    } else if ( type === POST_FUN_WRAP ) {
+                        str = ')';
+                        src = src.substring( 0, index+1 ) + str + src.substring( index+1 );
+                    } else if ( type === PRE_FUN_NAMED ) {
+                        str = "var __envNum = slate.executor.envNum;";
+                        src = src.substring( 0, index ) + str + src.substring( index );
+                    } else if ( type === POST_FUN_NAMED ) {
+                        str = "if ( __envNum !== 0 ) { slate.executor.setEnvironmentNum(__envNum); };";
+                        src = src.substring( 0, index+1 ) + str + src.substring( index+1 );
+                    }
+
+                    offset += str.length;
                 }
             }
         }
 
-        if ( inMultiComment ) {
-            throw new Error("comment is never closed");
-        }
-    };
+        return src;
+    }
 
     /**
      * Compiles the given coffeescript code, to javascript.
@@ -354,33 +542,23 @@
     }
 
     var compileCode = function( type, cmd ) {
-        var js = cmd;
-
-        // if the cmd is a global function, just call it
-        // i.e. 'cwd' or 'ls'
-        var trimJs = js.trim();
-
-        if (
-              ! KEYWORDS.hasOwnProperty(trimJs) &&
-                trimJs.search( /^[a-zA-Z_$][a-zA-Z_$0-9]*$/, '' ) !== -1
-        ) {
-            var f = window[ trimJs ];
-
-            if (
-                    typeof f === 'function' ||
-                    (f instanceof Function)
-            ) {
-                js += '()'
-            }
-        }
-
         if ( type === 'coffee' ) {
-            js = coffeeToJs( js );
+            cmd = coffeeToJs( cmd );
         }
 
-        errorIfUnsafeJS( js );
+        /*
+         * Throws an exception if the source code is incorrect,
+         * so translate it into a regular SyntaxError.
+         */
+        try {
+            esprima.parse( cmd );
+        } catch ( err ) {
+            throw new SyntaxError( err.message, '', err.lineNumber );
+        }
 
-        return js;
+        cmd = compileJS( cmd );
+
+        return cmd;
     }
 
     var executeInner = function( head, type, cmd, post, onDisplay ) {
@@ -399,7 +577,7 @@
         }
     }
 
-    var environNum = 0;
+    var maxEnvironNum = 0;
     var environments = [];
     var defaultEnvironment = function() { /* do nothing */ };
 
@@ -412,20 +590,28 @@
      * it will be copied across.
      */
     window.__wrap = function( f ) {
-        var envNum = environNum;
+        var envNum = slate.executor.envNum;
 
         return function() {
-            if ( envNum !== 0 ) {
-                environNum = envNum;
-            }
+            slate.executor.setEnvironmentNum( envNum );
 
             f.apply( this, arguments );
         }
     }
 
-    window.slate.executor = {
+    var executor = {
+        envNum: 0,
+
+        compile: compileJS,
+
+        setEnvironmentNum: function(env) {
+            if ( env !== 0 && environments[env] !== undefined ) {
+                executor.envNum = env;
+            }
+        },
+
         getEnvironment: function() {
-            var environment = environments[ environNum ];
+            var environment = environments[ executor.envNum ];
 
             if ( environment === undefined ) {
                 return defaultEnrivonment;
@@ -434,15 +620,15 @@
             }
         },
 
-        newEnvironment: function( onDisplay ) {
-            var env = environNum++;
+        newEnvironmentNum: function( onDisplay ) {
+            var env = executor.envNum = maxEnvironNum++;
 
             environments[ env ] = onDisplay;
 
             return env;
         },
 
-        deleteEnvironment: function( num ) {
+        deleteEnvironmentNum: function( num ) {
             delete environments[ num ];
         },
 
@@ -466,4 +652,6 @@
             }
         }
     }
+
+    window.slate.executor = executor;
 })(window);
