@@ -4,8 +4,63 @@
  * This is the main Content window pane, where items get attached to.
  */
 (function(window) {
-    var newDisplay = function( dom ) {
-        if ( ! dom ) throw new Error( "undefined dom object given" );
+    var newDisplay = function( dom, keyDown ) {
+        assert( dom, "undefined dom object given" );
+        assertFun( keyDown, "'keyDown' must be a function" );
+
+        /* a unicode refresh symbol */
+        var DEFAULT_REFRESH_BUTTON_TEXT = "\u2022";
+
+        /*
+         * The maximum is 10, because it is mapped to 0 through 9.
+         */
+        var MAX_REFRESH_SIZE = 10;
+        var refreshStack = [];
+
+        var addRefresh = function( button, refresh ) {
+            refreshStack.unshift({
+                button  : button,
+                refresh : refresh
+            })
+
+            while ( refreshStack.length > MAX_REFRESH_SIZE ) {
+                refreshStack.pop().button.innerText = DEFAULT_REFRESH_BUTTON_TEXT;
+            }
+
+            /*
+             * Update the ctrl+num buttons.
+             */
+            for ( var i = 0; i < refreshStack.length; i++ ) {
+                // 0 to 9 becomes 1 to 0 (keyboard num row)
+                var num = (i+1) % MAX_REFRESH_SIZE;
+
+                refreshStack[i].button.innerText = num + ',';
+            }
+        }
+
+        // hook into the keyDown event
+        keyDown( function(ev) {
+            if ( ev.ctrlKey && !ev.altKey && !ev.shiftKey ) {
+                var code = ev.keyCode;
+
+                // if code is between 0 and 9 keys
+                if ( 48 <= code && code <= 57 ) {
+                    var num = code - 48;
+                    num--;
+                    if ( num < 0 ) {
+                        num += MAX_REFRESH_SIZE;
+                    }
+
+                    var r = refreshStack[num];
+                    if ( r ) {
+                        r.refresh();
+                    }
+
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                }
+            }
+        } );
 
         /**
          * @param The html string, element, or array of strings and elements, to append.
@@ -76,18 +131,25 @@
             }
 
             if ( refresh ) {
+                var refreshFun = function() {
+                    refresh( clearAndAppend );
+                }
+
                 var button = document.createElement('a');
 
                 button.setAttribute( 'href', '#' );
                 button.className = 'slate-content-item-refresh';
+                button.innerText = DEFAULT_REFRESH_BUTTON_TEXT;
                 button.addEventListener( 'click', function(ev) {
-                    refresh( ev, clearAndAppend );
+                    refreshFun();
 
                     ev.stopPropagation();
                     ev.preventDefault();
                 })
 
                 wrap.appendChild( button );
+
+                addRefresh( button, refreshFun );
             }
             
             setTimeout( function() {

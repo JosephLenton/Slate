@@ -103,12 +103,18 @@
     var initialize = function( errors ) {
         var isDev      = window.slate.isDevelopment();
 
+        var onKeyDowns = [];
+        var addKeyDown = function(f) {
+            assertFun( f, "Function expected for onKeyDown" );
+            onKeyDowns.push( f );
+        }
+
         var handlers   = slate.data.formatHandlers;
 
         var displayDom = document.getElementsByClassName( 'slate-content' )[0];
 
-        var clear      = window.slate.content.newClear( displayDom ),
-            display    = window.slate.content.newDisplay( displayDom );
+        var clear      = slate.content.newClear( displayDom ),
+            display    = slate.content.newDisplay( displayDom, addKeyDown );
 
         var onDisplay  = window.slate.formatter.newDisplayFormat(
                 handlers,
@@ -145,10 +151,10 @@
             onDisplay( undefined, errors[i] );
         }
 
-        initializeGlobalCommands( document.getElementsByTagName('body')[0], isDev )
+        initializeGlobalCommands( document.getElementsByTagName('body')[0], onKeyDowns, isDev )
     }
 
-    var initializeGlobalCommands = function( dom, isDev ) {
+    var initializeGlobalCommands = function( dom, onKeyDowns, isDev ) {
         var disableMetaKeys = function(ev) {
             /*
              * allow
@@ -179,9 +185,15 @@
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 82 && isDev ) // ctrl + r
             )) {
                 return;
-            } else if ( ev.altKey || ev.ctrlKey || ev.metaKey ) {
-                ev.stopPropagation();
-                ev.preventDefault();
+            } else {
+                for ( var i = 0; i < onKeyDowns.length; i++ ) {
+                    onKeyDowns[i]( ev );
+                }
+
+                if ( ev.altKey || ev.ctrlKey || ev.metaKey ) {
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                }
             }
         }
 
