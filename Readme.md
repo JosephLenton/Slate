@@ -2,12 +2,17 @@
 Slate | a terminal for web development 
 ======================================
 
-Slate is an experiment to build a desktop terminal,
-which aims to mix traditional terminal development with a modern web experience.
+Slate is an experiment to build a modern terminal,
+which runs on both desktop and tablet.
+It aims to mix traditional terminal development,
+with modern web tools and experience.
 
-The system uses CoffeeScript for a terse REPL,
-allowing you to load web pages, debug and hack on them,
-using existing terminal commands.
+The system supports multiple languages (currently just CoffeeScript and JS),
+by the ability of having them just compile to JS.
+CoffeeScript is the default as it adds a terse REPL.
+
+The aim is to allow users to load content, and the hack the content
+as they would with text on a terminal.
 
 Common 'nix commands are re-implemented,
 in a way which works better with a web development environment.
