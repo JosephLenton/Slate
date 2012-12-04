@@ -59,7 +59,7 @@
             }
         }
 
-        return slate.lib.formatter.rawHtml( str );
+        return slate.formatter.rawHtml( str );
     } );
 
     slate.command( [ 'head', 'first' ], function(arr, display) {

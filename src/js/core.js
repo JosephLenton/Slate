@@ -286,9 +286,6 @@
     slate.obj = {
     };
 
-    slate.lib = {
-    };
-
     slate.util = {
     };
 })();

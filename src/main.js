@@ -84,16 +84,16 @@
 
                 var displayDom = document.getElementsByClassName( 'slate-content' )[0];
 
-                var clear      = window.slate.lib.content.newClear( displayDom ),
-                    display    = window.slate.lib.content.newDisplay( displayDom );
+                var clear      = window.slate.content.newClear( displayDom ),
+                    display    = window.slate.content.newDisplay( displayDom );
 
-                var onDisplay  = window.slate.lib.formatter.newDisplayFormat(
+                var onDisplay  = window.slate.formatter.newDisplayFormat(
                         handlers,
                         display,
                         isDev
                 );
 
-                var executor   = window.slate.lib.executor.newExecutor(
+                var executor   = window.slate.executor.newExecutor(
                         document.getElementsByTagName('head')[0],
                         onDisplay,
                         handlers
@@ -102,7 +102,7 @@
                 var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
                     typeDom = document.getElementsByClassName( 'slate-bar-type'  )[0];
 
-                var bar = new window.slate.lib.TerminalBar(
+                var bar = new window.slate.TerminalBar(
                         barDom,
                         typeDom,
                         executor,

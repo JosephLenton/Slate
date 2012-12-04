@@ -200,7 +200,7 @@
         }
     }
 
-    window.slate.lib.formatter = {
+    window.slate.formatter = {
         getHandler: getHandler,
 
         newDisplayFormat: function(handlers, displayFun, isDev) {
