@@ -399,7 +399,53 @@
         }
     }
 
+    var environNum = 0;
+    var environments = [];
+    var defaultEnvironment = function() { /* do nothing */ };
+
+    /**
+     * Wraps the given function,
+     * so that the environment number is passed across into
+     * the function returned.
+     *
+     * This is so if the function is used across an asynchronous call,
+     * it will be copied across.
+     */
+    window.__wrap = function( f ) {
+        var envNum = environNum;
+
+        return function() {
+            if ( envNum !== 0 ) {
+                environNum = envNum;
+            }
+
+            f.apply( this, arguments );
+        }
+    }
+
     window.slate.lib.executor = {
+        getEnvironment: function() {
+            var environment = environments[ environNum ];
+
+            if ( environment === undefined ) {
+                return defaultEnrivonment;
+            } else {
+                return environment;
+            }
+        },
+
+        newEnvironment: function( onDisplay ) {
+            var env = environNum++;
+
+            environments[ env ] = onDisplay;
+
+            return env;
+        },
+
+        deleteEnvironment: function( num ) {
+            delete environments[ num ];
+        },
+
         newExecutor: function( head, onDisplay, formatters ) {
             if ( ! onDisplay ) throw new Error( 'falsy onDisplay function given' );
 
