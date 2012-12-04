@@ -31,6 +31,7 @@ body {
 .slate-result,
 .slate-content-item-refresh,
 .slate-bar-input,
+.slate-bar-input-mark,
 .slate-bar-type {
     font-family: "DejaVu Sans Mono", consolas;
     font-family: "Segoe UI","Segoe WP","Helvetica Neue",'RobotoRegular',sans-serif;
@@ -48,8 +49,7 @@ body {
 
     display: block;
 
-    background: #201e19;
-    background: repeat url(../images/background.png);
+    background: #000;
 
     -moz-box-sizing: border-box;
     box-sizing: border-box;
@@ -152,13 +152,14 @@ body {
     background: #0e1b23;
     background: -moz-linear-gradient(top,  #0e1b23 0%, #081214 9%, #070d0f 58%, #050b0c 100%);
     background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#0e1b23), color-stop(9%,#081214), color-stop(58%,#070d0f), color-stop(100%,#050b0c));
-    background: -webkit-linear-gradient(top,  #0e1b23 0%,#081214 9%,#070d0f 58%,#050b0c 100%);
+    background: -webkit-linear-gradient(top,  #131f26 0%,#0b1618 9%,#0a1214 58%,#090f1a 100%);
     background: -o-linear-gradient(top,  #0e1b23 0%,#081214 9%,#070d0f 58%,#050b0c 100%);
     background: -ms-linear-gradient(top,  #0e1b23 0%,#081214 9%,#070d0f 58%,#050b0c 100%);
     background: linear-gradient(to bottom,  #0e1b23 0%,#081214 9%,#070d0f 58%,#050b0c 100%);
 }
     .slate-bar-type,
-    .slate-bar-input {
+    .slate-bar-input,
+    .slate-bar-input-mark {
         border: none;
 
         position: absolute;
@@ -171,20 +172,37 @@ body {
 
         display: inline-block;
     }
-    .slate-bar-input {
+    .slate-bar-input,
+    .slate-bar-input-mark {
         margin-top: 7px;
+        z-index: 1;
 
+        color: #666;
+    }
+    .slate-bar-input {
         width: 100%;
 
-        z-index: 1;
-        padding-left : 120px;
+        padding-left: 121px;
         padding-right: 6px;
 
         overflow-x: none;
         overflow-y: auto;
     }
+    .slate-bar-input:focus + .slate-bar-input-mark,
+    .slate-bar-input:focus {
+        color: #ddd;
+    }
+    .slate-bar-input-mark {
+        position: absolute;
+        left: 95px;
+        top: 0;
+        bottom: 0;
+    }
+    .slate-bar-input-mark:before {
+        content: "\25B6";
+    }
     .slate-bar-type {
-        width: 95px;
+        width: 70px;
         text-align: right;
 
         line-height: 35px;
@@ -223,10 +241,10 @@ body {
         background: linear-gradient(to bottom,  #101a30 0%,#0f192b 11%,#04122b 95%,#02101c 100%);
     }
     .slate-bar-type.slate-coffee:before {
-        content: 'coffee >>';
+        content: 'coffee';
     }
     .slate-bar-type.slate-js:before {
-        content: 'js >>';
+        content: 'js';
     }
 
 .slate-center {
