@@ -199,12 +199,16 @@
         iframe.setAttribute( 'src', src );
 
         iframe.onload = function() {
-            var htmlNode = ( iframe.contentDocument || iframe.contentWindow.document ).
-                    body.parentNode;
+            try {
+                var htmlNode = ( iframe.contentDocument || iframe.contentWindow.document ).
+                        body.parentNode;
 
-            iframe.parentNode.removeChild( iframe );
+                iframe.parentNode.removeChild( iframe );
 
-            callback( htmlNode );
+                callback( htmlNode );
+            } catch ( err ) {
+                error( err );
+            }
         }
 
         iframe.onerror = function() {
@@ -255,10 +259,10 @@
         this.fileDirs( dir, callback, false, true );
     }
 
-    var filesRecursiveInner = function( fs, dir, callback, whenDone ) {
+    var filesRecursiveInner = function( fs, dir, callback ) {
         fs.list( dir, function(f) {
             if ( f.isDirectory ) {
-                filesRecursiveInner( fs, f.path, callback, whenDone );
+                filesRecursiveInner( fs, f.path, callback );
             } else {
                 callback( f );
             }

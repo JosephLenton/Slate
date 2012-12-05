@@ -84,7 +84,7 @@
         if ( dom ) {
             dom.addEventListener( 'keypress', function(ex) {
                 if ( ex.keyCode === ENTER_KEY ) {
-                    var cmd = self.dom.textContent;
+                    var cmd = self.dom.value;
 
                     execute( type, cmd, function() {
                         undoStack.add( cmd );
@@ -137,7 +137,7 @@
     }
 
     TerminalBar.prototype.setText = function(cmd) {
-        this.dom.innerText = cmd;
+        this.dom.value = cmd;
     }
 
     TerminalBar.prototype.focus = function() {

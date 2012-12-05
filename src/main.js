@@ -52,9 +52,9 @@
             // load in the extension files
             fs.filesRecursive( root,
                     function(file) {
-                        file.extension('js', function(file) {
-                            count++;
+                        count++;
 
+                        file.isFile && file.extension('js', function(file) {
                             var script = document.createElement( 'script' );
 
                             script.className = EXTENSION_CLASS_NAME;
@@ -65,7 +65,8 @@
 
                             document.head.appendChild( script );
                         } );
-                    }
+                    },
+                    whenLoaded
             )
         },
 
