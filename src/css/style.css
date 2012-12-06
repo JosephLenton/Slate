@@ -185,7 +185,7 @@ body {
     .slate-bar-input {
         width: 100%;
 
-        padding-left: 121px;
+        padding-left: 131px;
         padding-right: 6px;
 
         overflow-x: none;
@@ -199,7 +199,7 @@ body {
     }
     .slate-bar-input-mark {
         position: absolute;
-        left: 95px;
+        left: 105px;
         top: 0;
         bottom: 0;
     }
@@ -207,7 +207,7 @@ body {
         content: "\25B6";
     }
     .slate-bar-type {
-        width: 70px;
+        width: 80px;
         text-align: right;
 
         line-height: 35px;
@@ -227,7 +227,7 @@ body {
            -moz-transition: background 100ms linear 0s;
                 transition: background 100ms linear 0s;
     }
-    .slate-bar-type.slate-coffee {
+    .slate-bar-type.slate-lang-coffee {
         background: #4c0f1b;
         background: -moz-linear-gradient(top,  #4c0f1b 0%, #420d16 6%, #3d121a 44%, #33141a 100%);
         background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#4c0f1b), color-stop(6%,#420d16), color-stop(44%,#3d121a), color-stop(100%,#33141a));
@@ -236,7 +236,16 @@ body {
         background: -ms-linear-gradient(top,  #4c0f1b 0%,#420d16 6%,#3d121a 44%,#33141a 100%);
         background: linear-gradient(to bottom,  #4c0f1b 0%,#420d16 6%,#3d121a 44%,#33141a 100%);
     }
-    .slate-bar-type.slate-js {
+    .slate-bar-type.slate-lang-livescript {
+        background: #7f3c02;
+        background: -moz-linear-gradient(top,  #7f3c02 0%, #753b02 3%, #633201 23%, #5b2a00 100%);
+        background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#7f3c02), color-stop(3%,#753b02), color-stop(23%,#633201), color-stop(100%,#5b2a00));
+        background: -webkit-linear-gradient(top,  #7f3c02 0%,#753b02 3%,#633201 23%,#5b2a00 100%);
+        background: -o-linear-gradient(top,  #7f3c02 0%,#753b02 3%,#633201 23%,#5b2a00 100%);
+        background: -ms-linear-gradient(top,  #7f3c02 0%,#753b02 3%,#633201 23%,#5b2a00 100%);
+        background: linear-gradient(to bottom,  #7f3c02 0%,#753b02 3%,#633201 23%,#5b2a00 100%);
+    }
+    .slate-bar-type.slate-lang-js {
         background: #101a30;
         background: -moz-linear-gradient(top,  #101a30 0%, #0f192b 11%, #04122b 95%, #02101c 100%);
         background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#101a30), color-stop(11%,#0f192b), color-stop(95%,#04122b), color-stop(100%,#02101c));
@@ -244,12 +253,6 @@ body {
         background: -o-linear-gradient(top,  #101a30 0%,#0f192b 11%,#04122b 95%,#02101c 100%);
         background: -ms-linear-gradient(top,  #101a30 0%,#0f192b 11%,#04122b 95%,#02101c 100%);
         background: linear-gradient(to bottom,  #101a30 0%,#0f192b 11%,#04122b 95%,#02101c 100%);
-    }
-    .slate-bar-type.slate-coffee:before {
-        content: 'coffee';
-    }
-    .slate-bar-type.slate-js:before {
-        content: 'js';
     }
 
 .slate-center {

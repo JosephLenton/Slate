@@ -46,38 +46,50 @@
     /**
      * The bar at the bottom of the terminal.
      */
-    function TerminalBar( dom, buttonDom, execute, defaultType ) {
+    function TerminalBar( dom, buttonDom, execute, languages, defaultType ) {
         if ( ! dom     ) throw new Error( 'undefined dom object given'     );
         if ( ! execute ) throw new Error( 'undefined execute object given' );
+
+        var langs = [],
+            langI = 0;
+        for ( var k in languages ) {
+            if ( languages.hasOwnProperty(k) ) {
+                langs.push(k);
+
+                if ( k === defaultType ) {
+                    langI = langs.length-1;
+                }
+            }
+        }
 
         this.dom = dom;
 
         var self = this;
 
-        var type;
-        var setType = function( t ) {
-            type = t;
+        var setType = function( i ) {
+            if ( i >= 0 && i < langs.length ) {
+                var old = langs[ langI ];
+                var lang = langs[i];
 
-            if ( type === 'js' ) {
-                buttonDom.className = buttonDom.className.replace( /( ?)slate-coffee/, '' ) + ' slate-js';
-            } else {
-                buttonDom.className = buttonDom.className.replace( /( ?)slate-js/, '' ) + ' slate-coffee';
+                buttonDom.className = buttonDom.className.
+                        replace( new RegExp('( ?)slate-lang-' + old), '' ) +
+                        ' slate-lang-' + lang;
+
+                buttonDom.innerText = lang;
+
+                langI = i;
             }
         }
 
         var switchType = function(ex) {
-            if ( type === 'coffee' ) {
-                setType( 'js'     );
-            } else {
-                setType( 'coffee' );
-            }           
+            setType( (langI+1) % langs.length );
 
             ex.preventDefault();
         };
 
         buttonDom.addEventListener( 'click', switchType );
 
-        setType( defaultType );
+        setType( langI );
 
         var undoStack = new UndoStack();
 
@@ -86,7 +98,7 @@
                 if ( ex.keyCode === ENTER_KEY ) {
                     var cmd = self.dom.value;
 
-                    execute( type, cmd, function() {
+                    execute( langs[langI], cmd, function() {
                         undoStack.add( cmd );
 
                         self.setText( '' );

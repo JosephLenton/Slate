@@ -125,6 +125,7 @@
 
         var executor   = window.slate.executor.newExecutor(
                 document.getElementsByTagName('head')[0],
+                slate.data.languages,
                 onDisplay,
                 handlers
         );
@@ -136,6 +137,7 @@
                 barDom,
                 typeDom,
                 executor,
+                slate.data.languages,
                 window.slate.getLanguage()
         );
         bar.focus();

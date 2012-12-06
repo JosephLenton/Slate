@@ -11,6 +11,7 @@
      */
     slate.data = {
             loaders: {},
+            languages: {},
             formatHandlers: []
     };
 
@@ -50,6 +51,38 @@
 
             style.parentNode.removeChild( style );
         }
+    }
+
+    /**
+     * Registers a language with the system. This takes the
+     * name of the language, and a callback used for compiling
+     * code.
+     *
+     * The callback must take the form:
+     *
+     *      function( src, next )
+     *
+     * Where src is the source code given, and 'next' is a
+     * callback to call into. For example:
+     *
+     *      function( src, next ) {
+     *          var js = CoffeeScript.compile( src );
+     *          next( js );
+     *      }
+     *
+     * You may pass Error objects into 'next' if an error
+     * occurres, or just throw them.
+     *
+     * @param The name of the language to register.
+     * @param callback A compiler function for the language.
+     */
+    slate.language = function( name, callback ) {
+        assertString( name, "name must be a string" );
+        assertFun( callback, "callbac must be a function" );
+
+        slate.data.languages[ name ] = callback;
+
+        return slate;
     }
 
     var generateStyles = function( name, props ) {
@@ -146,9 +179,9 @@
         return slate;
     }
 
-    var language = 'coffee';
+    var language = 'js';
     slate.setLanguage = function( lang ) {
-        assert( lang === 'js' || lang === 'coffee', "unsupported language given, must be 'js' or 'coffee'" );
+        assert( slate.data.languages.hasOwnProperty(lang), "Language not found 'lang'" );
 
         language = lang;
 

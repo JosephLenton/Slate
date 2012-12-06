@@ -265,6 +265,20 @@
     }
 
     /**
+     * This adds on to the standard 'compileJS', with some alterations
+     * specific for when JS is run on the command line.
+     *
+     * @param src The source code to compile.
+     * @param callback A callback which will take the result, when it has been compiled, or failed to compile.
+     */
+    var compileInlineJS = function(src, callback) {
+        src = src.replace( /^\(function\(\)\ {([ \t\n]*)/, '' ).
+                replace( /((;)?[ \t\n]*)\}\)\.call\(this\);[ \n\t]*$/g, '' );
+
+        compileJS( src, callback );
+    }
+
+    /**
      * Searches through the given JS to ensure that comments
      * and strings are valid. If they are not, errors are thrown.
      */
@@ -543,44 +557,36 @@
         callback( null, src );
     }
 
-    /**
-     * Compiles the given coffeescript code, to javascript.
-     * The code is also transformed so it is run in the global scope.
-     * 
-     * @param cmd CoffeeScript code to compile.
-     * @return js The JavaScript version of the code given.
-     * @throws Error A parse error if the code does not compile into CoffeeScript.
-     */
-    var coffeeToJs = function( cmd, callback ) {
-        try {
-            var js = CoffeeScript.compile( cmd );
+    var compileCode = function( languages, type, cmd, callback ) {
+        var lang = languages.hasOwnProperty(type) ?
+                languages[type] :
+                null ;
 
-            js = js.replace( /^\(function\(\)\ {([ \t\n]*)/, '' ).
-                    replace( /((;)?[ \t\n]*)\}\)\.call\(this\);[ \n\t]*$/g, '' );
+        if ( lang ) {
+            try {
+                assertFun( lang, "language callback for '" + type + "' is not a function" );
 
-            callback( null, js );
-        } catch( ex ) {
-            callback( ex, '' );
-        }
-    }
-
-    var compileCode = function( type, cmd, callback ) {
-        if ( type === 'coffee' ) {
-            coffeeToJs( cmd, function( ex, src ) {
-                if ( ex ) {
-                    callback( ex );
-                } else {
-                    compileJS( src, callback );
-                }
-            } );
+                lang( cmd, function(js) {
+                    if ( js instanceof Error ) {
+                        callback( js );
+                    } else if ( js ) {
+                        compileInlineJS( js, callback );
+                    } else {
+                        callback( new Error("Failed to compile in " + type) );
+                    }
+                } );
+            } catch ( ex ) {
+                console.log( ex.message );
+                callback( ex );
+            }
         } else {
-            compileJS( cmd, callback );
+            callback( new Error("language not found '" + type + "'") );
         }
     }
 
-    var executeInner = function( head, type, cmd, post, onDisplay ) {
+    var executeInner = function( head, languages, type, cmd, post, onDisplay ) {
         if ( cmd && cmd.trim() !== '' ) {
-            compileCode( type, cmd, function(ex, js) {
+            compileCode( languages, type, cmd, function(ex, js) {
                 if ( ex ) {
                     onDisplay( cmd, ex );
                 } else {
@@ -649,11 +655,11 @@
             delete environments[ num ];
         },
 
-        newExecutor: function( head, onDisplay, formatters ) {
+        newExecutor: function( head, languages, onDisplay, formatters ) {
             if ( ! onDisplay ) throw new Error( 'falsy onDisplay function given' );
 
             return function( type, cmd, post ) {
-                executeInner( head, type, cmd, post, function(cmd, r) {
+                executeInner( head, languages, type, cmd, post, function(cmd, r) {
                     if ( r ) {
                         var handler = slate.formatter.getHandler( formatters, r );
 
@@ -663,7 +669,7 @@
                     }
 
                     onDisplay( cmd, r, function(cmd, onDisplay) {
-                        executeInner( head, type, cmd, undefined, onDisplay );
+                        executeInner( head, languages, type, cmd, undefined, onDisplay );
                     })
                 } )
             }
