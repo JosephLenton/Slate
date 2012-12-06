@@ -190,6 +190,8 @@ body {
 
         overflow-x: none;
         overflow-y: auto;
+
+        outline: none;
     }
     .slate-bar-input:focus + .slate-bar-input-mark,
     .slate-bar-input:focus {
