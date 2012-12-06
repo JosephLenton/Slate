@@ -279,7 +279,21 @@
      * The other states, single-quote, multi-line comment,
      * and single-line comments, work in a similar fashion.
      */
-    var compileJS = function (src) {
+    var compileJS = function(src, callback) {
+        /*
+         * Throws an exception if the source code is incorrect,
+         * so translate it into a regular SyntaxError.
+         */
+        try {
+            esprima.parse( src );
+
+            compileJSInner( src, callback );
+        } catch ( err ) {
+            callback( new SyntaxError(err.message, '', err.lineNumber) );
+        }
+    }
+
+    var compileJSInner = function( src, callback ) {
         var trimSrc = src.trim();
 
         // if the cmd is a global function, just call it
@@ -526,7 +540,7 @@
             }
         }
 
-        return src;
+        callback( null, src );
     }
 
     /**
@@ -537,48 +551,46 @@
      * @return js The JavaScript version of the code given.
      * @throws Error A parse error if the code does not compile into CoffeeScript.
      */
-    var coffeeToJs = function( cmd ) {
-        var js = CoffeeScript.compile( cmd );
+    var coffeeToJs = function( cmd, callback ) {
+        try {
+            var js = CoffeeScript.compile( cmd );
 
-        js = js.replace( /^\(function\(\)\ {([ \t\n]*)/, '' ).
-                replace( /((;)?[ \t\n]*)\}\)\.call\(this\);[ \n\t]*$/g, '' );
+            js = js.replace( /^\(function\(\)\ {([ \t\n]*)/, '' ).
+                    replace( /((;)?[ \t\n]*)\}\)\.call\(this\);[ \n\t]*$/g, '' );
 
-        return js;
+            callback( null, js );
+        } catch( ex ) {
+            callback( ex, '' );
+        }
     }
 
-    var compileCode = function( type, cmd ) {
+    var compileCode = function( type, cmd, callback ) {
         if ( type === 'coffee' ) {
-            cmd = coffeeToJs( cmd );
+            coffeeToJs( cmd, function( ex, src ) {
+                if ( ex ) {
+                    callback( ex );
+                } else {
+                    compileJS( src, callback );
+                }
+            } );
+        } else {
+            compileJS( cmd, callback );
         }
-
-        /*
-         * Throws an exception if the source code is incorrect,
-         * so translate it into a regular SyntaxError.
-         */
-        try {
-            esprima.parse( cmd );
-        } catch ( err ) {
-            throw new SyntaxError( err.message, '', err.lineNumber );
-        }
-
-        cmd = compileJS( cmd );
-
-        return cmd;
     }
 
     var executeInner = function( head, type, cmd, post, onDisplay ) {
         if ( cmd && cmd.trim() !== '' ) {
-            try {
-                var js = compileCode( type, cmd );
+            compileCode( type, cmd, function(ex, js) {
+                if ( ex ) {
+                    onDisplay( cmd, ex );
+                } else {
+                    injectCommand( head, js, cmd, onDisplay );
+                }
 
-                injectCommand( head, js, cmd, onDisplay );
-            } catch ( ex ) {
-                onDisplay( cmd, ex );
-            }
-
-            if ( post ) {
-                setTimeout( post, 1 );
-            }
+                if ( post ) {
+                    setTimeout( post, 1 );
+                }
+            });
         }
     }
 
