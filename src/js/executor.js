@@ -294,16 +294,35 @@
      * and single-line comments, work in a similar fashion.
      */
     var compileJS = function(src, callback) {
+        var err = validateJS( src );
+
+        if ( err ) {
+            callback( err );
+        } else {
+            compileJSInner( src, callback );
+        }
+    }
+
+    /**
+     * Validates the JS given, and returns an Error object if
+     * it is invalid.
+     *
+     * @param js The JavaScript to validate.
+     * @param fileName Optional, the name of the file that this came from.
+     */
+    var validateJS = function( js, fileName ) {
         /*
          * Throws an exception if the source code is incorrect,
          * so translate it into a regular SyntaxError.
          */
         try {
-            esprima.parse( src );
-
-            compileJSInner( src, callback );
+            esprima.parse( js );
         } catch ( err ) {
-            callback( new SyntaxError(err.message, '', err.lineNumber) );
+            var message = fileName ?
+                    fileName + ' ' + err.message :
+                    err.message ;
+
+            return new SyntaxError( message, fileName || '', err.lineNumber );
         }
     }
 
@@ -625,7 +644,8 @@
     var executor = {
         envNum: 0,
 
-        compile: compileJS,
+        compileJS   : compileJS,
+        validateJS  : validateJS,
 
         setEnvironmentNum: function(env) {
             if ( env !== 0 && environments[env] !== undefined ) {

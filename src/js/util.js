@@ -10,6 +10,27 @@
     var anchor = document.createElement( 'a' );
 
     window.slate.util = {
+        onLoadError: function( obj, onload, onerror ) {
+            // ensure we delete the handlers *before* calling them.
+            if ( onload ) {
+                obj.onload = function() {
+                    delete obj.onload;
+                    delete obj.onerror;
+
+                    onload.call( this );
+                }
+            }
+
+            if ( onerror ) {
+                obj.onerror = function() {
+                    delete obj.onload;
+                    delete obj.onerror;
+
+                    onerror.call( this );
+                }
+            }
+        },
+
         isNumber: function( n ) {
             return typeof n === 'number' || ( n instanceof Number );
         },

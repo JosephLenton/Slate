@@ -46,11 +46,11 @@
         }
     }
 
-    function get( path, callback ) {
+    var get = function( path, callback ) {
         slate.util.ajaxGet( path, handleAjaxResponse(callback) );
     }
 
-    function head( path, callback ) {
+    var head = function( path, callback ) {
         slate.util.ajaxHead( path, handleAjaxResponse(callback) );
     }
 
@@ -155,7 +155,7 @@
      *  - an url, inputted in a HTML frame
      *  - an array of any of the above
      */
-    function load( path, onDisplay, state ) {
+    var load = function( path, onDisplay, state ) {
         if ( path instanceof File ) {
             path = file.path;
         }

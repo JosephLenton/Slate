@@ -127,8 +127,8 @@
                 this.extension()
     }
 
-    File.contents = function( callback ) {
-        new FileSystem().text( callback );
+    File.prototype.contents = function( callback ) {
+        new FileSystem().text( this.path, callback );
     }
 
     File.prototype.extension = function( type, callback ) {
@@ -198,22 +198,26 @@
         iframe.style.display = 'none';
         iframe.setAttribute( 'src', src );
 
-        iframe.onload = function() {
-            try {
-                var htmlNode = ( iframe.contentDocument || iframe.contentWindow.document ).
-                        body.parentNode;
+        slate.util.onLoadError( iframe, 
+                function() {
+                    try {
+                        var htmlNode = ( iframe.contentDocument || iframe.contentWindow.document ).
+                                body.parentNode;
 
-                iframe.parentNode.removeChild( iframe );
+                        iframe.parentNode.removeChild( iframe );
 
-                callback( htmlNode );
-            } catch ( err ) {
-                error( err );
-            }
-        }
+                        callback( htmlNode );
+                    } catch ( err ) {
+                        error( err );
+                    }
+                },
 
-        iframe.onerror = function() {
-            error( new Error('path not found ' + path) );
-        }
+                function() {
+                    error( new Error('path not found ' + path) );
+
+                    iframe.parentNode.removeChild( iframe );
+                }
+        )
 
         document.body.appendChild( iframe );
     }
@@ -237,19 +241,36 @@
      * inserted by the browser, and that is included.
      */
     FileSystem.prototype.raw = function( path, callback ) {
+        assertFun( callback, "Invalid callback given" );
+
         this.request( path, callback, function(htmlNode) {
             callback( htmlNode.innerHTML );
         } );
     }
 
     /**
-     * This retusn the actual file contents, with any extra
-     * HTML stripped out.
+     * This returns the file contents, presuming it was
+     * pure text, with any extra HTML stripped out.
      */
-    FileSystem.prototype.file = function( dir, callback ) {
-        this.request( dir, callback, function(html) {
-            // todo
-        });
+    FileSystem.prototype.text = function( path, callback ) {
+        this.request( path,
+                function( err ) {
+                    if ( callback ) {
+                        callback( err );
+                    }
+                },
+                function( node ) {
+                    if ( callback ) {
+                        var pre = node.getElementsByTagName('pre')[0];
+
+                        var html = pre ?
+                                pre.innerText       :
+                                node.body.innerHTML ;
+
+                        callback( html );
+                    }
+                }
+        )
     }
 
     /**

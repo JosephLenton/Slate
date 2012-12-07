@@ -9,21 +9,12 @@
         reloadScripts();
     }
 
-    function reloadScripts() {
-        slate.main.reloadExtensions();
+    function reloadScripts( params, onDisplay ) {
+        slate.main.reloadExtensions( onDisplay );
     }
 
-    function reloadCSS() {
-        var styles = document.getElementsByTagName( 'link' );
-        var timestamp = '?v=' + Date.now();
-
-        for ( var i = 0; i < styles.length; i++ ) {
-            var style = styles[i];
-
-            if ( style.href ) {
-                style.href = style.href.replace(/\?.*$/, '') + timestamp;
-            }
-        }
+    function reloadCSS( params, onDisplay ) {
+        slate.main.reloadCSS( onDisplay );
     }
 
     function log( params, onDisplay ) {

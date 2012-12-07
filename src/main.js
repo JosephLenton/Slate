@@ -18,18 +18,13 @@
          * Note that this will load them *recursively* within the folder
          * given.
          *
-         * @param root Optional, the location of where to search for extensions.
+         * @param root the location of where to search for extensions. Null or undefined defaults to the default location.
+         * @param each Optional, a callback for each script.
          * @param whenDone Optional, a callback to call when all scripts have been loaded.
          */
-        loadExtensions: function( root, whenDone ) {
-            if ( arguments.length < 2 ) {
-                if ( typeof root !== 'string' && (!(root instanceof String)) ) {
-                    if ( root ) {
-                        whenDone = root;
-                    }
-
-                    root = DEFAULT_EXTENSION_LOCATION;
-                }
+        loadExtensions: function( root, each, whenDone ) {
+            if ( ! root ) {
+                root = DEFAULT_EXTENSION_LOCATION;
             }
 
             var fs = new slate.fs.FileSystem(),
@@ -37,16 +32,56 @@
 
             var errors = [];
             var count = 0;
-            var whenLoaded = function() {
+            var decrementCount = function( err ) {
+                if ( err ) {
+                    errors.push( err );
+                }
+
                 count--;
 
                 if ( count === 0 && whenDone ) {
                     whenDone( errors );
                 }
             }
-            var errorLoaded = function() {
-                errors.push( new Error("failed to load extension " + this.src) );
-                whenLoaded();
+
+            /*
+             * Get the file contents, check it, and then validate.
+             */
+            var whenLoaded = function(script, file) {
+                file.contents( function(js) {
+                    if ( js instanceof Error ) {
+                        if ( each ) {
+                            each( js );
+                        }
+
+                        decrementCount( js );
+                    } else {
+                        var err = slate.executor.validateJS( js, file.name );
+
+                        if ( err ) {
+                            if ( each ) {
+                                each( err );
+                            }
+
+                            decrementCount( err );
+                        } else {
+                            if ( each ) {
+                                each( file );
+                            }
+
+                            decrementCount();
+                        }
+                    }
+                } )
+            }
+            var errorLoaded = function( script, file ) {
+                var err = new Error( "failed to load extension " + script.src );
+
+                if ( each ) {
+                    each( err );
+                }
+
+                decrementCount( err );
             }
 
             // load in the extension files
@@ -60,13 +95,19 @@
                             script.className = EXTENSION_CLASS_NAME;
                             script.src = file.path + timestamp;
 
-                            script.onload  = whenLoaded;
-                            script.onerror = errorLoaded;
+                            slate.util.onLoadError( script,
+                                    function() {  whenLoaded(this, file) },
+                                    function() { errorLoaded(this, file) }
+                            );
 
                             document.head.appendChild( script );
                         } );
                     },
-                    whenLoaded
+                    function() {
+                        if ( whenDone && count === 0 ) {
+                            whenDone( error );
+                        }
+                    }
             )
         },
 
@@ -94,10 +135,23 @@
          * Unloads all extensions,
          * and then reloads them.
          */
-        reloadExtensions: function( whenDone ) {
+        reloadExtensions: function( each, whenDone ) {
             slate.main.unloadExtensions( function() {
-                slate.main.loadExtensions( whenDone );
+                slate.main.loadExtensions( null, each, whenDone );
             } );
+        },
+
+        reloadCSS: function( each ) {
+            var styles = document.getElementsByTagName( 'link' );
+            var timestamp = '?v=' + Date.now();
+
+            for ( var i = 0; i < styles.length; i++ ) {
+                var style = styles[i];
+
+                if ( style.href ) {
+                    style.href = style.href.replace(/\?.*$/, '') + timestamp;
+                }
+            }
         }
     }
 
@@ -205,7 +259,7 @@
 
     document.onreadystatechange = function () {
         if (document.readyState === "complete") {
-            slate.main.loadExtensions( initialize );
+            slate.main.loadExtensions( null, null, initialize );
         }
     }
 })();

@@ -62,7 +62,7 @@
         return slate.formatter.rawHtml( str );
     } );
 
-    slate.command( [ 'head', 'first' ], function(arr, display) {
+    slate.command( 'first', function(arr, display) {
         if ( slate.util.isArray(arr) ) {
             if ( arr.length > 0 ) {
                 var first = arr[0];
@@ -76,7 +76,7 @@
         }
     } );
 
-    slate.command( [ 'tail', 'last' ], function(arr, display) {
+    slate.command( 'last', function(arr, display) {
         if ( slate.util.isArray(arr) ) {
             if ( arr.length > 0 ) {
                 var last = arr[arr.length-1];

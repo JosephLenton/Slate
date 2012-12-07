@@ -13,29 +13,25 @@
         el.isLoaded = false;
         el.isError  = false;
 
-        dom.onload = function() {
-            el.isLoaded = true;
-            el.isError  = false;
+        slate.util.onLoadError( dom,
+                function() {
+                    el.isLoaded = true ;
+                    el.isError  = false;
 
-            delete dom.onload;
-            delete dom.onerror;
+                    if ( el.onLoad ) {
+                        el.onLoad( dom );
+                    }
+                },
 
-            if ( el.onLoad ) {
-                el.onLoad( dom );
-            }
-        }
+                function() {
+                    el.isLoaded = false;
+                    el.isError  = true ;
 
-        dom.onerror = function() {
-            el.isLoaded = false;
-            el.isError  = true;
-
-            delete dom.onload;
-            delete dom.onerror;
-
-            if ( el.onError ) {
-                el.onError( dom );
-            }
-        }
+                    if ( el.onError ) {
+                        el.onError( dom );
+                    }
+                }
+        )
     }
 
     /**
