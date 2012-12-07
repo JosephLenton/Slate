@@ -123,8 +123,7 @@
         this.isFile = true;
         this.size   = size || 0;
 
-        this.type = type ||
-                this.extension()
+        this.type   = type || this.extension()
     }
 
     File.prototype.contents = function( callback ) {
@@ -169,7 +168,7 @@
         this.isDirectory = true;
     }
 
-    Dir.prototype.children = function( callback ) {
+    Dir.prototype.list = function( callback ) {
         new FileSystem( path ).
                 list( callback );
     }
@@ -185,41 +184,176 @@
     }
 
     /**
+     * A file system core is created by providing an object
+     * with methods. The idea of the core is to provide the
+     * absolute bare minimum, which the FileSystem then wraps,
+     * and adds all of the higher level details.
+     *
+     * You can think of it like a very high level device driver.
+     *
+     * Public methods however must return 'string', 'File',
+     * 'Dir', or 'boolean' values as appropriate. It must
+     * *not* expose internal details, as the FileSystem does
+     * not understand how the core works.
+     *
+     * Those methods are checked for existance, and must exist.
+     * An exception will be thrown if they do not exist.
+     *
+     * Required methods are:
+     *
+     *  - getObj( path, err, success ) -
+     *          returns the type of item at the path given.
+     *          Types include:
+     *                error( new Error('path not found') )
+     *                success( new File ) // if it's a file
+     *                success( new Dir  ) // if it's a directory
+     *
+     *  - text( path, err, success )
+     *          returns the textual representation,
+     *          of the path given.
+     *
+     *  - list( path, err, success )
+     *          lists all items found in the directory stated.
+     *
+     * All methods should work in the following format:
+     *
+     *  function( params ..., errorCallback, successCallback )
+     *
+     * Where 'params' is 0 or more parameters, based on the
+     * method being implemented.
+     *
+     * Other methods can be supplied, and will be added to the
+     * FileSystemCore generated.
+     *
+     * @param methods An object of methods to implement.
+     * @return A FileSystemCore object.
+     */
+    var newFileSystemCore = function(methods) {
+        var requiredMethods = [ 'getObj', 'text', 'list' ];
+        var proto = {};
+
+        for ( var i = 0; i < methods.length; i++ ) {
+            var requiredMethod = requiredMethods[i];
+            var method = methods[requiredMethod];
+
+            assert( method, "required method '" + requiredMethod + "' is not supplied" );
+        }
+
+        for ( var k in methods ) {
+            if ( methods.hasOwnProperty(k) ) {
+                proto[k] = methods[k];
+            }
+        }
+
+        var Core = function() { };
+        Core.prototype = proto;
+
+        return Core;
+    }
+
+    var iFrameFileSystemCore = new (newFileSystemCore({
+            getObj: function( path, error, success ) {
+                // todo
+            },
+
+            text: function( path, error, success ) {
+                this.request( path,
+                        function( err ) {
+                            if ( error ) {
+                                error( err );
+                            }
+                        },
+                        function( node ) {
+                            if ( success ) {
+                                var pre = node.getElementsByTagName('pre')[0];
+
+                                var html = pre ?
+                                        pre.innerText       :
+                                        node.body.innerHTML ;
+
+                                success( html );
+                            }
+                        }
+                ) 
+
+            },
+
+            list: function( path, error, success ) {
+                this.request( path, error, function(html) {
+                    var files = [];
+                    var lines = html.getElementsByTagName( 'tr' );
+
+                    for ( var i = 0; i < lines.length; i++ ) {
+                        var tds = lines[i].getElementsByTagName('td');
+
+                        if ( tds.length > 0 ) {
+                            var info = tds[0].getElementsByTagName('a')[0];
+
+                            if ( info ) {
+                                if ( info.className.indexOf('file') !== -1 ) {
+                                    var size;
+
+                                    if ( tds[1] > 0 ) {
+                                        size = parseSize( tds[1].innerText );
+                                    }
+
+                                    files.push( new File(info.href, size) );
+                                } else if ( info.className.indexOf('dir') !== -1 ) {
+                                    files.push( new Dir(info.href) );
+                                }
+                            }
+                        }
+                    }
+
+                    if ( files ) {
+                        success( files );
+                    }
+                });
+            },
+
+            /* extra methods */
+
+            request: function( path, error, success ) {
+                var iframe = document.createElement( 'iframe' );
+                iframe.style.display = 'none';
+                iframe.setAttribute( 'src', path );
+
+                slate.util.onLoadError( iframe, 
+                        function() {
+                            try {
+                                var htmlNode = ( iframe.contentDocument || iframe.contentWindow.document ).
+                                        body.parentNode;
+
+                                iframe.parentNode.removeChild( iframe );
+
+                                success( htmlNode );
+                            } catch ( err ) {
+                                error( err );
+                            }
+                        },
+
+                        function() {
+                            error( new Error('path not found ' + path) );
+
+                            iframe.parentNode.removeChild( iframe );
+                        }
+                )
+
+                document.body.appendChild( iframe );
+            }
+    }))
+
+    /**
      * Represents an entire file system.
+     */
+    /*
+     * The FileSystem works in two parts, a wrapper file for common
+     * file system handling, and a core section that does the actual
+     * access.
      */
     function FileSystem( path ) {
         this.root = combinePath( root, path );
-    }
-
-    FileSystem.prototype.request = function( path, error, callback ) {
-        var src = combinePath( this.root, path );
-
-        var iframe = document.createElement( 'iframe' );
-        iframe.style.display = 'none';
-        iframe.setAttribute( 'src', src );
-
-        slate.util.onLoadError( iframe, 
-                function() {
-                    try {
-                        var htmlNode = ( iframe.contentDocument || iframe.contentWindow.document ).
-                                body.parentNode;
-
-                        iframe.parentNode.removeChild( iframe );
-
-                        callback( htmlNode );
-                    } catch ( err ) {
-                        error( err );
-                    }
-                },
-
-                function() {
-                    error( new Error('path not found ' + path) );
-
-                    iframe.parentNode.removeChild( iframe );
-                }
-        )
-
-        document.body.appendChild( iframe );
+        this.core = iFrameFileSystemCore;
     }
 
     /**
@@ -235,42 +369,12 @@
     }
 
     /**
-     * This returns the raw HTML from the iframe request.
-     *
-     * That request may include extra HTML,
-     * inserted by the browser, and that is included.
-     */
-    FileSystem.prototype.raw = function( path, callback ) {
-        assertFun( callback, "Invalid callback given" );
-
-        this.request( path, callback, function(htmlNode) {
-            callback( htmlNode.innerHTML );
-        } );
-    }
-
-    /**
      * This returns the file contents, presuming it was
      * pure text, with any extra HTML stripped out.
      */
     FileSystem.prototype.text = function( path, callback ) {
-        this.request( path,
-                function( err ) {
-                    if ( callback ) {
-                        callback( err );
-                    }
-                },
-                function( node ) {
-                    if ( callback ) {
-                        var pre = node.getElementsByTagName('pre')[0];
-
-                        var html = pre ?
-                                pre.innerText       :
-                                node.body.innerHTML ;
-
-                        callback( html );
-                    }
-                }
-        )
+        var src = combinePath( this.root, path );
+        this.core.text( src, callback, callback );
     }
 
     /**
@@ -330,6 +434,13 @@
         this.list( dir, eachFileFun, seenDirFun );
     }
 
+    FileSystem.prototype.exists = function( path, callback ) {
+        this.core.getObj( path,
+                function() { callback( false ) },
+                function() { callback( true  ) }
+        )
+    }
+
     /**
      * Returns a list of list in a directory.
      */
@@ -346,35 +457,35 @@
 
     FileSystem.prototype.fileDirs = function( dir, callback, whenDone, includeFiles, includeDirs ) {
         if ( includeFiles || includeDirs ) {
-            this.request( dir, callback, function(html) {
-                var lines = html.getElementsByTagName( 'tr' );
+            this.core.list( dir,
+                    function(err) {
+                        if ( callback ) {
+                            callback( err );
+                        }
 
-                for ( var i = 0; i < lines.length; i++ ) {
-                    var tds = lines[i].getElementsByTagName('td');
+                        if ( whenDone ) {
+                            whenDone( err );
+                        }
+                    },
 
-                    if ( tds.length > 0 ) {
-                        var info = tds[0].getElementsByTagName('a')[0];
+                    function(files) {
+                        if ( callback ) {
+                            for ( var i = 0; i < files.length; i++ ) {
+                                var file = files[i];
 
-                        if ( info ) {
-                            if ( includeFiles && info.className.indexOf('file') !== -1 ) {
-                                var size;
-
-                                if ( tds[1] > 0 ) {
-                                    size = parseSize( tds[1].innerText );
+                                if ( (file instanceof File) && includeFiles ) { 
+                                    callback( file );
+                                } else if ( (file instanceof Dir) && includeDirs ) {
+                                    callback( file );
                                 }
-
-                                callback( new File(info.href, size) );
-                            } else if ( includeDirs && info.className.indexOf('dir') !== -1 ) {
-                                callback( new Dir(info.href) );
                             }
                         }
-                    }
-                }
 
-                if ( whenDone ) {
-                    whenDone();
-                }
-            });
+                        if ( whenDone ) {
+                            whenDone( files );
+                        }
+                    }
+            )
         }
     }
 
