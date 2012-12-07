@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="pragma" content="no-cache">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+        <title>Slate</title>
+
+        <link rel="stylesheet" href="css/reset.css">
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/highlighting.css">
+
+        <!-- external libraries -->
+        <script src="js/lib/assert.js"></script>
+        <script src="js/lib/esprima.js"></script>
+
+        <!-- application libraries -->
+        <script src="js/core.js"></script>
+        <script src="js/util.js"></script>
+        <script src="js/file-system.js"></script>
+
+        <script src="js/commands.js"></script>
+        <script src="js/content.js"></script>
+        <script src="js/executor.js"></script>
+        <script src="js/formatter.js"></script>
+        <script src="js/terminal-bar.js"></script>
+
+        <!-- languages -->
+        <script src="languages/coffee-script.js"></script>
+        <script src="languages/livescript.js"></script>
+        <script src="languages/parse.js"></script>
+        <script src="languages/slate.script.js"></script>
+        <script src="languages.js"></script>
+
+        <!-- the application it's self -->
+        <script src="settings.js"></script>
+        <script src="main.js"></script>
+    </head>
+
+    <body>
+        <div class="slate-content"></div>
+
+        <div class="slate-bar">
+            <a href='#' class="slate-bar-type"></a>
+            <textarea wrap="off" class="slate-bar-input"></textarea>
+            <div class="slate-bar-input-mark"></div>
+        </div>
+    </body>
+</html>

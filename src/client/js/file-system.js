@@ -343,6 +343,25 @@
             }
     }))
 
+    var proxyFileSystemCore = new (newFileSystemCore({
+            getObj: function( path, err, success ) {
+                // todo
+            },
+
+            text: function( path, err, success ) {
+                // todo
+            },
+
+            list: function( path, err, success ) {
+                // todo
+            },
+
+            request: function( path, data, callback ) {
+                var url = '/proxy/file/' + path;
+                slate.util.ajaxPost( url, data, callback );
+            }
+    }));
+
     /**
      * Represents an entire file system.
      */
@@ -353,7 +372,7 @@
      */
     function FileSystem( path ) {
         this.root = combinePath( root, path );
-        this.core = iFrameFileSystemCore;
+        this.core = proxyFileSystemCore;
     }
 
     /**

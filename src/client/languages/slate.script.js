@@ -5,7 +5,7 @@
  *
  * This is a simple shell language, designed for slate.
  *
- * Example code:
+ * Examples
  *
  *  grep blah index.html | format
  *
