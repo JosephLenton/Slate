@@ -1,9 +1,10 @@
 "use strict";
 
 (function() {
-    var rockwall = require( './rockwall/rockwall.js' );
+    var rockwall    = require( './rockwall/rockwall.js' );
+    var proxyFile   = new (require( './proxy-file.js' ).ProxyFile);
 
-    var rockServer = new rockwall.Server();
+    var rockServer  = new rockwall.Server();
 
     rockServer.mime({
             html    : 'text/html',
@@ -20,7 +21,11 @@
     } );
 
     rockServer.route( 'proxy/file', function(url, req, res) {
-        res.writeHead( 200, {'Content-Type': 'text/html'} );
+        proxyFile.handle( request.body.type, request.body, function(output) {
+            res.writeHead( 200, {'Content-Type': 'text/html'} );
+            res.write( JSON.stringify(output) );
+            res.end();
+        } );
     } );
 
     rockServer.route( '', function(url, req, res) {
