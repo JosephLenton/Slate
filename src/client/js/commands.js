@@ -146,7 +146,7 @@
 
                     fs   : fileSystem,
 
-                    onDisplay: onDisplay,
+                    onDisplay: onDisplayFun,
                     clearDisplay: function() {
                         throw new Error("state.clear not yet implemented");
                         // todo, get the terminal context passed in,

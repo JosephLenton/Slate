@@ -638,7 +638,7 @@
         return function() {
             slate.executor.setEnvironmentNum( envNum );
 
-            f.apply( this, arguments );
+            return f.apply( this, arguments );
         }
     }
 
@@ -683,7 +683,11 @@
 
             return function( type, cmd, post ) {
                 executeInner( head, languages, type, cmd, post, function(cmd, r) {
-                    onDisplay( cmd, new slate.formatter.ignoreHandler(r), function(cmd, onDisplay) {
+                    if ( r !== undefined ) {
+                        r = new slate.formatter.ignoreHandler(r)
+                    }
+
+                    onDisplay( cmd, r, function(cmd, onDisplay) {
                         executeInner( head, languages, type, cmd, undefined, onDisplay );
                     })
                 } )

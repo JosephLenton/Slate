@@ -9,7 +9,7 @@
         reloadScripts();
     }
 
-    function reloadScripts( params, onDisplay ) {
+    function reloadExtensions( params, onDisplay ) {
         slate.main.reloadExtensions( onDisplay );
     }
 
@@ -26,7 +26,7 @@
 
     slate.command({
             reloadCSS: reloadCSS,
-            reloadScripts: reloadScripts,
+            reloadExtensions: reloadExtensions,
             reload: reload,
 
             log: log

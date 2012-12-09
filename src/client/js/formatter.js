@@ -185,6 +185,8 @@
                 html = formatResult( r );
             } else if ( r === undefined || r === window.slate.IGNORE_RESULT ) {
                 return window.slate.IGNORE_RESULT;
+            } else if ( r instanceof Error ) {
+                html = formatError( r );
             } else {
                 var handler = getHandler( handlers, r );
 

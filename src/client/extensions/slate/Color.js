@@ -22,9 +22,17 @@
 
         var cssColor;
         if ( alpha !== 1 ) {
-            cssColor = 'rgba( ' + red + ', ' + green + ', ' + blue + ', ' + alpha + ' )';
+            cssColor = 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alpha + ')';
         } else {
-            cssColor =  'rgb( ' + red + ', ' + green + ', ' + blue + ' )';
+            var strRed   = red.toString(16),
+                strGreen = green.toString(16),
+                strBlue  = blue.toString(16);
+
+            if ( strRed  .length < 2 ) strRed   = '0' + strRed  ;
+            if ( strGreen.length < 2 ) strGreen = '0' + strGreen;
+            if ( strBlue .length < 2 ) strBlue  = '0' + strBlue ;
+
+            cssColor = '#' + strRed + strGreen + strBlue ;
         }
 
         this.cssColor = cssColor;
@@ -89,7 +97,6 @@
                         var c = colorInternal( col[i], onDisplay );
 
                         colors.push( c );
-                        onDisplay( c );
                     }
 
                     return colors;
@@ -120,9 +127,9 @@
         type: Color,
 
         fun: function(obj) {
-            return '<div class="slate-embed-color" style="background: ' +
-                    obj.cssColor +
-                    ';"></div>' ;
+            return '<div class="slate-embed-color" style="background: ' + obj.cssColor + ';">' +
+                        obj.cssColor +
+                    '</div>' ;
         },
 
         format_return: false

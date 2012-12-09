@@ -89,6 +89,16 @@
             return arr;
         }
     });
+
+    slate.commandEach( 'filter', function(val, display, meta) {
+        if ( display !== meta.onDisplay ) {
+            if ( display(val) ) {
+                meta.onDisplay( val );
+            }
+        } else {
+            display( val );
+        }
+    } );
 })();
 
 /**

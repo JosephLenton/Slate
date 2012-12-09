@@ -275,10 +275,22 @@ body {
     }
 
 .slate-embed-color {
-    width: 80px;
-    height: 80px;
+    min-width: 110px;
+    height   : 110px;
+
+    line-height: 80px;
+
+    vertical-align: middle;
+    text-align: center;
+
     float: left;
     clear: none;
     display: inline-block;
     margin-top: 8px;
+
+    color: white;
+    text-shadow: 1px 1px 1px #222;
+
+    padding: 12px;
+    box-sizing: border-box;
 }
