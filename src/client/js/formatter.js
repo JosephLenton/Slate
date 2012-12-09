@@ -47,13 +47,87 @@
         return '<span class="' + klass + '">' + r + '</span>';
     }
 
+    var formatError = function( ex, isDev ) {
+        var str = '';
+
+        if ( ex.stack ) {
+            if ( ! isDev ) {
+                var stack = ex.stack.split( "\n" );
+                var endIndex = stack.length;
+
+                for ( var i = stack.length-1; i >= 0; i-- ) {
+                    endIndex = i;
+
+                    if ( stack[i].search( /http:\/\/appjs\// ) === -1 ) {
+                        break;
+                    }
+                }
+
+                str = slate.util.htmlSafe(
+                        stack.slice( 0, endIndex+1 ).join( "\n" )
+                )
+            } else {
+                str = slate.util.htmlSafe( ex.stack );
+            }
+        } else {
+            str = slate.util.htmlSafe( ex.message || ex.description );
+        }
+
+        return '<span class="slate-error">' + str + '</span>';
+    }
+
+    var formatFunction = function(f, format) {
+        var obj = null;
+        for ( var k in f ) {
+            if ( f.hasOwnProperty(k) ) {
+                if ( obj === null ) {
+                    obj = {};
+                }
+
+                obj[k] = f[k];
+            }
+        }
+
+        var name = window.slate.util.identifyFunction( f );
+        var strFun = f.toString();
+        var args = '';
+
+        if ( strFun.indexOf('function') !== -1 ) {
+            var firstParen = strFun.indexOf( '(' );
+
+            args = strFun.substring(
+                    firstParen,
+                    strFun.indexOf( ')' ) + 1
+            );
+        }
+
+        var propStr;
+        if ( obj !== null ) {
+            indent++;
+            propStr = "\n" + format( obj );
+            indent--;
+        } else {
+            propStr = '';
+        }
+
+        if ( name === '' ) {
+            name = 'function';
+        }
+
+        return name + args + propStr;
+    }
+
     var newFormatResult = function( handlers, isDev ) {
         var formatResult = function( r ) {
+            var ignoreHandler = false;
+            if ( r instanceof IgnoreHandler ) {
+                r = r.getObject();
+                ignoreHandler = true;
+            }
+
             // test for internal types
             if ( r instanceof RawHtml ) {
                 return r.getHtml();
-            } else if ( r instanceof IgnoreHandler ) {
-                return r.getObject();
             } else if ( r === window.slate.IGNORE_RESULT ) {
                 return '';
 
@@ -68,12 +142,18 @@
                 return span( 'slate-string', '"' + window.slate.util.htmlSafe(r) + '"' )
             } else if ( typeof r === 'number'  || (r instanceof Number ) ) {
                 return span( 'slate-number', r )
-            } else if ( typeof r === 'object' ) {
+            } else if ( r instanceof Error ) {
+                return formatError( r, isDev );
+            } else if ( slate.util.isFunction(r) ) {
+                return formatFunction( r, isDev );
+            } else if ( !ignoreHandler && typeof r === 'object' ) {
                 var handler = getHandler( handlers, r );
 
                 if ( handler ) {
                     return handler.fun( r, formatResult, isDev );
                 }
+
+            // default handlers
             }
 
             /* Default Case */
@@ -89,8 +169,8 @@
             }
 
             var str = slate.util.identify( r );
-            if ( name !== null ) {
-                return name + ', ' + str;
+            if ( name !== null && name !== slate.executor.RESULT_VAR ) {
+                return name + ':' + str;
             } else {
                 return str;
             }
@@ -102,7 +182,7 @@
             if ( r instanceof RawHtml ) {
                 html = r.getHtml();
             } else if ( r instanceof IgnoreHandler ) {
-                return r.getObject();
+                html = formatResult( r );
             } else if ( r === undefined || r === window.slate.IGNORE_RESULT ) {
                 return window.slate.IGNORE_RESULT;
             } else {

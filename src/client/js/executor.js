@@ -5,7 +5,8 @@
  * depending on what the result is.
  */
 (function(window) {
-    var SLATE_SCRIPT_ID = 'slate-script-js';
+    var SLATE_SCRIPT_ID = 'slate-script-js',
+        RESULT_VAR = '__slate_result';
 
     /**
      * ASCII codes for characters.
@@ -165,7 +166,7 @@
         cmd = window.escape( cmd );
 
         var dumpResult = true,
-            grabVar = '__slate_result';
+            grabVar = RESULT_VAR;
 
         if ( js.search( /^[ \n\t]*;/ ) === -1 ) {
             var matches = js.match( /^[ \n\t]*[a-zA-Z_$][a-zA-Z0-9_$]*/ );
@@ -190,13 +191,13 @@
                     dumpResult = KEYWORDS[ match ];
 
                     if ( dumpResult ) {
-                        js = '    var __slate_result = ' + js + "\n"
+                        js = '    var ' + RESULT_VAR + ' = ' + js + "\n"
                     }
                 } else {
-                    js = '    var __slate_result = ' + js + "\n"
+                    js = '    var ' + RESULT_VAR + ' = ' + js + "\n"
                 }
             } else {
-                js = '    var __slate_result = ' + js + "\n"
+                js = '    var ' + RESULT_VAR + ' = ' + js + "\n"
             }
         } else {
             dumpResult = false;
@@ -211,7 +212,7 @@
         }
 
         return [
-                "var __slate_result = undefined",
+                'var ' + RESULT_VAR + ' = undefined',
                 "try {",
                     js,
                 '} catch ( ex ) {',
@@ -222,7 +223,7 @@
                 '',
                 'var script = document.getElementById("' + scriptId + '");',
                 'if ( script ) { script.parentNode.removeChild( script ); }',
-                '__slate_result = undefined;'
+                RESULT_VAR + ' = undefined;'
         ].join("\n")
     }
 
@@ -642,7 +643,9 @@
     }
 
     var executor = {
-        envNum: 0,
+        RESULT_VAR  : RESULT_VAR,
+
+        envNum      : 0,
 
         compileJS   : compileJS,
         validateJS  : validateJS,
@@ -680,15 +683,7 @@
 
             return function( type, cmd, post ) {
                 executeInner( head, languages, type, cmd, post, function(cmd, r) {
-                    if ( r ) {
-                        var handler = slate.formatter.getHandler( formatters, r );
-
-                        if ( handler && handler.format_returns === false ) {
-                            r = new slate.formatter.ignoreHandler( r );
-                        }
-                    }
-
-                    onDisplay( cmd, r, function(cmd, onDisplay) {
+                    onDisplay( cmd, new slate.formatter.ignoreHandler(r), function(cmd, onDisplay) {
                         executeInner( head, languages, type, cmd, undefined, onDisplay );
                     })
                 } )

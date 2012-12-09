@@ -9,9 +9,10 @@
  *
  *  grep blah index.html | format
  *
- *  grep { ls *.txt | map { @ ~= /^\d+/ } | find { @ > 10 } } #{ @fileName }.txt
+ *  grep { ls *.txt | map { @ ~= /^\d+/ } | filter { @.length } } #{ @fileName }.txt
  */
 (function() {
+    var ast = null;
     var statements = null;
 
     /**
@@ -106,13 +107,45 @@
                 RIGHT_BRACE = 125,
                 TILDA = 126;
 
+            ast = {};
+            ast.String = function() {
+                // todo
+            }
+
+            ast.Block = function() {
+                // todo
+            }
+
             var terminals = {
+                endOfLine: "\n",
+                semiColon: ";",
+
                 command: parse.terminal.IDENTIFIER,
 
                 op: {
-                        dot         : '.',
-                        comma       : ',',
+                        assignment  : '=',
+
+                        plus        : '+',
+                        subtract    : '-',
+
+                        booleanAnd  : '&&',
+                        booleanOr   : '||',
+
                         pipe        : '|',
+
+                        lessThanEqual    : '<=',
+                        greaterThanEqual : '>=',
+
+                        lessThan    : '<',
+                        greaterThan : '>',
+
+                        equal       : '==',
+                        notEqual    : '!=',
+                        
+                        dot         : '.',
+
+                        leftBrace   : '(',
+                        rightBrace  : ')',
 
                         leftParen   : '(',
                         rightParen  : ')',
@@ -157,8 +190,8 @@
                             while (
                                     i < len && ( (
                                             code !== BAR        &&
-                                            code !== COMMA      &&
                                             code !== SPACE      &&
+                                            code !== SEMI_COLON &&
                                             code !== SLASH_N
                                     ) || isEscaping )
                             ) {
@@ -176,7 +209,138 @@
                 }
             }
 
-            statements = parse.rule();
+            statements = parse.repeatingSeperator(
+                    statement,
+                    parse.either( terminals.endOfLine, terminals.semiColon )
+            )
+
+            var expr = parse.rule();
+
+            var exprParams = parse.
+                    repeating( expr );
+
+            /**
+             * Examples:
+             *
+             *      foo blah foobar
+             *      grep blah index.html
+             *      color 233 200 199
+             *
+             *      @page.src "script.js"
+             *      @server.get http://localhost/proxy/file
+             */
+            var command = parse.
+                    either(
+                            terminal.identifier,
+                            expr
+                    ).
+                    optional( exprParams ).
+                    onMatch( function(id, params) {
+                        if ( id.terminal === terminal.identifier ) {
+                            return new ast.Command( id, params );
+                        } else {
+                            return new ast.CommandCall( id, params );
+                        }
+                    } );
+
+            var block = parse.
+                    a( terminal.ops.leftBrace ).
+                    optional( statements ).
+                    then( terminal.ops.rightBrace ).
+                    onMatch( function(left, stmts, right) {
+                        return new ast.Block( left, stmts );
+                    } );
+
+            var exprExtension = parse.
+                    either(
+                            terminals.ops.assignment,
+
+                            terminals.ops.pipe,
+
+                            terminals.ops.plus,
+                            terminals.ops.subtract,
+
+                            terminals.ops.booleanAnd,
+                            terminals.ops.booleanOr,
+
+                            terminals.ops.equal,
+                            terminals.ops.notEqual,
+
+                            terminals.ops.greaterThan,
+                            terminals.ops.lessThan,
+                            terminals.ops.greaterThanEqual,
+                            terminals.ops.lessThanEqual,
+
+                            terminals.ops.dot
+                    ).
+                    then( expr )
+                    onMatch( function(expr, op) {
+                        var constructor = null;
+
+                        if ( op.terminal === terminals.ops.assignment ) {
+                            constructor = ast.Assignment;
+
+                        if ( op.terminal === terminals.ops.pipe ) {
+                            constructor = ast.Pipe;
+
+                        } else if ( op.terminal === terminals.ops.plus ) {
+                            constructor = ast.Plus;
+                        } else if ( op.terminal === terminals.ops.subtract ) {
+                            constructor = ast.Subtract;
+
+                        } else if ( op.terminal === terminals.ops.booleanAnd ) {
+                            constructor = ast.BooleanAnd;
+                        } else if ( op.terminal === terminals.ops.booleanOr ) {
+                            constructor = ast.BooleanOr;
+
+                        } else if ( op.terminal === terminals.ops.equal ) {
+                            constructor = ast.Equal;
+                        } else if ( op.terminal === terminals.ops.notEqual ) {
+                            constructor = ast.NotEqual;
+
+                        } else if ( op.terminal === terminals.ops.greaterThan ) {
+                            constructor = ast.GreaterThan;
+                        } else if ( op.terminal === terminals.ops.lessThan ) {
+                            constructor = ast.LessThan;
+                        } else if ( op.terminal === terminals.ops.greaterThanEqual ) {
+                            constructor = ast.GreaterThanEqual;
+                        } else if ( op.terminal === terminals.ops.lessThanEqual ) {
+                            constructor = ast.LessThanEqual;
+
+                        } else if ( op.terminal === terminals.ops.dot ) {
+                            constructor = ast.MethodCall;
+                        }
+
+                        return {
+                                constructor : constructor,
+                                op          : op,
+                                right       : expr
+                        }
+                    } );
+
+            expr = expr.
+                    either(
+                            parse.
+                                    a( terminal.identifier ).
+                                    onMatch( function(id) {
+                                        return new ast.String(id)
+                                    } ),
+                            terminal.literals
+                    ).
+                    optional( exprExtension ).
+                    onMatch( function(left, op) {
+                        if ( op ) {
+                            return new op.constructor( op.op, left, op.right );
+                        } else {
+                            return left;
+                        }
+                    } );
+
+            var statement = parse.
+                    either(
+                            command,
+                            expr
+                    )
         }
 
         return statements;
