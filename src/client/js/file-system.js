@@ -4,23 +4,10 @@
 (function(slate) {
     var div = null;
 
-    var root = (function() {
-        var a = document.createElement( 'a' );
-        a.href = '.';
-        var root = a.href;
-        
-        if (
-                root.charAt(root.length-1) !== '/' &&
-                root.charAt(root.length-1) !== '\\'
-        ) {
-            root += '/';
-        }
-
-        return root;
-    })();
-
     var combinePath = function( root, path ) {
         if ( path ) {
+            path.replace( /\\/g, '/' );
+
             /*
              * Account for 'http://' type of paths.
              *
@@ -43,7 +30,7 @@
                     path.charAt(0) === '\\' ||
                     path.search( /^[a-zA-Z]:\// ) !== -1
             ) {
-                return 'file://' + path;
+                return path;
             } else {
                 return root + path;
             }
@@ -83,7 +70,8 @@
      * A generic handler for both a File, and a Dir object.
      */
     function FileDir( path, name, isDir ) {
-        this.path = path;
+        // ensure all slashes are the same
+        this.path = path.replace( /\\/g, '/');
         this.name = unescape(
                 path.
                         replace( /\/+$/, '' ).              // remove any ending slashes
@@ -344,21 +332,57 @@
     }))
 
     var proxyFileSystemCore = new (newFileSystemCore({
-            getObj: function( path, err, success ) {
-                // todo
+            getObj: function( path, onError, onSuccess ) {
+                this.request( 'query', path, onError, onSuccess );
             },
 
-            text: function( path, err, success ) {
-                // todo
+            text: function( path, onError, onSuccess ) {
+                this.request( 'content', path, onError, function(text) {
+                    onSuccess( atob(text) )
+                });
             },
 
-            list: function( path, err, success ) {
-                // todo
+            list: function( path, onError, onSuccess ) {
+                this.request( 'list', path, onError, function(files) {
+                    for ( var i = 0; i < files.length; i++ ) {
+                        var data = files[i];
+                        var filePath = path + '/' + data.name;
+
+                        if ( data.isDirectory ) {
+                            files[i] = new Dir( filePath );
+                        } else {
+                            files[i] = new File( filePath, data.size );
+                        }
+                    }
+
+                    onSuccess( files );
+                });
             },
 
-            request: function( path, data, callback ) {
-                var url = '/proxy/file/' + path;
-                slate.util.ajaxPost( url, data, callback );
+            request: function( type, file, onError, onSuccess ) {
+                slate.util.ajaxPost( '/proxy/file/',
+                        {
+                            type: type,
+                            file: file
+                        },
+                        function(err, r) {
+                            if ( err ) {
+                                onError( err );
+                            } else {
+                                try {
+                                    var obj = JSON.parse( r.responseText );
+
+                                    if ( obj.success ) {
+                                        onSuccess( obj.content );
+                                    } else {
+                                        onError( new Error(obj.content) );
+                                    }
+                                } catch ( err ) {
+                                    onError( err );
+                                }
+                            }
+                        }
+                );
             }
     }));
 
@@ -371,8 +395,27 @@
      * access.
      */
     function FileSystem( path ) {
-        this.root = combinePath( root, path );
+        this.root = combinePath( FileSystem.root, path );
         this.core = proxyFileSystemCore;
+    }
+
+    FileSystem.root = (function() {
+        var a = document.createElement( 'a' );
+        a.href = '.';
+        var root = a.href;
+        
+        if (
+                root.charAt(root.length-1) !== '/' &&
+                root.charAt(root.length-1) !== '\\'
+        ) {
+            root += '/';
+        }
+
+        return root;
+    })();
+
+    FileSystem.setCWD = function( root ) {
+        FileSystem.root = root.replace( /\\/g, '/' );
     }
 
     /**

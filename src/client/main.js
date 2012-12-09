@@ -1,10 +1,11 @@
 "use strict";
 
 (function() {
-    var DEFAULT_EXTENSION_LOCATION  = 'extensions',
-        EXTENSION_CLASS_NAME        = 'slate-js';
-
     var slate = window.slate = window.slate || {};
+    slate.constants = slate.constants || {};
+
+    var EXTENSION_CLASS_NAME        = 'slate-js';
+
     slate.main = {
         /**
          * Searches for all JavaScript files in the root given,
@@ -24,7 +25,7 @@
          */
         loadExtensions: function( root, each, whenDone ) {
             if ( ! root ) {
-                root = DEFAULT_EXTENSION_LOCATION;
+                root = (slate.constants.clientRoot || '.') + '/extensions';
             }
 
             var fs = new slate.fs.FileSystem(),
@@ -47,7 +48,7 @@
             /*
              * Get the file contents, check it, and then validate.
              */
-            var whenLoaded = function(script, file) {
+            var loadScript = function(file) {
                 file.contents( function(js) {
                     if ( js instanceof Error ) {
                         if ( each ) {
@@ -65,17 +66,31 @@
 
                             decrementCount( err );
                         } else {
-                            if ( each ) {
-                                each( file );
-                            }
+                            var script = document.createElement('script');
 
-                            decrementCount();
+                            script.className = EXTENSION_CLASS_NAME;
+                            script.innerHTML = js;
+
+                            document.head.appendChild( script );
+
+                            /*
+                             * onload is not firing, so we just have to
+                             * hope it's run straight away, and use a
+                             * setTimeout.
+                             */
+                            setTimeout(function() {
+                                if ( each ) {
+                                    each(file);
+                                }
+
+                                decrementCount();
+                            }, 1 );
                         }
                     }
                 } )
             }
-            var errorLoaded = function( script, file ) {
-                var err = new Error( "failed to load extension " + script.src );
+            var errorLoaded = function( url, file ) {
+                var err = new Error( "failed to load extension " + url );
 
                 if ( each ) {
                     each( err );
@@ -89,23 +104,11 @@
                     function(file) {
                         count++;
 
-                        file.isFile && file.extension('js', function(file) {
-                            var script = document.createElement( 'script' );
-
-                            script.className = EXTENSION_CLASS_NAME;
-                            script.src = file.path + timestamp;
-
-                            slate.util.onLoadError( script,
-                                    function() {  whenLoaded(this, file) },
-                                    function() { errorLoaded(this, file) }
-                            );
-
-                            document.head.appendChild( script );
-                        } );
+                        file.isFile && file.extension( 'js', loadScript );
                     },
                     function() {
                         if ( whenDone && count === 0 ) {
-                            whenDone( error );
+                            whenDone( errors );
                         }
                     }
             )
@@ -156,6 +159,10 @@
     }
 
     var initialize = function( errors ) {
+        if ( slate.constants.cwd ) {
+            slate.fs.FileSystem.setCWD( slate.constants.cwd );
+        }
+
         var isDev      = window.slate.isDevelopment();
 
         var onKeyDowns = [];

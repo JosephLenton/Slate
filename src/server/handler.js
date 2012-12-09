@@ -36,12 +36,12 @@ exports.Handler = (function() {
     }
 
     Handler.prototype.handle = function( type ) {
-        var args = arguments.length-1;
+        var args = new Array( arguments.length-1 );
         for ( var i = 1; i < arguments.length; i++ ) {
             args[i-1] = arguments[i];
         }
 
-        if ( handle && this.handleObj.hasOwnProperty(type) ) {
+        if ( this.handleObj.hasOwnProperty(type) ) {
             return this.handleObj[type].apply( this, args );
         } else {
             return this.handleNotFound.apply( this, args );

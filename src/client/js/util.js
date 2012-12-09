@@ -89,19 +89,24 @@
             return href;
         },
 
-        ajaxGet: function( url, callback, data ) {
-            return slate.util.ajax( 'GET', url, callback, data );
+        ajaxGet: function( url, data, callback ) {
+            if ( arguments.length === 2 ) {
+                callback = data;
+                data = undefined;
+            }
+
+            return slate.util.ajax( 'GET', url, data, callback );
         },
 
-        ajaxPost: function( url, callback ) {
-            return slate.util.ajax( 'POST', url, callback, data );
+        ajaxPost: function( url, data, callback ) {
+            return slate.util.ajax( 'POST', url, data, callback );
         },
 
-        ajaxHead: function( url, callback ) {
-            return slate.util.ajax( 'HEAD', url, callback );
+        ajaxHead: function( url, data, callback ) {
+            return slate.util.ajax( 'HEAD', url, data, callback );
         },
 
-        ajax: function( type, url, callback, data ) {
+        ajax: function( type, url, data, callback ) {
             try {
                 var ajaxObj = new window.XMLHttpRequest();
 
@@ -121,12 +126,16 @@
                 ajaxObj.open( type, url, true );
 
                 if ( type === 'POST' ) {
-                    if ( ! data ) {
+                    if ( data ) {
+                        if ( ! slate.util.isString(data) ) {
+                            data = JSON.stringify(data);
+                        }
+                    } else {
                         data = '';
                     }
 
                     ajaxObj.setRequestHeader( "Content-type", "application/x-www-form-urlencoded" );
-                    ajaxObj.setRequestHeader( "Content-Length", data.length );
+                    //ajaxObj.setRequestHeader( "Content-Length", data.length );
                     ajaxObj.send( data );
                 } else {
                     ajaxObj.send( '' );

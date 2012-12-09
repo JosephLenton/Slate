@@ -7,6 +7,9 @@
  */
 
 exports.Server = (function() {
+    var RockwallRequest  = require( './rockwall-request.js'  ).RockwallRequest,
+        RockwallResponse = require( './rockwall-response.js' ).RockwallResponse;
+
     var http = require('http'),
         fs   = require('fs');
 
@@ -109,15 +112,11 @@ exports.Server = (function() {
     }
 
     var runRequest = function( url, req, res, fun ) {
-        res.writeHead( 200, {'Content-Type': 'text/html'} );
-
         console.log( 'request ' + req.url );
 
         if ( fun ) {
             fun(url, req, res);
         }
-
-        res.end();
     }
 
     var runNotFound = function( url, req, res, fun ) {
@@ -181,76 +180,25 @@ exports.Server = (function() {
         routes[ last ] = action;
     }
 
-    var Result = function( res ) {
-        this.res = res;
-        this.endCount = 0;
+    rockwall.prototype = {
+        serveFile: function( fileUrl, req, res, ifNotFound, success ) {
+            var self = this;
 
-        this.__defineSetter__( 'statusCode', function( code ) {
-            res.statusCode = code;
-            return code;
-        })
-
-        this.__defineGetter__( 'statusCode', function( code ) {
-            return res.statusCode;
-        })
-    }
-
-    Result.prototype = {
-            wait: function( f ) {
-                this.endCount++;
-            },
-
-            writeHead: function( code, reason, headers ) {
-                this.res.writeHead( code, reason, headers );
-            },
-
-            write: function( chunk, encoding ) {
-                this.res.write( chunk, encoding );
-            },
-
-            setHeader: function( head, value ) {
-                this.res.setHeader( head, value );
-            },
-
-            endWait: function( data, encoding ) {
-                this.endCount--;
-
-                if ( this.endCount < 0 ) {
-                    this.endCount = 0;
-                }
-
-                this.end( data, encoding );
-            },
-
-            end: function( data, encoding ) {
-                if ( this.endCount === 0 ) {
-                    this.res.end( data, encoding );
+            if ( ! ifNotFound ) {
+                ifNotFound = function() {
+                    runNotFound( fileUrl, req, res );
                 }
             }
-    }
 
-    rockwall.prototype = {
-        serveFile: function( fileUrl, req, res, ifNotFound ) {
             try {
                 var path = fs.realpathSync( this.realPublicFolder + fileUrl ).replace( /\\/g, "/" );
 
                 if ( path.indexOf(this.realPublicFolder) === 0 ) {
-                    var self = this;
-
-                    res.wait();
                     fs.exists( path, function(exists) {
-                        if ( ! ifNotFound ) {
-                            ifNotFound = function() {
-                                runNotFound( fileUrl, req, res );
-                            }
-                        }
-
                         if ( exists ) {
                             fs.readFile( path, function( err, data ) {
                                 if ( err ) {
                                     ifNotFound.call( self );
-
-                                    res.endWait();
                                 } else {
                                     var ext  = parseExtension( fileUrl );
                                     var mime = self.fileMimeTypes[ ext ] || 'text/plain';
@@ -258,20 +206,25 @@ exports.Server = (function() {
                                     console.log( '   file ' + req.url );
 
                                     res.writeHead( 200, {'Content-Type': mime} );
+                                    res.write( data );
 
-                                    res.endWait( data );
+                                    if ( success ) {
+                                        success();
+                                    }
+
+                                    res.end();
                                 }
                             } );
                         } else {
                             ifNotFound.call( self );
-
-                            res.endWait();
                         }
                     } );
 
                     return true;
                 }
-            } catch ( err ) { }
+            } catch ( err ) {
+                ifNotFound.call( self );
+            }
 
             return false;
         },
@@ -362,7 +315,10 @@ exports.Server = (function() {
             http.createServer(function(req, res) {
                 var url = parseUrl( req.url );
 
-                self.handleFileRequest( url, req, new Result(res) );
+                self.handleFileRequest( url,
+                        new RockwallRequest(req),
+                        new RockwallResponse(res)
+                );
             }).listen( port );
 
             console.log( 'server listening on port ' + port );
