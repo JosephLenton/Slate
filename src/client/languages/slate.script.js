@@ -280,7 +280,7 @@
                         if ( op.terminal === terminals.ops.assignment ) {
                             constructor = ast.Assignment;
 
-                        if ( op.terminal === terminals.ops.pipe ) {
+                        } else if ( op.terminal === terminals.ops.pipe ) {
                             constructor = ast.Pipe;
 
                         } else if ( op.terminal === terminals.ops.plus ) {
