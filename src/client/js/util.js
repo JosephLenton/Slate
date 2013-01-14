@@ -31,6 +31,43 @@
             }
         },
 
+        newElement: function( type, info ) {
+            var dom     = document.createElement( type ),
+                argsLen = arguments.length;
+
+            if ( argsLen > 1 ) {
+                if ( slate.util.isString(info) ) {
+                    dom.className = info;
+                } else {
+                    assert( info, "no info given" );
+
+                    for ( var k in info ) {
+                        dom.setAttribute( k, info[k] );
+                    }
+                }
+
+                if ( argsLen > 2 ) {
+                    for ( var i = 2; i < argsLen; i++ ) {
+                        slate.util.addToDom( dom, arguments[i] );
+                    }
+                }
+            }
+
+            return dom;
+        },
+
+        addToDom: function( dom, el ) {
+            if ( slate.util.isArray(el) ) {
+                for ( var i = 0; i < el.length; i++ ) {
+                    slate.util.addToDom( dom, el[i] );
+                }
+            } else {
+                dom.appendChild( el );
+            }
+
+            return dom;
+        },
+
         isNumber: function( n ) {
             return typeof n === 'number' || ( n instanceof Number );
         },

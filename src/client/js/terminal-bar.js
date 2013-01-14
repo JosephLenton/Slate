@@ -46,10 +46,27 @@
     /**
      * The bar at the bottom of the terminal.
      */
-    function TerminalBar( dom, buttonDom, execute, languages, defaultType ) {
-        if ( ! dom     ) throw new Error( 'undefined dom object given'     );
-        if ( ! execute ) throw new Error( 'undefined execute object given' );
+    function TerminalBar( outerDom, execute, languages, defaultType ) {
+        if ( ! outerDom ) throw new Error( 'undefined dom object given'     );
+        if ( ! execute  ) throw new Error( 'undefined execute object given' );
 
+        var dom  = slate.util.newElement( 'textarea', {
+                'class' : 'slate-bar-input',
+                'wrap'  : 'off'
+        });
+        var buttonDom = slate.util.newElement( 'a', {
+                'class' : 'slate-bar-type',
+                'href'  : '#'
+        });
+
+        outerDom.appendChild(
+                slate.util.newElement( 'div', 'slate-bar', [
+                        buttonDom,
+                        dom,
+                        slate.util.newElement( 'div', 'slate-bar-input-mark' )
+                ] )
+        );
+        
         var langs = [],
             langI = 0;
         for ( var k in languages ) {
@@ -75,7 +92,7 @@
                         replace( new RegExp('( ?)slate-lang-' + old), '' ) +
                         ' slate-lang-' + lang;
 
-                buttonDom.innerText = lang;
+                buttonDom.textContent = lang;
 
                 langI = i;
             }

@@ -191,12 +191,10 @@
                 handlers
         );
         
-        var barDom  = document.getElementsByClassName( 'slate-bar-input' )[0],
-            typeDom = document.getElementsByClassName( 'slate-bar-type'  )[0];
+        var inputDom = document.getElementsByClassName( 'slate-input' )[0];
 
         var bar = new window.slate.TerminalBar(
-                barDom,
-                typeDom,
+                inputDom,
                 executor,
                 slate.data.languages,
                 window.slate.getLanguage()
