@@ -55,8 +55,7 @@
                 'wrap'  : 'off'
         });
         var buttonDom = slate.util.newElement( 'a', {
-                'class' : 'slate-bar-type',
-                'href'  : '#'
+                'class' : 'slate-bar-type'
         });
 
         outerDom.appendChild(

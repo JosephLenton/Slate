@@ -35,6 +35,10 @@
             var dom     = document.createElement( type ),
                 argsLen = arguments.length;
 
+            if ( type === 'a' ) {
+                dom.setAttribute( 'href', '#' );
+            }
+
             if ( argsLen > 1 ) {
                 if ( slate.util.isString(info) ) {
                     dom.className = info;
@@ -61,6 +65,8 @@
                 for ( var i = 0; i < el.length; i++ ) {
                     slate.util.addToDom( dom, el[i] );
                 }
+            } else if ( slate.util.isString(el) ) {
+                dom.insertAdjacentHTML( 'beforeend', el );
             } else {
                 dom.appendChild( el );
             }

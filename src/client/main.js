@@ -163,7 +163,40 @@
             slate.fs.FileSystem.setCWD( slate.constants.cwd );
         }
 
-        var isDev      = window.slate.isDevelopment();
+        /**
+         * Work out if we should use touch or not.
+         * It is used if ...
+         *
+         *  = ?touch is in the query url
+         *  = ?touch=true is in the query url
+         *  = ?touch=1 is in the query url
+         *  = slate.constants.useTouch was set to true.
+         */
+        var useTouch = false;
+        
+        var parts = window.location.href.split( '#' )[0].split( '?' );
+        if ( parts.length > 1 ) {
+            parts = parts[ parts.length-1 ].split( '&' );
+
+            for ( var i = 0; i < parts.length; i++ ) {
+                var keyVal = parts[i].split( '=' );
+
+                if ( keyVal[0] === 'touch' ) {
+                    useTouch =
+                            keyVal.length === 1  ||
+                            keyVal[1] === 'true' ||
+                            keyVal[1] === '1'
+
+                    break;
+                }
+            }
+        }
+
+        if ( slate.constants.useTouch !== undefined ) {
+            useTouch = slate.constants.useTouch;
+        }
+
+        var isDev = window.slate.isDevelopment();
 
         var onKeyDowns = [];
         var addKeyDown = function(f) {
@@ -190,16 +223,10 @@
                 onDisplay,
                 handlers
         );
-        
-        var inputDom = document.getElementsByClassName( 'slate-input' )[0];
-
-        var bar = new window.slate.TerminalBar(
-                inputDom,
-                executor,
-                slate.data.languages,
-                window.slate.getLanguage()
-        );
-        bar.focus();
+ 
+        /*
+         * Create and setup the command for use.
+         */
 
         window.slate.commands.bindCommands(
                 clear,
@@ -208,6 +235,25 @@
                 new slate.fs.FileSystem(),
                 isDev
         );
+       
+        var inputDom = document.getElementsByClassName( 'slate-input' )[0];
+
+        if ( useTouch ) {
+            document.getElementsByTagName( 'body' )[0].className += ' slate-touch';
+
+            new window.slate.TouchBar(
+                    inputDom,
+                    executor,
+                    window.slate.commands.listCommands()
+            );
+        } else {
+            new window.slate.TerminalBar(
+                    inputDom,
+                    executor,
+                    slate.data.languages,
+                    window.slate.getLanguage()
+            ).focus();
+        }
 
         for ( var i = 0; i < errors.length; i++ ) {
             onDisplay( undefined, errors[i] );
@@ -231,11 +277,14 @@
                     ( ev.ctrlKey &&   ev.shiftKey && ev.keyCode === 73 ) ||       // ctrl + shift + i
                     ( ev.ctrlKey &&   ev.shiftKey && ev.keyCode === 74 ) ||       // ctrl + shift + j
 
+                    ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 76 ) ||       // ctrl + l
+
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 65 ) ||       // ctrl + a
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 90 ) ||       // ctrl + z
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 88 ) ||       // ctrl + x
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 67 ) ||       // ctrl + c
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 86 ) ||       // ctrl + v
+                    ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 84 ) ||       // ctrl + t
 
                     ( ev.ctrlKey && ! ev.shiftKey && ev.keyCode === 80 ) ||       // ctrl + p
 

@@ -44,6 +44,56 @@
             }
     });
 
+    var resultsToString = function( results ) {
+        var str = '';
+
+        for ( var k in results ) {
+            var r = results[k];
+
+            if ( r.type ) {
+                str += '<span class="' + r.type + '">';
+            }
+
+            str += window.slate.util.htmlSafe( r.value );
+
+            if ( r.type ) {
+                str += '</span>';
+            }
+
+            str += "\n";
+        }
+
+        return window.slate.lib.formatter.rawHtml( str );
+    }
+
+    /*
+     * TODO layout the structure of the item in a table or something.
+     */
+    slate.command( 'describe', function( item ) {
+        if ( item ) {
+            for ( var k in obj ) {
+                var isProto = item.hasOwnProperty( k );
+                var isFun   = slate.util.isFunction( item[k] );
+
+                var type =
+                        isProto &&  isFun ? 'slate-prototype-function' :
+                        isProto && !isFun ? 'slate-prototype-property' :
+                       !isProto &&  isFun ? 'slate-object-function'    :
+                       !isProto && !isFun ? 'slate-object-property'    :
+                                            ''                         ;
+
+                results.push({
+                        type: type,
+                        value: k
+                });
+            }
+
+            return resultsToString( results );
+        } else {
+            return undefined;
+        }
+    } );
+
     slate.command( ['clear', 'cls'], function( p, display, state ) {
         state.clearDisplay();
 

@@ -26,6 +26,9 @@ body {
 
     padding-bottom: 30px;
 }
+body.slate-touch {
+    padding-bottom: 100px;
+}
 
 .slate-cmd,
 .slate-result,
@@ -58,6 +61,10 @@ body {
 
     overflow: hidden;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+body.touch > .slate-content {
+    bottom: 100px;
 }
     .slate-content-item,
     .slate-content-item-contents {
@@ -138,27 +145,31 @@ body {
 .slate-bar-input {
     line-height: 20px;
 }
-.slate-bar {
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-    padding: 0 6px;
-
+.slate-input {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-
-    width: 100%;
-
-    height: 36px;
-    vertical-align: middle;
-
+}
+.slate-bar,
+.touch-bar {
     background: #1b1b1b;
     background: -webkit-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
     background: -moz-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
     background: -ms-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
     background: -o-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
     background: linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
+
+}
+.slate-bar {
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 0 6px;
+
+    width: 100%;
+
+    height: 36px;
+    vertical-align: middle;
 }
     .slate-bar-type,
     .slate-bar-input,
@@ -190,6 +201,7 @@ body {
 
         overflow-x: none;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
 
         outline: none;
     }
