@@ -151,8 +151,7 @@ body.touch > .slate-content {
     left: 0;
     right: 0;
 }
-.slate-bar,
-.touch-bar {
+.slate-bar {
     background: #1b1b1b;
     background: -webkit-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
     background: -moz-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
@@ -160,8 +159,6 @@ body.touch > .slate-content {
     background: -o-linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
     background: linear-gradient(to bottom,  #1f1f1f 0%,#1c1c1c 9%,#1a1a1a 58%,#181818 100%);
 
-}
-.slate-bar {
     -moz-box-sizing: border-box;
     box-sizing: border-box;
     padding: 0 6px;

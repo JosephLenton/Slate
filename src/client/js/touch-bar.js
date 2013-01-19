@@ -25,30 +25,25 @@ window.slate.TouchBar = (function() {
             dom.appendChild( item );
         }
 
-        dom.addEventListener( 'click', function(ev) {
-            ev.preventDefault();
-            callback();
-        } );
+        slate.util.click( dom, callback );
 
         this.dom.appendChild( dom );
     }
 
     var addSection = function( touchBar, name, row ) {
-        var button = slate.util.newElement( 'a', 'touch-bar-button', name );
+        var button = slate.util.newElement( 'a', 'touch-bar-button', name )
 
-        button.addEventListener( 'click', function(ev) {
-            ev.preventDefault();
-
+        slate.util.click( button, function() {
             touchBar.showRow( row );
-        } );
+        } )
 
-        touchBar.lower.appendChild( button );
+        touchBar.lower.appendChild( button )
     }
 
     var TouchBar = function( dom, execute, commands ) {
         var viewArea = slate.util.newElement( 'div', 'touch-bar-view' );
-        var upper = slate.util.newElement( 'div', 'touch-bar-row' );
-        var lower = slate.util.newElement( 'div', 'touch-bar-row' );
+        var upper = slate.util.newElement( 'div', 'touch-bar-row upper' );
+        var lower = slate.util.newElement( 'div', 'touch-bar-row lower' );
 
         var wrap = slate.util.newElement( 'div', 'touch-bar', viewArea, upper, lower );
 
@@ -56,6 +51,7 @@ window.slate.TouchBar = (function() {
         this.row   = null;
         this.lower = lower;
         this.upper = upper;
+        this.view  = viewArea;
 
         dom.appendChild( wrap );
 

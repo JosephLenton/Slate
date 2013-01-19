@@ -10,6 +10,18 @@
     var anchor = document.createElement( 'a' );
 
     window.slate.util = {
+        click: function( el, callback ) {
+            assert( el instanceof HTMLElement, "non-html element given" );
+
+            el.addEventListener( 'click', function(ev) {
+                ev.preventDefault();
+                
+                callback( ev );
+            } );
+
+            return el;
+        },
+
         onLoadError: function( obj, onload, onerror ) {
             // ensure we delete the handlers *before* calling them.
             if ( onload ) {
