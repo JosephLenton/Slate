@@ -158,9 +158,35 @@
         }
     }
 
+    var getOptions = function() {
+        var parts = window.location.href.split( '#' )[0].split( '?' );
+        var options = {};
+
+        if ( parts.length > 1 ) {
+            parts = parts[ parts.length-1 ].split( '&' );
+
+            for ( var i = 0; i < parts.length; i++ ) {
+                var keyVal = parts[i].split( '=' );
+                var key = keyVal[0];
+                var val = keyVal.length > 1 ?
+                        keyVal[1] :
+                        true ;
+
+                options[ key ] = val;
+            }
+        }
+
+        return options;
+    }
+
     var initialize = function( errors ) {
         if ( slate.constants.cwd ) {
             slate.fs.FileSystem.setCWD( slate.constants.cwd );
+        }
+
+        var options = getOptions();
+        if ( options.debug ) {
+            document.body.parentNode.classList.add( 'debug' );
         }
 
         /**
@@ -173,25 +199,11 @@
          *  = slate.constants.useTouch was set to true.
          */
         var useTouch = false;
-        
-        var parts = window.location.href.split( '#' )[0].split( '?' );
-        if ( parts.length > 1 ) {
-            parts = parts[ parts.length-1 ].split( '&' );
 
-            for ( var i = 0; i < parts.length; i++ ) {
-                var keyVal = parts[i].split( '=' );
-
-                if ( keyVal[0] === 'touch' ) {
-                    useTouch =
-                            keyVal.length === 1  ||
-                            keyVal[1] === 'true' ||
-                            keyVal[1] === '1'
-
-                    break;
-                }
-            }
+        if ( options.touch ) {
+            useTouch = ( options.touch !== 'false' );
         }
-
+       
         if ( slate.constants.useTouch !== undefined ) {
             useTouch = slate.constants.useTouch;
         }

@@ -16,13 +16,6 @@
     background: -o-linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
     background: linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
 }
-    .touch-bar-view {
-        height: 100px;
-        width : 100%;
-
-        position: absolute;
-        top: 0;
-    }
     .touch-bar-row {
         position: absolute;
         left: 0;
@@ -82,5 +75,55 @@
         }
         .touch-bar-button:last-of-type {
             border-right: 0 none;
+        }
+
+    .touch-bar-view {
+        line-height: 95px;
+        height: 100px;
+        width : 100%;
+
+        position: absolute;
+        top: 0;
+
+        text-align: center;
+    }
+    .touch-ast {
+        display: inline-block;
+
+        border: 1px solid transparent;
+
+        -webkit-transition: border 200ms linear;
+        -moz-transition: border 200ms linear;
+        -o-transition: border 200ms linear;
+        transition: border 200ms linear;
+
+        min-width: 21px;
+        height: 40px;
+
+        vertical-align: middle;
+
+        padding: 6px 3px;
+
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+    }
+    .touch-ast.select {
+        border-color: #eb3;
+    }
+
+    .touch-ast-empty {
+        border-color: #7ae;
+        margin-top: -1px;
+
+        border-radius: 3px;
+    }
+    .touch-ast-op {
+    }
+
+    .touch-ast-literal {
+    }
+        .touch-ast-literal.touch-ast-boolean > .touch-ast-literal-inner {
+            line-height: 24px;
+            height: 100%;
         }
 

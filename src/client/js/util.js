@@ -86,6 +86,26 @@
             return dom;
         },
 
+        extend: function() {
+            var obj = {};
+
+            for ( var i = 0; i < arguments.length; i++ ) {
+                var srcObj = arguments[i];
+
+                if ( slate.util.isFunction(srcObj) ) {
+                    srcObj = srcObj.prototype;
+                }
+
+                for ( var k in srcObj ) {
+                    if ( srcObj.hasOwnProperty(k) ) {
+                        obj[k] = srcObj[k];
+                    }
+                }
+            }
+
+            return obj;
+        },
+
         isNumber: function( n ) {
             return typeof n === 'number' || ( n instanceof Number );
         },
