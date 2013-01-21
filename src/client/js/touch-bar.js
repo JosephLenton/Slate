@@ -316,23 +316,67 @@ window.slate.TouchBar = (function() {
 
         var inputDom = document.createElement( 'input' );
         inputDom.setAttribute( 'type', type );
-        inputDom.className = 'touch-ast-input';
+        if ( defaultVal !== undefined ) {
+            this.input.value = devaultVal;
+        }
 
         var dom = this.getDom();
+        dom.classList.add( 'touch-ast-input' );
         dom.classList.add( cssKlass );
 
-        if ( defaultVal !== undefined ) {
-            dom.value = devaultVal;
-            dom.textContent( defaultVal );
-        }
+        this.text = astText( defaultVal !== undefined ? defaultVal : '' );
+        this.input = inputDom;
+        this.timeout = null;
+
+        this.add( this.text, this.input );
+
+        var self = this;
+        this.input.addEventListener( 'input', function() {
+            self.text.textContent = self.input.value;
+        } );
     }
 
     ast.Input.prototype = slate.util.extend( ast.Node, {
         select: function() {
             ast.Node.prototype.select.call( this );
+
+            this.showInput();
         },
+
         unselect: function() {
             ast.Node.prototype.unselect.call( this );
+
+            this.hideInput();
+        },
+
+        withInput: function( fun ) {
+            var self = this;
+
+            if ( this.timeout !== null ) {
+                clearTimeout( this.timeout );
+                this.timeout = null;
+            }
+
+            this.timeout = setTimeout( function() {
+                this.timeout = null;
+                
+                fun.call( self );
+            }, 0 );
+        },
+
+        showInput: function() {
+            this.withInput( function() {
+                if ( ! this.input.classList.contains('show') ) {
+                    this.input.classList.add( 'show' );
+                    this.input.focus();
+                }
+            } )
+        },
+
+        hideInput: function() {
+            this.withInput( function() {
+                this.input.classList.remove( 'show' );
+            } )
         }
     } );
 

@@ -162,6 +162,15 @@
         }
     .touch-ast-op.select {
     }
+        .touch-ast-literal.select > .touch-ast-text,
+        .touch-ast.select-parent > .touch-ast-string > .touch-ast-text,
+        .touch-ast.select > .touch-ast-string > .touch-ast-text {
+            color: #3a3;
+        }
+        .touch-ast-string > .touch-ast-text:before,
+        .touch-ast-string > .touch-ast-text:after {
+            content: '"';
+        }
 
     .touch-ast-literal {
     }
@@ -194,4 +203,37 @@
     .touch-ast-op.select > .touch-ast .touch-ast-empty {
         color: #242424;
     }
+
+    .touch-ast-input {
+        overflow: hidden;
+        position: relative;
+    }
+        .touch-ast-input > input {
+            line-height: 32px;
+            vertical-align: middle;
+
+            display: inline-block;
+
+            position: absolute;
+            width: 100%;
+            height: 32px;
+
+            margin-left: -100%;
+            margin-top: 5px;
+
+            left: -4px;
+            top :  0;
+
+            -webkit-transition: margin 120ms linear, left 120ms linear;
+               -moz-transition: margin 120ms linear, left 120ms linear;
+                -ms-transition: margin 120ms linear, left 120ms linear;
+                 -o-transition: margin 120ms linear, left 120ms linear;
+                    transition: margin 120ms linear, left 120ms linear;
+        }
+        .touch-ast-input > input.show {
+            margin-left: 0;
+            left: 0;
+        }
+        .touch-ast-input > .touch-ast-text {
+        }
 
