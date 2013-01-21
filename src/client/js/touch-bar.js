@@ -2,6 +2,30 @@
 
 window.slate = window.slate || {};
 window.slate.TouchBar = (function() {
+    var newASTText = function( args ) {
+        var klass = 'touch-ast-text';
+        for ( var i = 1; i < args.length; i++ ) {
+            klass += ' ' + args[i];
+        }
+
+        var textDiv = document.createElement( 'div' );
+        textDiv.className = klass;
+
+        return textDiv;
+    }
+
+    var astHTML = function( html ) {
+        var div = newASTText( arguments );
+        div.innerHTML = html;
+        return div;
+    }
+
+    var astText = function( text ) {
+        var div = newASTText( arguments );
+        div.textContent = text;
+        return div;
+    }
+
     var ast = {};
 
     ast.Node = function() {
@@ -12,7 +36,9 @@ window.slate.TouchBar = (function() {
 
         var self = this;
 
-        slate.util.click( this.dom, function() {
+        slate.util.click( this.dom, function(ev) {
+            ev.stopPropagation();
+
             self.getView().setCurrent( self );
         } );
     }
@@ -28,22 +54,45 @@ window.slate.TouchBar = (function() {
             return this.up !== null;
         },
 
-        parent: function( newParent ) {
-            if ( arguments.length === 0 ) {
-                return this.up;
-            } else {
-                assert( newParent, "falsy parent given" );
-                this.up = newParent;
-
-                // todo, swap the HTML nodes
-
-                return this;
-            }
+        getParent: function() {
+            return this.up;
         },
 
+        /**
+         * Private. This should never be called from
+         * outside of this class!
+         */
+        setParent: function( newParent ) {
+            assert( newParent, "falsy parent given" );
+
+            this.up = newParent;
+
+            // todo, swap the HTML nodes
+
+            return this;
+        },
+
+        /**
+         * Returns the view area, which this AST node is
+         * present within.
+         *
+         * Calling this when the node is not present inside
+         * of a view, will result in an error.
+         *
+         * Essentially you shouldn't be trying to interact
+         * with the view, if there isn't one.
+         */
         getView: function() {
-            assert( this.view !== null, "getting view when this node does not have one" );
-            return this.view;
+            if ( this.view === null ) {
+                if ( this.hasParent() ) {
+                    this.view = this.getParent().getView();
+                    return this.view;
+                } else {
+                    throw new Error("getView called when node is not within a view");
+                }
+            } else {
+                return this.view;
+            }
         },
         setView: function( view ) {
             assert( view, "falsy view given" );
@@ -54,9 +103,42 @@ window.slate.TouchBar = (function() {
 
         select: function() {
             this.dom.classList.add( 'select' );
+
+            this.selectMore();
         },
+        selectMore: function() {
+            this.withParent( 'touch-ast', function(node) {
+                node.getDom().classList.add( 'select-parent' );
+            } );
+        },
+
         unselect: function() {
             this.dom.classList.remove( 'select' );
+
+            this.withParent( 'select-parent', function(node) {
+                node.getDom().classList.remove( 'select-parent' );
+            } );
+        },
+
+        /**
+         * Finds the first parent node with the class given set to it.
+         * If found, 'fun' is then called with that parent node passed
+         * in.
+         *
+         * Iteration then stops, unless 'fun' returns true.
+         */
+        withParent: function( klass, fun ) {
+            var p = this.getParent();
+
+            for ( var p = this.getParent(); p !== null; p = p.getParent() ) {
+                if ( p.getDom().classList.contains(klass) ) {
+                    if ( fun(p) !== true ) {
+                        return this;
+                    }
+                }
+            }
+
+            return this;
         },
 
         getDom: function() {
@@ -104,7 +186,23 @@ window.slate.TouchBar = (function() {
             if ( empty ) {
                 return empty;
             } else if ( this.hasParent() ) {
-                return this.parent().findEmpty();
+                return this.getParent().findEmpty();
+            }
+        },
+
+        add: function() {
+            for ( var i = 0; i < arguments.length; i++ ) {
+                var arg = arguments[i];
+
+                if ( arg instanceof HTMLElement ) {
+                    this.dom.appendChild( arg );
+                } else if ( arg.getDom !== undefined ) {
+                    this.dom.appendChild( arg.getDom() );
+
+                    arg.setParent( this );
+                } else {
+                    throw new Error( "unknown argument given" );
+                }
             }
         }
     }
@@ -113,6 +211,7 @@ window.slate.TouchBar = (function() {
         ast.Node.call( this );
 
         this.addClass( 'touch-ast-empty' );
+        this.dom.innerHTML = '&#x25cf;';
     }
 
     ast.Empty.prototype = slate.util.extend( ast.Node, {
@@ -133,10 +232,7 @@ window.slate.TouchBar = (function() {
         this.addClass( 'touch-ast-literal' ).
                 addClass( klass );
 
-        var inner = slate.util.newElement( 'div', 'touch-ast-literal-inner' );
-        inner.textContent = value;
-
-        this.dom.appendChild( inner );
+        this.dom.appendChild( astText(value) );
     }
 
     ast.Literal.prototype = slate.util.extend( ast.Node, {
@@ -153,11 +249,13 @@ window.slate.TouchBar = (function() {
         this.left  = new ast.Empty();
         this.right = new ast.Empty();
 
-        var textDiv = document.createElement( 'div' );
-        textDiv.className = 'touch-ast-op-text';
-        textDiv.textContent = text;
-
-        this.add( this.left, textDiv, this.right );
+        this.add(
+                astText('(', 'touch-ast-left-paren'),
+                this.left,
+                astHTML(text, 'touch-ast-op-text'),
+                this.right,
+                astText(')', 'touch-ast-left-paren')
+        );
 
         this.fun = fun;
     }
@@ -170,6 +268,32 @@ window.slate.TouchBar = (function() {
             )
         },
 
+        selectMore: function() {
+            // do nothing
+        },
+
+        /**
+         * Replaces this double operator, i.e. a plus,
+         * with the node given.
+         *
+         * However if the node given is also a double operator,
+         * i.e. replacing a plus with a subtract,
+         * then the left and right values are kept.
+         */
+        replace: function( other ) {
+            if ( other instanceof ast.DoubleOp ) {
+                if ( ! (this.left instanceof ast.Empty) ) {
+                    other.left.replace( this.left );
+                }
+
+                if ( ! (this.right instanceof ast.Empty) ) {
+                    other.right.replace( this.right );
+                }
+            }
+
+            ast.Node.prototype.replace.call( this, other );
+        },
+
         replaceChild: function( old, newChild ) {
             if ( this.left === old ) {
                 this.left = newChild;
@@ -179,13 +303,69 @@ window.slate.TouchBar = (function() {
                 throw new Error( "old child given, but it is not a child of this AST node" );
             }
 
-            newChild.parent( this );
+            newChild.setParent( this );
         },
 
         getEmpty: function() {
             return this.left.getEmpty() || this.right.getEmpty();
         }
     } );
+
+    ast.Input = function( type, cssKlass, defaultVal, emptyAllowed ) {
+        ast.Node.call( this );
+
+        var inputDom = document.createElement( 'input' );
+        inputDom.setAttribute( 'type', type );
+        inputDom.className = 'touch-ast-input';
+
+        var dom = this.getDom();
+        dom.classList.add( cssKlass );
+
+        if ( defaultVal !== undefined ) {
+            dom.value = devaultVal;
+            dom.textContent( defaultVal );
+        }
+    }
+
+    ast.Input.prototype = slate.util.extend( ast.Node, {
+        select: function() {
+            ast.Node.prototype.select.call( this );
+        },
+        unselect: function() {
+            ast.Node.prototype.unselect.call( this );
+        }
+    } );
+
+    var newASTInput = function() {
+        var args = arguments;
+
+        var cons = function() {
+            ast.Input.apply( this, args );
+        }
+
+        cons.prototype = slate.util.extend( ast.Input.prototype );
+
+        return cons;
+    }
+
+    ast.StringInput = newASTInput(
+            'text',
+            'touch-ast-string',
+            undefined,
+            true
+    );
+    ast.NumberInput = newASTInput(
+            'number',
+            'touch-ast-number',
+            0,
+            false
+    );
+    ast.VariableInput = newASTInput(
+            'text',
+            'touch-ast-string',
+            'x',
+            false
+    );
 
     /**
      * A horizontal row of options to select.
@@ -210,7 +390,7 @@ window.slate.TouchBar = (function() {
         var dom = slate.util.newElement( 'a', 'touch-bar-button' );
 
         if ( window.slate.util.isString(item) ) {
-            dom.textContent = item;
+            dom.innerHTML = item;
         } else {
             dom.appendChild( item );
         }
@@ -256,6 +436,8 @@ window.slate.TouchBar = (function() {
                     }
 
                     this.current = ast;
+                    this.current.setView( this );
+
                     this.current.select();
                 }
 
@@ -280,14 +462,14 @@ window.slate.TouchBar = (function() {
              */
             insert: function( node ) {
                 this.current.replace( node );
-                this.current = node;
+                node.setView( this );
 
-                var empty = this.current.findEmpty();
-                if ( empty ) {
-                    empty.select();
-                } else {
-                    node.select();
-                }
+                this.selectEmpty( node );
+            },
+
+            selectEmpty: function( node ) {
+                node = ( node || this.current );
+                this.setCurrent( node.findEmpty() || node );
             }
     }
 
@@ -326,13 +508,13 @@ window.slate.TouchBar = (function() {
         var valuesRow = new TouchRow( this.upper );
 
         valuesRow.append( 'var', function() {
-            console.log( 'new var' );
+            view.insert( new ast.VariableInput() );
         } );
         valuesRow.append( '123', function() {
-            console.log( 'new number' );
+            view.insert( new ast.NumberInput() );
         } );
         valuesRow.append( '"text"', function() {
-            view.insert( new ast.Literal(true, 'touch-ast-boolean') );
+            view.insert( new ast.StringInput() );
         } );
         valuesRow.append( 'true', function() {
             view.insert( new ast.Literal(true, 'touch-ast-boolean') );
@@ -351,26 +533,33 @@ window.slate.TouchBar = (function() {
 
         var newOps = function( sym, fun ) {
             opsRow.append( '_ ' + sym + ' _', function() {
-                view.insert( new ast.DoubleOp( sym, fun ) )
+                var op = new ast.DoubleOp(sym, fun)
+                var current = view.getCurrent();
+
+                current.replace( op );
+                view.setCurrent( op );
+                op.left.replace( current );
+
+                view.selectEmpty();
             } )
         }
 
         newOps( '+' , function(l, r) { return l + r } );
         newOps( '-' , function(l, r) { return l - r } );
-        newOps( '*' , function(l, r) { return l * r } );
-        newOps( '/' , function(l, r) { return l / r } );
+        newOps( '&times;' , function(l, r) { return l * r } );
+        newOps( '&#xf7;' , function(l, r) { return l / r } );
 
-        newOps( '>=', function(l, r) { return l >=  r } );
-        newOps( '<=', function(l, r) { return l <=  r } );
+        newOps( '&gt;=', function(l, r) { return l >=  r } );
+        newOps( '&lt;=', function(l, r) { return l <=  r } );
         newOps( '==', function(l, r) { return l === r } );
-        newOps( '!=', function(l, r) { return l !== r } );
+        newOps( '&#x2260', function(l, r) { return l !== r } );
 
-        newOps( '>>', function(l, r) { return l >> r } );
-        newOps( '<<', function(l, r) { return l << r } );
-        newOps( '&&', function(l, r) { return l && r } );
-        newOps( '||', function(l, r) { return l || r } );
+        newOps( '&gt;&gt;', function(l, r) { return l >> r } );
+        newOps( '&lt;&lt;', function(l, r) { return l << r } );
+        newOps( 'and', function(l, r) { return l && r } );
+        newOps( 'or', function(l, r) { return l || r } );
 
-        newOps( '&' , function(l, r) { return l & r  } );
+        newOps( '&amp;' , function(l, r) { return l & r  } );
         newOps( '|' , function(l, r) { return l | r  } );
 
         addSection( this, 'operators', opsRow );

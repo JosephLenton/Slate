@@ -10,11 +10,6 @@
     font-family: 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
 
     background: #1a1a1a;
-    background: -webkit-linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
-    background: -moz-linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
-    background: -ms-linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
-    background: -o-linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
-    background: linear-gradient(to bottom,  #1f1f1f 0%, #1a1a1a 9%, #181818 58%, #131313 100%);
 }
     .touch-bar-row {
         position: absolute;
@@ -87,43 +82,116 @@
 
         text-align: center;
     }
-    .touch-ast {
+    .touch-ast,
+    .touch-ast-text {
         display: inline-block;
 
-        border: 1px solid transparent;
-
-        -webkit-transition: border 200ms linear;
-        -moz-transition: border 200ms linear;
-        -o-transition: border 200ms linear;
-        transition: border 200ms linear;
-
-        min-width: 21px;
-        height: 40px;
-
-        vertical-align: middle;
-
-        padding: 6px 3px;
+        height: 50px;
+        line-height: 42px;
 
         -moz-box-sizing: border-box;
-        box-sizing: border-box;
+             box-sizing: border-box;
+
+        font-size: 21px;
+        font-weight: 400;
+
+        vertical-align: top;
+
+        padding: 0 4px;
+
+        margin-top : -1px;
+        margin-left: -1px;
+        border: 1px solid transparent;
+        border-radius: 3px;
+
+        -webkit-transition:
+                background 150ms linear,
+                border 150ms linear,
+                color 150ms linear;
+        -moz-transition:
+                background 150ms linear,
+                border 150ms linear,
+                color 150ms linear;
+        -o-transition:
+                background 150ms linear,
+                border 150ms linear,
+                color 150ms linear;
+        transition:
+                background 150ms linear,
+                border 150ms linear,
+                color 150ms linear;
+    }
+    .touch-ast {
+        color: white;
+        min-width: 32px;
+
+        cursor: pointer;
+    }
+    .touch-ast-text,
+    .touch-bar-view > .touch-ast {
+        vertical-align: middle;
+    }
+    .touch-ast-text {
+        color: #666;
+    }
+    .touch-ast.select,
+    .touch-ast-text.select {
     }
     .touch-ast.select {
-        border-color: #eb3;
+        background: #111;
     }
 
     .touch-ast-empty {
-        border-color: #7ae;
-        margin-top: -1px;
-
-        border-radius: 3px;
+        background: transparent;
+        color: #444;
+        line-height: 46px;
+        font-size: 14px;
+    }
+    .touch-ast-empty.select {
+        color: #f0b639;
     }
     .touch-ast-op {
+    }
+        .touch-ast.select > .touch-ast-op-text,
+        .touch-ast.select-parent > .touch-ast-op-text {
+            color: #e08000;
+        }
+        .touch-ast.select > .touch-ast .touch-ast,
+        .touch-ast.select > .touch-ast .touch-ast-text {
+            color: #3a3a3a;
+        }
+    .touch-ast-op.select {
     }
 
     .touch-ast-literal {
     }
-        .touch-ast-literal.touch-ast-boolean > .touch-ast-literal-inner {
-            line-height: 24px;
-            height: 100%;
+        .touch-ast-literal.select > .touch-ast-text,
+        .touch-ast.select-parent > .touch-ast-literal > .touch-ast-text,
+        .touch-ast.select > .touch-ast-literal > .touch-ast-text {
+            color: #369;
         }
+
+    .touch-ast.select-parent > .touch-ast-left-paren,
+    .touch-ast.select-parent > .touch-ast-right-paren,
+    .touch-ast.select > .touch-ast-left-paren,
+    .touch-ast.select > .touch-ast-right-paren {
+        color: #aaa;
+    }
+
+    .touch-ast-left-paren,
+    .touch-ast-right-paren {
+        color: #444;
+        font-size: 32px;
+    }
+    .touch-ast-left-paren {
+        padding-right: 0;
+    }
+    .touch-ast-right-paren {
+        padding-left: 0;
+    }
+    .touch-ast-op.select > .touch-ast .touch-ast-left-paren,
+    .touch-ast-op.select > .touch-ast .touch-ast-right-paren,
+    .touch-ast-op.select > .touch-ast .touch-ast-empty {
+        color: #242424;
+    }
 
