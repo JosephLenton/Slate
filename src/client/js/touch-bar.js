@@ -101,18 +101,28 @@ window.slate.TouchBar = (function() {
             return this;
         },
 
-        select: function() {
+        onSelect: function() {
             this.dom.classList.add( 'select' );
 
             this.selectMore();
         },
+
+        /**
+         * A selection hook,
+         * which is made every time this is selected,
+         * even if it is already selected.
+         */
+        onEverySelect: function() {
+            // do nothing
+        },
+
         selectMore: function() {
             this.withParent( 'touch-ast', function(node) {
                 node.getDom().classList.add( 'select-parent' );
             } );
         },
 
-        unselect: function() {
+        onUnselect: function() {
             this.dom.classList.remove( 'select' );
 
             this.withParent( 'select-parent', function(node) {
@@ -324,29 +334,74 @@ window.slate.TouchBar = (function() {
         dom.classList.add( 'touch-ast-input' );
         dom.classList.add( cssKlass );
 
-        this.text = astText( defaultVal !== undefined ? defaultVal : '' );
         this.input = inputDom;
         this.timeout = null;
 
-        this.add( this.text, this.input );
+        this.add( astText('"'), this.input, astText('"') );
+
+        this.lastInput = '';
 
         var self = this;
+
         this.input.addEventListener( 'input', function() {
-            self.text.textContent = self.input.value;
+            self.resizeInput();
         } );
     }
 
-    ast.Input.prototype = slate.util.extend( ast.Node, {
-        select: function() {
-            ast.Node.prototype.select.call( this );
+    /**
+     * Returns the width of the text given,
+     * for a 'touch-ast-input > input' node.
+     *
+     * @param text The text to measure the width of.
+     * @return The width, in pixels, but as an int. i.e. '400' not '400px'.
+     */
+    ast.Input.textWidth = (function() {
+        var isMeasureSet = false;
 
-            this.showInput();
+        var div = document.createElement( 'div' );
+        div.className = 'touch-input-measure-div';
+
+        var inputTextWrap = document.createElement( 'div' );
+        inputTextWrap.className = 'touch-input-measure';
+        inputTextWrap.appendChild( div );
+
+        return function( text ) {
+            if ( ! isMeasureSet ) {
+                isMeasureSet = true;
+                document.getElementsByTagName('body')[0].appendChild( inputTextWrap );
+            }
+
+            div.textContent = text;
+            return div.clientWidth;
+        }
+    })();
+
+    ast.Input.prototype = slate.util.extend( ast.Node, {
+        onEverySelect: function() {
+            this.input.focus();
+            this.resizeInput();
         },
 
-        unselect: function() {
-            ast.Node.prototype.unselect.call( this );
+        onUnselect: function() {
+            ast.Node.prototype.onUnselect.call( this );
 
-            this.hideInput();
+            this.input.classList.remove( 'multi-change' );
+        },
+
+        resizeInput: function() {
+            /*
+             * If more than 2 characters are inputted at once,
+             * it will animate the width change.
+             */
+            var thisInput = this.input.value;
+            if ( Math.abs(thisInput.length-this.lastInput.length) > 2 ) {
+                this.input.classList.add( 'multi-change' );
+            } else {
+                this.input.classList.remove( 'multi-change' );
+            }
+            this.lastInput = thisInput;
+
+            this.input.style.width = ast.Input.textWidth( this.input.value ) + 'px';
         },
 
         withInput: function( fun ) {
@@ -362,21 +417,6 @@ window.slate.TouchBar = (function() {
                 
                 fun.call( self );
             }, 0 );
-        },
-
-        showInput: function() {
-            this.withInput( function() {
-                if ( ! this.input.classList.contains('show') ) {
-                    this.input.classList.add( 'show' );
-                    this.input.focus();
-                }
-            } )
-        },
-
-        hideInput: function() {
-            this.withInput( function() {
-                this.input.classList.remove( 'show' );
-            } )
         }
     } );
 
@@ -476,14 +516,16 @@ window.slate.TouchBar = (function() {
             setCurrent: function( ast ) {
                 if ( this.current !== ast ) {
                     if ( this.current !== null ) {
-                        this.current.unselect();
+                        this.current.onUnselect();
                     }
 
                     this.current = ast;
                     this.current.setView( this );
 
-                    this.current.select();
+                    this.current.onSelect();
                 }
+
+                this.current.onEverySelect();
 
                 return this;
             },

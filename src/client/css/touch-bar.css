@@ -82,7 +82,9 @@
 
         text-align: center;
     }
+    .touch-input-measure-div,
     .touch-ast,
+    .touch-ast-input > input,
     .touch-ast-text {
         display: inline-block;
 
@@ -128,6 +130,7 @@
         cursor: pointer;
     }
     .touch-ast-text,
+    .touch-ast-input > input,
     .touch-bar-view > .touch-ast {
         vertical-align: middle;
     }
@@ -162,13 +165,16 @@
         }
     .touch-ast-op.select {
     }
-        .touch-ast-literal.select > .touch-ast-text,
-        .touch-ast.select-parent > .touch-ast-string > .touch-ast-text,
-        .touch-ast.select > .touch-ast-string > .touch-ast-text {
+        .touch-ast.select > .touch-ast-string         >  input,
+        .touch-ast.select > .touch-ast-string         > .touch-ast-text,
+                            .touch-ast-string.select  >  input,
+                            .touch-ast-string.select  > .touch-ast-text,
+                            .touch-ast-literal.select > .touch-ast-text
+        {
             color: #3a3;
         }
-        .touch-ast-string > .touch-ast-text:before,
-        .touch-ast-string > .touch-ast-text:after {
+        .touch-ast-string > input:before,
+        .touch-ast-string > input:after {
             content: '"';
         }
 
@@ -205,35 +211,77 @@
     }
 
     .touch-ast-input {
-        overflow: hidden;
-        position: relative;
+        cursor: text;
     }
         .touch-ast-input > input {
-            line-height: 32px;
+            min-width:   4px;
+                width:   4px;
+            max-width: 200px;
+
+            -moz-box-sizing: content-box;
+            box-sizing: content-box;
+
+            background: transparent;
+            border: none;
+
             vertical-align: middle;
-
-            display: inline-block;
-
-            position: absolute;
-            width: 100%;
-            height: 32px;
-
-            margin-left: -100%;
-            margin-top: 5px;
-
-            left: -4px;
-            top :  0;
-
-            -webkit-transition: margin 120ms linear, left 120ms linear;
-               -moz-transition: margin 120ms linear, left 120ms linear;
-                -ms-transition: margin 120ms linear, left 120ms linear;
-                 -o-transition: margin 120ms linear, left 120ms linear;
-                    transition: margin 120ms linear, left 120ms linear;
         }
-        .touch-ast-input > input.show {
-            margin-left: 0;
-            left: 0;
+        .touch-ast-input > input.multi-change {
+            -webkit-transition:
+                    width 50ms linear,
+                    background 150ms linear,
+                    border 150ms linear,
+                    color 150ms linear;
+            -moz-transition:
+                    width 50ms linear,
+                    background 150ms linear,
+                    border 150ms linear,
+                    color 150ms linear;
+            -ms-transition:
+                    width 50ms linear,
+                    background 150ms linear,
+                    border 150ms linear,
+                    color 150ms linear;
+            -o-transition:
+                    width 50ms linear,
+                    background 150ms linear,
+                    border 150ms linear,
+                    color 150ms linear;
+            transition:
+                    width 50ms linear,
+                    background 150ms linear,
+                    border 150ms linear,
+                    color 150ms linear;
         }
-        .touch-ast-input > .touch-ast-text {
-        }
+
+.touch-input-measure {
+    width : 0 !important;
+    height: 0 !important;
+
+    padding : 0 !important;
+    margin  : 0 !important;
+
+    overflow  : hidden;
+    visibility: hidden;
+    position  : fixed;
+
+    top : 0;
+    left: 0;
+}
+    .touch-input-measure-div {
+        white-space: pre;
+
+        padding: 0 !important;
+        margin : 0 !important;
+
+        position: absolute;
+        left: 0;
+        top : 0;
+
+        -webkit-transition: none;
+           -moz-transition: none;
+            -ms-transition: none;
+             -o-transition: none;
+                transition: none;
+    }
 
