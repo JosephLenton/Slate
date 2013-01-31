@@ -81,6 +81,12 @@
         top: 0;
 
         text-align: center;
+
+        white-space: pre;
+        overflow: hidden;
+        overflow-x: scroll;
+
+        -webkit-overflow-scrolling: touch;
     }
     .touch-input-measure-div,
     .touch-ast,
