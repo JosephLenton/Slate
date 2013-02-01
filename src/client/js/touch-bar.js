@@ -156,10 +156,15 @@ window.slate.TouchBar = (function() {
         },
 
         setDom: function( dom ) {
+            var old = this.dom;
             this.dom = dom;
 
-            // todo, swap the HTML nodes
-            
+            // swap the old and new nodes
+            var upDom = old.parentNode;
+            if ( upDom ) {
+                upDom.replaceChild( dom, old );
+            }
+
             return this;
         },
 
