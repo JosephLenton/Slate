@@ -321,13 +321,26 @@ window.slate.TouchBar = (function() {
         }
     } );
 
-    ast.Input = function( type, cssKlass, defaultVal, emptyAllowed ) {
+    /**
+     * The addFun is used primarily as a way of injecting extra nodes
+     * into this AST node. If provided, it is called when the input
+     * node is added to this AST nodes DOM.
+     *
+     * Then you can add the input node yourself, however you like.
+     *
+     * @param type The type for the HTMLInputElement; i.e. 'text', 'number'. 
+     * @param cssKlass Extra class name for this AST node.
+     * @param defaultVal The default value this input should contain, undefined for none.
+     * @param emptyAllowed True if this node can be left empty, false if that is invalid.
+     * @param addFun Optional, a function which defines how items are added.
+     */
+    ast.Input = function( type, cssKlass, defaultVal, emptyAllowed, addFun ) {
         ast.Node.call( this );
 
         var inputDom = document.createElement( 'input' );
         inputDom.setAttribute( 'type', type );
         if ( defaultVal !== undefined ) {
-            this.input.value = devaultVal;
+            inputDom.value = defaultVal;
         }
 
         var dom = this.getDom();
@@ -337,7 +350,11 @@ window.slate.TouchBar = (function() {
         this.input = inputDom;
         this.timeout = null;
 
-        this.add( astText('"'), this.input, astText('"') );
+        if ( addFun ) {
+            addFun.call( this, this.input );
+        } else {
+            this.add( this.input );
+        }
 
         this.lastInput = '';
 
@@ -346,6 +363,8 @@ window.slate.TouchBar = (function() {
         this.input.addEventListener( 'input', function() {
             self.resizeInput();
         } );
+
+        this.resizeInput();
     }
 
     /**
@@ -436,7 +455,10 @@ window.slate.TouchBar = (function() {
             'text',
             'touch-ast-string',
             undefined,
-            true
+            true,
+            function(input) {
+                this.add( astText('"'), input, astText('"') );
+            }
     );
     ast.NumberInput = newASTInput(
             'number',

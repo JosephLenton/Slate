@@ -171,6 +171,13 @@
         }
     .touch-ast-op.select {
     }
+        .touch-ast.select > .touch-ast-number         >  input,
+        .touch-ast.select > .touch-ast-number         > .touch-ast-text,
+                            .touch-ast-number.select  >  input,
+                            .touch-ast-number.select  > .touch-ast-text
+        {
+            color: #b51;
+        }
         .touch-ast.select > .touch-ast-string         >  input,
         .touch-ast.select > .touch-ast-string         > .touch-ast-text,
                             .touch-ast-string.select  >  input,
