@@ -588,18 +588,19 @@ window.slate.TouchBar = (function() {
                 multiply    : newOps( '&times;' , function(l, r) { return l * r } ),
                 divide      : newOps( '&#xf7;'  , function(l, r) { return l / r } ),
 
-                lessThan    : newOps( '&ge;'    , function(l, r) { return l >=  r } ),
-                greaterThan : newOps( '&le;'    , function(l, r) { return l <=  r } ),
                 equal       : newOps( '&equiv;' , function(l, r) { return l === r } ),
                 notEqual    : newOps( '&ne;'    , function(l, r) { return l !== r } ),
+                lessThan    : newOps( '&ge;'    , function(l, r) { return l >=  r } ),
+                greaterThan : newOps( '&le;'    , function(l, r) { return l <=  r } ),
 
-                leftShift   : newOps( '&#x226a;', function(l, r) { return l << r } ),
-                rightShift  : newOps( '&#x226b;', function(l, r) { return l >> r } ),
+                bitwiseAnd  : newOps( '&amp;'   , function(l, r) { return l & r  } ),
+                bitwiseOr   : newOps( '|'       , function(l, r) { return l | r  } ),
+
                 and         : newOps( 'and'     , function(l, r) { return l && r } ),
                 or          : newOps( 'or'      , function(l, r) { return l || r } ),
 
-                bitwiseAnd  : newOps( '&amp;'   , function(l, r) { return l & r  } ),
-                bitwiseOr   : newOps( '|'       , function(l, r) { return l | r  } )
+                leftShift   : newOps( '&#x226a;', function(l, r) { return l << r } ),
+                rightShift  : newOps( '&#x226b;', function(l, r) { return l >> r } )
         }
     })();
 
