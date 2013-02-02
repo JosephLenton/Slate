@@ -30,6 +30,7 @@ window.slate.TouchBar = (function() {
 
     ast.Node = function() {
         this.dom = slate.util.newElement( 'div', 'touch-ast' );
+
         this.up = null;
 
         this.view = null;
@@ -41,6 +42,14 @@ window.slate.TouchBar = (function() {
 
             self.getView().setCurrent( self );
         } );
+
+        var deleteNode = slate.util.newElement( 'a', 'touch-ast-delete' );
+        slate.util.click( deleteNode, function(ev) {
+            ev.stopPropagation();
+
+            self.replace( new ast.Empty() );
+        } );
+        this.dom.appendChild( deleteNode );
     }
 
     ast.Node.prototype = {
@@ -106,6 +115,10 @@ window.slate.TouchBar = (function() {
             this.view = view;
 
             return this;
+        },
+
+        isSelected: function() {
+            return this.dom.classList.contains( 'select' );
         },
 
         onSelect: function() {
@@ -189,6 +202,10 @@ window.slate.TouchBar = (function() {
 
             if ( this.hasParent() ) {
                 this.getParent().replaceChild( this, ast );
+            }
+
+            if ( this.isSelected() ) {
+                this.getView().setCurrent( ast );
             }
             
             return this;

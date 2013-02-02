@@ -191,11 +191,58 @@
                 color 150ms linear;
     }
     .touch-ast {
+        position: relative;
+
         color: white;
         min-width: 32px;
 
         cursor: pointer;
     }
+        .touch-ast-delete:before {
+            content: '\0003A7';
+        }
+        .touch-ast.select > .touch-ast-delete {
+            width : 18px;
+            height: 18px;
+
+            top : -11px;
+            left:   3px;
+
+            border-width: 2px;
+        }
+        .touch-ast-delete {
+            -webkit-transition:
+                    100ms border linear,
+                    100ms width  linear,
+                    100ms height linear,
+                    100ms top    linear,
+                    100ms left   linear;
+                    
+            width : 0;
+            height: 0;
+
+            top : -2px;
+            left: 12px;
+
+            overflow: hidden;
+
+            line-height: 18px;
+            text-align: center;
+            vertical-align: middle;
+
+            position: absolute;
+
+            border-radius: 100px;
+            background: #421D1D;
+
+            border: 0 solid #C9BBA1;
+            color: #C9BBA1;
+
+            font-size: 15px;
+            font-weight: 900;
+
+            z-index: 100;
+        }
     .touch-ast-text,
     .touch-ast-input > input,
     .touch-bar-view > .touch-ast {
