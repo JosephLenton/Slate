@@ -44,6 +44,13 @@ window.slate.TouchBar = (function() {
     }
 
     ast.Node.prototype = {
+        isEmpty: function() {
+            return false;
+        },
+        isAssignable: function() {
+            return false;
+        },
+        
         addClass: function( klass ) {
             this.dom.classList.add( klass );
 
@@ -187,8 +194,24 @@ window.slate.TouchBar = (function() {
             return this;
         },
 
+        run: function( onSuccess, onError ) {
+            if ( this.validate(onError) ) {
+                this.evaluate(onSuccess);
+            }
+        },
+
+        validate: function(onError) {
+            // todo
+        },
+
         evaluate: function() {
-            throw new Error( "evaluate is not yet implemented, override it!" );
+            setTimeout( function() {
+                throw new Error( "evaluate is not yet implemented, override it!" );
+
+                setTimeout( function() {
+                    onSuccess();
+                }, 0 )
+            }, 0 )
         },
 
         getEmpty: function() {
@@ -230,8 +253,18 @@ window.slate.TouchBar = (function() {
     }
 
     ast.Empty.prototype = slate.util.extend( ast.Node, {
+        isEmpty: function() {
+            return true;
+        },
+
         evaluate: function() {
             throw new Error( "evaluating but node is still empty" );
+        },
+
+        validate: function( onError ) {
+            onError( this, "empty node still present" );
+
+            return false;
         },
 
         getEmpty: function() {
@@ -251,6 +284,10 @@ window.slate.TouchBar = (function() {
     }
 
     ast.Literal.prototype = slate.util.extend( ast.Node, {
+        validate: function() {
+            return true;
+        },
+
         evaluate: function() {
             return this.value;
         }
@@ -276,6 +313,20 @@ window.slate.TouchBar = (function() {
     }
 
     ast.DoubleOp.prototype = slate.util.extend( ast.Node, {
+        validate: function(onError) {
+            if ( this.left.isEmpty() ) {
+                onError( this.left, "left node is still empty" );
+
+                return false;
+            } else if ( this.right.isEmpty() ) {
+                onError( this.right, "right node is still empty" );
+
+                return false;
+            } else {
+                return this.left.validate( onError ) && this.right.validate( onError );
+            }
+        },
+
         evaluate: function() {
             return this.fun(
                     this.left.evaluate(),
@@ -337,9 +388,8 @@ window.slate.TouchBar = (function() {
      * @param cssKlass Extra class name for this AST node.
      * @param defaultVal The default value this input should contain, undefined for none.
      * @param emptyAllowed True if this node can be left empty, false if that is invalid.
-     * @param addFun Optional, a function which defines how items are added.
      */
-    ast.Input = function( type, cssKlass, defaultVal, emptyAllowed, addFun ) {
+    ast.Input = function( type, cssKlass, defaultVal, emptyAllowed ) {
         ast.Node.call( this );
 
         var inputDom = document.createElement( 'input' );
@@ -353,13 +403,10 @@ window.slate.TouchBar = (function() {
         dom.classList.add( cssKlass );
 
         this.input = inputDom;
+        this.emptyAllowed = emptyAllowed;
         this.timeout = null;
 
-        if ( addFun ) {
-            addFun.call( this, this.input );
-        } else {
-            this.add( this.input );
-        }
+        this.add( this.input );
 
         this.lastInput = '';
 
@@ -401,6 +448,19 @@ window.slate.TouchBar = (function() {
     })();
 
     ast.Input.prototype = slate.util.extend( ast.Node, {
+        validate: function( onError ) {
+            if ( !this.emptyAllowed && this.input.value === '' ) {
+                onError( this, "this is missing a value" );
+                return false;
+            } else {
+                return true;
+            }
+        },
+
+        evaluate: function() {
+            throw new Error( "no evaluate function provided!" );
+        },
+
         onEverySelect: function() {
             this.input.focus();
             this.resizeInput();
@@ -428,6 +488,14 @@ window.slate.TouchBar = (function() {
             this.input.style.width = ast.Input.textWidth( this.input.value ) + 'px';
         },
 
+        getInputDom: function() {
+            return this.input;
+        },
+
+        getInputValue: function() {
+            return this.input.value;
+        },
+
         withInput: function( fun ) {
             var self = this;
 
@@ -444,38 +512,102 @@ window.slate.TouchBar = (function() {
         }
     } );
 
-    var newASTInput = function() {
-        var args = arguments;
-
+    var newASTInput = function( args, extraMethods ) {
         var cons = function() {
             ast.Input.apply( this, args );
         }
 
-        cons.prototype = slate.util.extend( ast.Input.prototype );
+        cons.prototype = slate.util.extend( ast.Input.prototype, extraMethods || {} );
 
         return cons;
     }
 
-    ast.StringInput = newASTInput(
-            'text',
-            'touch-ast-string',
-            undefined,
-            true,
-            function(input) {
-                this.add( astText('"'), input, astText('"') );
+    ast.StringInput = (function() {
+        var input = newASTInput(
+                [
+                        'text',
+                        'touch-ast-string',
+                        undefined,
+                        true
+                ],
+                {
+                        validate: function() {
+                            return true;
+                        },
+                        evaluate: function() {
+                            return this.getInputValue();
+                        },
+                }
+        );
+
+        /*
+         * This is here to wrap the constructor,
+         * so we can inject two extra text nodes,
+         * around the input element.
+         */
+        var fun = function() {
+            input.apply( this, arguments );
+            var dom = this.getDom();
+
+            dom.insertBefore( astText('"'), this.getInputDom() );
+            dom.appendChild( astText('"') );
+        }
+        fun.prototype = input.prototype;
+
+        return fun;
+    })();
+    ast.NumberInput = newASTInput(
+            [
+                    'number',
+                    'touch-ast-number',
+                    0,
+                    false
+            ],
+            {
+                    validate: function( onError ) {
+                        if ( this.getInputValue().length > 0 ) {
+                            return true;
+                        } else {
+                            onError( this, "no number provided" );
+                            return false;
+                        }
+                    },
+                    evaluate: function() {
+                        var value = this.getInputValue();
+
+                        return value.indexOf('.') !== -1 ?
+                                parseFloat( value ) :
+                                parseInt( value )   ;
+                    }
             }
     );
-    ast.NumberInput = newASTInput(
-            'number',
-            'touch-ast-number',
-            0,
-            false
-    );
     ast.VariableInput = newASTInput(
-            'text',
-            'touch-ast-string',
-            'x',
-            false
+            [
+                    'text',
+                    'touch-ast-string',
+                    'x',
+                    false
+            ],
+            {
+                    validate: function( onError ) {
+                        if ( this.getValue().length > 0 ) {
+                            return true;
+                        } else {
+                            onError( this, "no variable name provided" );
+                            return false;
+                        }
+                    },
+
+                    evaluate: function() {
+                        return window[ this.getInputValue().value ];
+                    },
+
+                    isAssignable: function() { return true; },
+
+                    onAssignment: function( expr ) {
+                        window[ this.getInputValue().value ] = expr;
+                    }
+            }
     );
 
     /**
@@ -538,6 +670,20 @@ window.slate.TouchBar = (function() {
     TouchView.prototype = {
             clear: function() {
                 this.setAST( new ast.Empty() );
+            },
+
+            run: function() {
+                var self = this;
+                this.getCurrent().run(
+                    // on success
+                    function() { self.clear(); },
+
+                    // on fail
+                    function( node, msg ) {
+                        self.setCurrent( node );
+                        // todo show the error message for the user
+                    }
+                )
             },
 
             getCurrent: function() {
@@ -642,14 +788,7 @@ window.slate.TouchBar = (function() {
 
         var controlsDom = newButtons( 'touch-controls', {
                 'touch-controls-run'   : function() {
-                    view.getCurrent().execute(
-                        // on success
-                        function() { view.clear(); },
-                        // on fail
-                        function( err ) {
-                            // todo
-                        }
-                    )
+                    view.run();
                 },
                 'touch-controls-redo'  : function() {
                     /* todo: perform a redo */

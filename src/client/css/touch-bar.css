@@ -19,7 +19,7 @@
 }
 .touch-controls {
     right: 0;
-    width: 200px;
+    width: 150px;
 
     overflow: hidden;
 
@@ -70,7 +70,7 @@
 .touch-bar {
     position: absolute;
     left: 0;
-    right: 195px;
+    right: 145px;
 }
     .touch-bar-row {
         position: absolute;
