@@ -11,6 +11,13 @@
 
     background: #1a1a1a;
 }
+.touch-bar-wrap *:not( input ) {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    user-select: none;
+}
+
 .touch-controls,
 .touch-bar {
     position: absolute;

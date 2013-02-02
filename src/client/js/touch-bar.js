@@ -40,13 +40,25 @@ window.slate.TouchBar = (function() {
         slate.util.click( this.dom, function(ev) {
             ev.stopPropagation();
 
-            self.getView().setCurrent( self );
+            if ( self.isSelected() ) {
+                if ( self.onClickFun !== null ) {
+                    self.onClickFun();
+                }
+            } else {
+                self.getView().setCurrent( self );
+            }
         } );
 
         this.setupDeleteButton();
+        this.onClickFun = null;
     }
 
     ast.Node.prototype = {
+        setOnClick: function( fun ) {
+            assertFun( fun, "click function is not a function object" );
+            this.onClickFun = fun;
+        },
+
         setupDeleteButton: function() {
             var self = this;
 
@@ -353,6 +365,30 @@ window.slate.TouchBar = (function() {
             return this.value;
         }
     } )
+
+    ast.TrueLiteral = (function() {
+        var switchToFalse = function() {
+            this.replace( new ast.FalseLiteral() );
+        }
+
+        return function() {
+            var literal = new ast.Literal( true, 'touch-ast-boolean' );
+            literal.setOnClick( switchToFalse );
+            return literal;
+        }
+    })();
+
+    ast.FalseLiteral = (function() {
+        var switchToTrue = function() {
+            this.replace( new ast.TrueLiteral() );
+        }
+
+        return function() {
+            var literal = new ast.Literal( false, 'touch-ast-boolean' );
+            literal.setOnClick( switchToTrue );
+            return literal;
+        }
+    })();
 
     /**
      * This is a generic operator, with a left
@@ -1092,10 +1128,10 @@ window.slate.TouchBar = (function() {
             view.insert( new ast.StringInput() );
         } );
         valuesRow.append( 'true', function() {
-            view.insert( new ast.Literal(true, 'touch-ast-boolean') );
+            view.insert( new ast.TrueLiteral() );
         } );
         valuesRow.append( 'false', function() {
-            view.insert( new ast.Literal(false, 'touch-ast-boolean') );
+            view.insert( new ast.FalseLiteral() );
         } );
 
         valuesRow.append( '/ ' + SMALL_EMPTY + ' /', function() {
