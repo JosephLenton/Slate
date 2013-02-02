@@ -536,6 +536,10 @@ window.slate.TouchBar = (function() {
     }
 
     TouchView.prototype = {
+            clear: function() {
+                this.setAST( new ast.Empty() );
+            },
+
             getCurrent: function() {
                 return this.current;
             },
@@ -563,7 +567,17 @@ window.slate.TouchBar = (function() {
              */
             setAST: function( ast ) {
                 if ( this.current ) {
-                    this.dom.removeChild( this.current.getDom() )
+                    /*
+                     * Search for the top 'ast' node,
+                     * and remove that one.
+                     */
+                    var topDom = this.current.getDom();
+                    for ( var nextDom = topDom; nextDom !== this.dom; nextDom = nextDom.parentNode ) {
+                        topDom = nextDom;
+                    }
+
+                    this.dom.removeChild( topDom );
+                    this.current = null;
                 }
 
                 this.dom.appendChild( ast.getDom() );
@@ -586,20 +600,69 @@ window.slate.TouchBar = (function() {
             }
     }
 
+    /**
+     * Creates a new Div, and fills it with the buttons
+     * listed in the object.
+     *
+     * The object uses a mappings of:
+     *
+     *      className => onClickEvent
+     *
+     * @param cssKlass The className for the button-wrapping div.
+     * @param obj The object describing the many buttons to create.
+     */
+    var newButtons = function( cssKlass, obj ) {
+        var dom = document.createElement( 'div' );
+        dom.className = cssKlass;
+
+        for ( var k in obj ) {
+            if ( obj.hasOwnProperty(k) ) {
+                var button = slate.util.newElement( 'a', k );
+                slate.util.click( button, obj[k] );
+                dom.appendChild( button );
+            }
+        }
+
+        return dom;
+    }
+
     var TouchBar = function( dom, execute, commands ) {
-        var upper = slate.util.newElement( 'div', 'touch-bar-row upper' );
-        var lower = slate.util.newElement( 'div', 'touch-bar-row lower' );
+        var upper  = slate.util.newElement( 'div', 'touch-bar-row upper' );
+        var lower  = slate.util.newElement( 'div', 'touch-bar-row lower' );
+        var barDom = slate.util.newElement( 'div', 'touch-bar', upper, lower );
 
-        var wrap  = slate.util.newElement( 'div', 'touch-bar', upper, lower );
+        var view   = new TouchView( barDom );
 
-        var view = new TouchView( wrap );
-        this.view = view;
+        this.view  = view;
 
-        this.dom   = wrap;
+        this.bar   = barDom;
         this.row   = null;
         this.lower = lower;
         this.upper = upper;
 
+        var controlsDom = newButtons( 'touch-controls', {
+                'touch-controls-run'   : function() {
+                    view.getCurrent().execute(
+                        // on success
+                        function() { view.clear(); },
+                        // on fail
+                        function( err ) {
+                            // todo
+                        }
+                    )
+                },
+                'touch-controls-redo'  : function() {
+                    /* todo: perform a redo */
+                },
+                'touch-controls-undo'  : function() {
+                    /* todo: perform an undo */
+                },
+                'touch-controls-clear' : function() {
+                    view.clear();
+                }
+        } )
+
+        var wrap  = slate.util.newElement( 'div', 'touch-bar-wrap', barDom, controlsDom );
         dom.appendChild( wrap );
 
         /**

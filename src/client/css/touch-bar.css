@@ -1,5 +1,5 @@
 
-.touch-bar {
+.touch-bar-wrap {
     width : 100% ;
     height: 200px;
 
@@ -10,6 +10,67 @@
     font-family: 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
 
     background: #1a1a1a;
+}
+.touch-controls,
+.touch-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+}
+.touch-controls {
+    right: 0;
+    width: 200px;
+
+    overflow: hidden;
+
+    box-shadow: -3px 0 9px rgba( 0, 0, 0, 0.6 );
+}
+    .touch-controls,
+    .touch-controls > a:first-of-type {
+        border-top-left-radius: 6px;
+    }
+    .touch-controls,
+    .touch-controls > a:last-of-type {
+        border-bottom-left-radius: 6px;
+    }
+    .touch-controls > a {
+        width: 100%;
+        height: 50px;
+        line-height: 50px;
+        
+        text-align: center;
+        vertical-align: middle;
+        display: inline-block;
+
+        float: left;
+        clear: both;
+
+        color: black;
+
+        font-size  : 21px;
+        font-weight: 100;
+    }
+
+    .touch-controls-run:before   {    content: 'run';   }
+    .touch-controls-run          { background: #78A68F; }
+    .touch-controls-run:hover    { background: #70CC9E; }
+
+    .touch-controls-redo:before  {    content: 'redo';  }
+    .touch-controls-redo         { background: #CBD49C; }
+    .touch-controls-redo:hover   { background: #DCE8A0; }
+
+    .touch-controls-undo:before  {    content: 'undo';  }
+    .touch-controls-undo         { background: #FED457; }
+    .touch-controls-undo:hover   { background: #FFDD78; }
+
+    .touch-controls-clear:before {    content: 'clear'; }
+    .touch-controls-clear        { background: #CB252A; }
+    .touch-controls-clear:hover  { background: #CC4348; }
+
+.touch-bar {
+    position: absolute;
+    left: 0;
+    right: 195px;
 }
     .touch-bar-row {
         position: absolute;
