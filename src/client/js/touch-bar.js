@@ -43,31 +43,63 @@ window.slate.TouchBar = (function() {
             self.getView().setCurrent( self );
         } );
 
-        var deleteNode = slate.util.newElement( 'a', 'touch-ast-delete' );
-        slate.util.click( deleteNode, function(ev) {
-            ev.stopPropagation();
-
-            self.replace( new ast.Empty() );
-        } );
-        this.dom.appendChild( deleteNode );
+        this.setupDeleteButton();
     }
 
     ast.Node.prototype = {
+        setupDeleteButton: function() {
+            var self = this;
+
+            var deleteNode = slate.util.newElement( 'a', 'touch-ast-delete' );
+            slate.util.click( deleteNode, function(ev) {
+                ev.stopPropagation();
+
+                self.replace( new ast.Empty() );
+            } );
+
+            this.dom.appendChild( deleteNode );
+        },
+
         isEmpty: function() {
             return false;
         },
         isAssignable: function() {
             return false;
         },
-        
-        addClass: function( klass ) {
-            this.dom.classList.add( klass );
+
+        setError: function() {
+            var self = this;
+
+            // timeout is to ensure it fades in
+            setTimeout( function() {
+                self.addClass( 'error' );
+            }, 0 );
 
             return this;
         },
 
+        removeError: function() {
+            var self = this;
+
+            setTimeout( function() {
+                self.removeClass( 'error' );
+            }, 0 );
+
+            return this;
+        },
+        
+        addClass: function( klass ) {
+            this.dom.classList.add( klass );
+            return this;
+        },
+        
+        removeClass: function( klass ) {
+            this.dom.classList.remove( klass );
+            return this;
+        },
+
         hasParent: function() {
-            return this.up !== null;
+            return ( this.up !== null );
         },
 
         getParent: function() {
@@ -213,24 +245,36 @@ window.slate.TouchBar = (function() {
 
         run: function( onSuccess, onError ) {
             if ( this.validate(onError) ) {
-                this.evaluate(onSuccess);
+                setTimeout( function() {
+                    var val = this.evaluate();
+
+                    setTimeout( function() {
+                        onSuccess( val );
+                    } );
+                }, 0 );
+            } else {
+                return undefined;
             }
         },
 
         validate: function(onError) {
-            // todo
+            throw new Error( "Validate has not been overridden" );
         },
 
         evaluate: function() {
-            setTimeout( function() {
-                throw new Error( "evaluate is not yet implemented, override it!" );
-
-                setTimeout( function() {
-                    onSuccess();
-                }, 0 )
-            }, 0 )
+            throw new Error( "evaluate is not yet implemented, override it!" );
         },
 
+        /**
+         * Returns the first empty node it can find,
+         * which is either this node, or below it.
+         *
+         * It does not look at siblings, or parents.
+         *
+         * By default, it simply returns null.
+         * Sub-classes are expected to override this
+         * to add their own behaviour.
+         */
         getEmpty: function() {
             return null;
         },
@@ -310,26 +354,75 @@ window.slate.TouchBar = (function() {
         }
     } )
 
-    ast.DoubleOp = function( text, fun ) {
+    /**
+     * This is a generic operator, with a left
+     * and right side, but no information on what
+     * that means.
+     *
+     * It works in conjunction with a description
+     * of the double operator it is representing.
+     *
+     * For example addition is performed through
+     * a DoubleOp + AdditionDescription.
+     *
+     * Why? So descriptions can be changed on the
+     * fly, without the node being affected.
+     *
+     * Different properties between operators:
+     *  - html          - Required, symbol text
+     *  - css           - Optional, the css class
+     *  - validate      - Optional, replaces the validate function with your own
+     *  - validateLeft  - Optional, validates left when it's set
+     *  - validateRight - Optional, validates right wehn it's set
+     *  - execute       - Required, execution function
+     *
+     *  - opposite      - Optional, (tap) node i.e. equal taps to not equal,
+     */
+    ast.DoubleOp = function( meta ) {
         ast.Node.call( this );
 
         this.addClass( 'touch-ast-op' );
 
         this.left  = new ast.Empty();
         this.right = new ast.Empty();
+        this.text  = astHTML( '', 'touch-ast-op-text' ),
 
         this.add(
                 astText('(', 'touch-ast-left-paren'),
                 this.left,
-                astHTML(text, 'touch-ast-op-text'),
+                this.text,
                 this.right,
                 astText(')', 'touch-ast-left-paren')
         );
 
-        this.fun = fun;
+        this.meta = null;
+        this.setMeta( meta );
+        this.meta = meta;
     }
 
     ast.DoubleOp.prototype = slate.util.extend( ast.Node, {
+        setMeta: function( meta ) {
+            assertString( meta.html, "html display is missing" );
+            assertFun( meta.evaluate, "evaluation function is missing" );
+
+            if ( this.meta !== null ) {
+                if ( this.meta.css ) {
+                    this.dom.classList.remove( this.meta.css );
+                }
+            }
+
+            this.text.innerHTML = meta.html;
+            if ( meta.css ) {
+                setTimeout( function() {
+                    this.dom.classList.add( meta.css );
+                }, 0 );
+            }
+            this.meta = meta;
+
+            this.validateLeft();
+            this.validateRight();
+        },
+
         validate: function(onError) {
             if ( this.left.isEmpty() ) {
                 onError( this.left, "left node is still empty" );
@@ -340,15 +433,28 @@ window.slate.TouchBar = (function() {
 
                 return false;
             } else {
-                return this.left.validate( onError ) && this.right.validate( onError );
+                if ( this.meta.validate ) {
+                    return ! this.meta.validate( onError )
+                } else {
+                    return this.left.validate( onError ) && this.right.validate( onError );
+                }
             }
         },
 
         evaluate: function() {
-            return this.fun(
-                    this.left.evaluate(),
-                    this.right.evaluate()
-            )
+            return this.meta.evaluate();
+        },
+
+        validateLeft: function() {
+            if ( this.meta.validateLeft ) {
+                this.meta.validateLeft( this.left );
+            }
+        },
+
+        validateRight: function() {
+            if ( this.meta.validateRight ) {
+                this.meta.validateRight( this.right );
+            }
         },
 
         selectMore: function() {
@@ -380,8 +486,10 @@ window.slate.TouchBar = (function() {
         replaceChild: function( old, newChild ) {
             if ( this.left === old ) {
                 this.left = newChild;
+                this.validateLeft();
             } else if ( this.right === old ) {
                 this.right = newChild;
+                this.validateRight();
             } else {
                 throw new Error( "old child given, but it is not a child of this AST node" );
             }
@@ -393,6 +501,71 @@ window.slate.TouchBar = (function() {
             return this.left.getEmpty() || this.right.getEmpty();
         }
     } );
+
+    var descriptors = (function() {
+        var newOps = function( sym, fun ) {
+            return {
+                    html    : sym,
+                    evaluate: fun
+            }
+        }
+
+        return {
+                assignment : {
+                        html: ':=',
+
+                        validateLeft: function( left ) {
+                            if ( !left.isAssignable() && !left.isEmpty() ) {
+                                left.setError();
+                            }
+                        },
+
+                        validate: function( onError ) {
+                            if ( ! this.left.isAssignable() ) {
+                                onError( this.left, "illegal assignment" );
+                                return false;
+                            } else {
+                                return this.left.validate( onError ) && this.right.validate( onError );
+                            }
+                        },
+
+                        /**
+                         * Behaves like:
+                         *
+                         *  x = left = right
+                         *
+                         * Right is evaluated, set to the left branch,
+                         * and then returned as though there was an 'x' variable.
+                         * Since an assignment, is also an expression.
+                         *
+                         */
+                        evaluate: function() {
+                            var right = this.right.evaluate();
+                            this.left.assign( right );
+
+                            return right;
+                        }
+                },
+
+                add         : newOps( '+'       , function(l, r) { return l + r } ),
+                subtract    : newOps( '-'       , function(l, r) { return l - r } ),
+                multiply    : newOps( '&times;' , function(l, r) { return l * r } ),
+                divide      : newOps( '&#xf7;'  , function(l, r) { return l / r } ),
+
+                lessThan    : newOps( '&ge;'    , function(l, r) { return l >=  r } ),
+                greaterThan : newOps( '&le;'    , function(l, r) { return l <=  r } ),
+                equal       : newOps( '&equiv;' , function(l, r) { return l === r } ),
+                notEqual    : newOps( '&ne;'    , function(l, r) { return l !== r } ),
+
+                leftShift   : newOps( '&#x226a;', function(l, r) { return l << r } ),
+                rightShift  : newOps( '&#x226b;', function(l, r) { return l >> r } ),
+                and         : newOps( 'and'     , function(l, r) { return l && r } ),
+                or          : newOps( 'or'      , function(l, r) { return l || r } ),
+
+                bitwiseAnd  : newOps( '&amp;'   , function(l, r) { return l & r  } ),
+                bitwiseOr   : newOps( '|'       , function(l, r) { return l | r  } )
+        }
+    })();
 
     /**
      * The addFun is used primarily as a way of injecting extra nodes
@@ -539,6 +712,62 @@ window.slate.TouchBar = (function() {
         return cons;
     }
 
+    ast.RegExpInput = (function() {
+        var input = newASTInput(
+                [
+                        'text',
+                        'touch-ast-regexp',
+                        undefined,
+                        true
+                ],
+                {
+                        isRegExpValid: function() {
+                            try {
+                                new RegExp( this.getInputValue() );
+                                return true;
+                            } catch ( err ) {
+                                return false;
+                            }
+                        },
+                        validate: function() {
+                            return this.isRegExpValid();
+                        },
+                        evaluate: function() {
+                            return new RegExp( this.getInputValue() );
+                        }
+                }
+        );
+
+        /*
+         * This is here to wrap the constructor,
+         * so we can inject two extra text nodes,
+         * around the input element.
+         */
+        var fun = function() {
+            input.apply( this, arguments );
+
+            var self = this;
+            this.getInputDom().addEventListener( 'input', function() {
+                if ( self.isRegExpValid() ) {
+                    self.removeError();
+                } else {
+                    self.setError();
+                }
+            } );
+
+            /*
+             * Wrap the RegExp with //'s on either side.
+             */
+            var dom = this.getDom();
+
+            dom.insertBefore( astText('/'), this.getInputDom() );
+            dom.appendChild( astText('/') );
+        }
+        fun.prototype = input.prototype;
+
+        return fun;
+    })();
+
     ast.StringInput = (function() {
         var input = newASTInput(
                 [
@@ -601,8 +830,8 @@ window.slate.TouchBar = (function() {
     ast.VariableInput = newASTInput(
             [
                     'text',
-                    'touch-ast-string',
-                    'x',
+                    'touch-ast-variable',
+                    '',
                     false
             ],
             {
@@ -691,11 +920,13 @@ window.slate.TouchBar = (function() {
 
             run: function() {
                 var self = this;
-                this.getCurrent().run(
-                    // on success
-                    function() { self.clear(); },
+                this.getRootAST().run(
+                    /* success :D */
+                    function() {
+                        self.clear();
+                    },
 
-                    // on fail
+                    /* fail :( */
                     function( node, msg ) {
                         self.setCurrent( node );
                         // todo show the error message for the user
@@ -724,22 +955,26 @@ window.slate.TouchBar = (function() {
                 return this;
             },
 
+            getRootAST: function() {
+                var children = this.dom.children;
+                for ( var i = 0; i < children.length; i++ ) {
+                    var child = children[i];
+
+                    if ( child.classList.contains('touch-ast') ) {
+                        return child;
+                    }
+                }
+
+                return null;
+            },
+
             /**
              * Replaces the entire AST in the view,
              * with the ast node given.
              */
             setAST: function( ast ) {
                 if ( this.current ) {
-                    /*
-                     * Search for the top 'ast' node,
-                     * and remove that one.
-                     */
-                    var topDom = this.current.getDom();
-                    for ( var nextDom = topDom; nextDom !== this.dom; nextDom = nextDom.parentNode ) {
-                        topDom = nextDom;
-                    }
-
-                    this.dom.removeChild( topDom );
+                    this.dom.removeChild( this.getRootAST() );
                     this.current = null;
                 }
 
@@ -837,10 +1072,18 @@ window.slate.TouchBar = (function() {
          * Add the values and literals
          */
 
+        var SMALL_EMPTY = '<span class="touch-small">&#x25cf;</span>';
+
         var valuesRow = new TouchRow( this.upper );
 
         valuesRow.append( 'var', function() {
             view.insert( new ast.VariableInput() );
+        } );
+        valuesRow.append( SMALL_EMPTY + ' [' + SMALL_EMPTY + ']', function() {
+            view.insert( new ast.ArrayAssignment() );
+        } );
+        valuesRow.append( '[ &hellip; ]', function() {
+            view.insert( new ast.ArrayLiteral() );
         } );
         valuesRow.append( '123', function() {
             view.insert( new ast.NumberInput() );
@@ -855,6 +1098,16 @@ window.slate.TouchBar = (function() {
             view.insert( new ast.Literal(false, 'touch-ast-boolean') );
         } );
 
+        valuesRow.append( '/ ' + SMALL_EMPTY + ' /', function() {
+            view.insert( new ast.RegExpInput() );
+        } );
+        valuesRow.append( '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' )', function() {
+            // todo new *exlusive* range
+        } );
+        valuesRow.append( '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' ]', function() {
+            // todo new *inclusive* range
+        } );
+
         addSection( this, 'values', valuesRow );
 
         /*
@@ -863,36 +1116,26 @@ window.slate.TouchBar = (function() {
 
         var opsRow = new TouchRow( this.upper );
 
-        var newOps = function( sym, fun ) {
-            opsRow.append( '_ ' + sym + ' _', function() {
-                var op = new ast.DoubleOp(sym, fun)
-                var current = view.getCurrent();
+        var replaceWithDoubleOp = function( op ) {
+            var current = view.getCurrent();
 
-                current.replace( op );
-                view.setCurrent( op );
-                op.left.replace( current );
+            current.replace( op );
+            view.setCurrent( op );
+            op.left.replace( current );
 
-                view.selectEmpty();
-            } )
+            view.selectEmpty();
         }
 
-        newOps( '+' , function(l, r) { return l + r } );
-        newOps( '-' , function(l, r) { return l - r } );
-        newOps( '&times;' , function(l, r) { return l * r } );
-        newOps( '&#xf7;' , function(l, r) { return l / r } );
-
-        newOps( '&gt;=', function(l, r) { return l >=  r } );
-        newOps( '&lt;=', function(l, r) { return l <=  r } );
-        newOps( '==', function(l, r) { return l === r } );
-        newOps( '&#x2260', function(l, r) { return l !== r } );
-
-        newOps( '&gt;&gt;', function(l, r) { return l >> r } );
-        newOps( '&lt;&lt;', function(l, r) { return l << r } );
-        newOps( 'and', function(l, r) { return l && r } );
-        newOps( 'or', function(l, r) { return l || r } );
-
-        newOps( '&amp;' , function(l, r) { return l & r  } );
-        newOps( '|' , function(l, r) { return l | r  } );
+        for ( var k in descriptors ) {
+            if ( descriptors.hasOwnProperty(k) ) {
+                (function(descriptor) {
+                    opsRow.append(
+                            SMALL_EMPTY + ' ' + descriptor.html + ' ' + SMALL_EMPTY,
+                            function() { replaceWithDoubleOp( new ast.DoubleOp(descriptor) ); }
+                    )
+                })( descriptors[k] );
+            }
+        }
 
         addSection( this, 'operators', opsRow );
 

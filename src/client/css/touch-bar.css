@@ -73,6 +73,7 @@
     right: 145px;
 }
     .touch-bar-row {
+        text-align: center;
         position: absolute;
         left: 0;
 
@@ -131,6 +132,13 @@
         }
         .touch-bar-button:last-of-type {
             border-right: 0 none;
+        }
+        .touch-small {
+            font-size: 10px;
+            color: #444;
+
+            position: relative;
+            bottom: 3px;
         }
 
     .touch-bar-view {
@@ -198,25 +206,43 @@
 
         cursor: pointer;
     }
+    .touch-ast.error {
+        background: #A60300 !important;
+    }
+        .touch-ast.error,
+        .touch-ast.error > .touch-ast-text,
+        .touch-ast.error > input {
+            color: #F0AE33 !important;
+        }
+
         .touch-ast-delete:before {
             content: '\0003A7';
         }
-        .touch-ast.select > .touch-ast-delete {
-            width : 18px;
-            height: 18px;
-
-            top : -11px;
-            left:   3px;
-
-            border-width: 2px;
-        }
         .touch-ast-delete {
             -webkit-transition:
-                    100ms border linear,
-                    100ms width  linear,
-                    100ms height linear,
-                    100ms top    linear,
-                    100ms left   linear;
+                    width  100ms linear,
+                    height 100ms linear,
+                    border 100ms linear,
+                    top    100ms linear,
+                    left   100ms linear;
+            -moz-transition:
+                    width  100ms linear,
+                    height 100ms linear,
+                    border 100ms linear,
+                    top    100ms linear,
+                    left   100ms linear;
+            -ms-transition:
+                    width  100ms linear,
+                    height 100ms linear,
+                    border 100ms linear,
+                    top    100ms linear,
+                    left   100ms linear;
+            transition:
+                    width  100ms linear,
+                    height 100ms linear,
+                    border 100ms linear,
+                    top    100ms linear,
+                    left   100ms linear;
                     
             width : 0;
             height: 0;
@@ -243,6 +269,16 @@
 
             z-index: 100;
         }
+        .touch-ast.select > .touch-ast-delete {
+            width : 18px;
+            height: 18px;
+
+            top : -11px;
+            left:   3px;
+
+            border-width: 2px;
+        }
+
     .touch-ast-text,
     .touch-ast-input > input,
     .touch-bar-view > .touch-ast {
@@ -286,19 +322,28 @@
         {
             color: #b51;
         }
+                            .touch-ast-literal.select > .touch-ast-text,
         .touch-ast.select > .touch-ast-string         >  input,
         .touch-ast.select > .touch-ast-string         > .touch-ast-text,
                             .touch-ast-string.select  >  input,
-                            .touch-ast-string.select  > .touch-ast-text,
-                            .touch-ast-literal.select > .touch-ast-text
+                            .touch-ast-string.select  > .touch-ast-text
         {
-            color: #3a3;
+            color: #18AD18;
         }
-        .touch-ast-string > input:before,
-        .touch-ast-string > input:after {
-            content: '"';
+        .touch-ast.select > .touch-ast-regexp         >  input,
+        .touch-ast.select > .touch-ast-regexp         > .touch-ast-text,
+                            .touch-ast-regexp.select  >  input,
+                            .touch-ast-regexp.select  > .touch-ast-text
+        {
+            color: #8E40B8;
         }
-
+        .touch-ast.select > .touch-ast-variable         >  input,
+        .touch-ast.select > .touch-ast-variable         > .touch-ast-text,
+                            .touch-ast-variable.select  >  input,
+                            .touch-ast-variable.select  > .touch-ast-text
+        {
+            color: #52CC97;
+        }
     .touch-ast-literal {
     }
         .touch-ast-literal.select > .touch-ast-text,
