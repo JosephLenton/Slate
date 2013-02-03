@@ -1,14 +1,16 @@
 "use static";
 
 window.TransientMenu = (function() {
-    var newTransientMenuItem = function( item, stopScrollCallback, isEnabled ) {
+    var HIDE_TIME = 1500;
+
+    var newTransientMenuItem = function( item, isEnabled ) {
         var dom = document.createElement( 'a' );
-        dom.href = '#';
+        dom.setAttribute( 'href', '#' );
 
         if ( isEnabled ) {
-            dom.className = 'transient-list-item';
+            dom.className = 'transient-menu-item';
         } else {
-            dom.className = 'transient-list-item disable';
+            dom.className = 'transient-menu-item disable';
         }
 
         if ( item.css ) {
@@ -22,9 +24,11 @@ window.TransientMenu = (function() {
         if ( item.text ) {
             dom.textContent = item.text;
         }
+
+        return dom;
     }
 
-    var TransientMenu = function() {
+    var TransientMenu = function( items ) {
         var list = document.createElement( 'div' );
         list.className = 'transient-menu-list';
 
@@ -36,16 +40,25 @@ window.TransientMenu = (function() {
          * If the dom is currently hiding,
          * it will stop the hiding process.
          */
+        var self = this;
         var cancelHide = function() {
-            dom.classList.add( 'show' );
+            self.autoHide();
         }
 
         dom.addEventListener( 'mousedown', cancelHide );
         dom.addEventListener( 'mousemove', cancelHide );
         dom.addEventListener( 'touchdown', cancelHide );
 
+        dom.addEventListener( 'blur', function() {
+            self.hide();
+        } );
+
         this.list = list;
         this.dom  = dom;
+
+        if ( items ) {
+            this.setItems( items );
+        }
     }
 
     TransientMenu.prototype = {
@@ -54,6 +67,10 @@ window.TransientMenu = (function() {
             this.itemDom.classList.remove( 'disable' );
 
             this.hide();
+        },
+
+        getDom: function() {
+            return this.dom;
         },
 
         /**
@@ -70,7 +87,6 @@ window.TransientMenu = (function() {
             for ( var i = 0; i < items.length; i++ ) {
                 var itemDom = newTransientMenuItem(
                         items[i],
-                        stopScroll,
                         firstIndex === i
                 )
 
@@ -90,11 +106,28 @@ window.TransientMenu = (function() {
         },
 
         show: function() {
-            this.dom.classList.add( 'show' );
+            if ( ! this.isShown() ) {
+                // re-position to align with the parent
+                this.dom.classList.add( 'show' );
+            }
+
+            this.autoHide();
+        },
+
+        autoHide: function() {
+            if ( this.isHiding ) {
+                cancelTimeout( this.isHiding );
+            }
+
+            var self = this;
+            self.isHiding = setTimeout( function() {
+                self.hide();
+                self.isHiding = 0;
+            }, HIDE_TIME );
         },
 
         hide: function() {
-            this.dom.classList.add( 'hide' );
+            this.dom.classList.remove( 'show' );
         }
     }
 

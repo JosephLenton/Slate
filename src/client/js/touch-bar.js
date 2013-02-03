@@ -310,7 +310,9 @@ window.slate.TouchBar = (function() {
                 } else if ( arg.getDom !== undefined ) {
                     this.dom.appendChild( arg.getDom() );
 
-                    arg.setParent( this );
+                    if ( arg.setParent ) {
+                        arg.setParent( this );
+                    }
                 } else {
                     throw new Error( "unknown argument given" );
                 }
@@ -414,15 +416,45 @@ window.slate.TouchBar = (function() {
      *
      *  - opposite      - Optional, (tap) node i.e. equal taps to not equal,
      */
-    ast.DoubleOp = function( meta ) {
+    ast.DoubleOp = function( meta, metas ) {
         ast.Node.call( this );
 
         this.addClass( 'touch-ast-op' );
 
         this.left  = new ast.Empty();
         this.right = new ast.Empty();
-        this.text  = astHTML( '', 'touch-ast-op-text' ),
 
+        /*
+         * Convert the meta items we have,
+         * into an array of meta items for the menu.
+         */
+        var menuItems = [];
+        var metaIndex = 0,
+            countIndex = true;
+        for ( var i = 0; i < metas.length; i++ ) {
+            var temp = metas[i];
+
+            if ( countIndex ) {
+                if ( temp === meta ) {
+                    countIndex = false;
+                } else {
+                    metaIndex++;
+                }
+            }
+
+            menuItems.push({
+                    html: temp.html,
+                    css : 'touch-ast-op-text',
+                    fun : (function(m) {
+                        return function() {
+                            self.setMeta( m );
+                        }
+                    })(temp)
+            })
+        }
+
+        this.text = new TransientMenu( menuItems, metaIndex );
+        this.text.getDom().classList.add( 'touch-ast-text' );
         this.add(
                 astText('(', 'touch-ast-left-paren'),
                 this.left,
@@ -433,7 +465,6 @@ window.slate.TouchBar = (function() {
 
         this.meta = null;
         this.setMeta( meta );
-        this.meta = meta;
     }
 
     ast.DoubleOp.prototype = slate.util.extend( ast.Node, {
@@ -539,15 +570,18 @@ window.slate.TouchBar = (function() {
     } );
 
     var descriptors = (function() {
-        var newOps = function( sym, fun ) {
+        var newOps = function( name, sym, fun ) {
             return {
+                    name    : name,
                     html    : sym,
                     evaluate: fun
             }
         }
 
-        return {
-                assignment : {
+        return [
+                {
+                        name: 'assignment',
+
                         html: ':=',
 
                         validateLeft: function( left ) {
@@ -583,25 +617,25 @@ window.slate.TouchBar = (function() {
                         }
                 },
 
-                add         : newOps( '+'       , function(l, r) { return l + r } ),
-                subtract    : newOps( '-'       , function(l, r) { return l - r } ),
-                multiply    : newOps( '&times;' , function(l, r) { return l * r } ),
-                divide      : newOps( '&#xf7;'  , function(l, r) { return l / r } ),
+                newOps( 'add'               , '+'       , function(l, r) { return l + r } ),
+                newOps( 'subtract'          , '-'       , function(l, r) { return l - r } ),
+                newOps( 'multiply'          , '&times;' , function(l, r) { return l * r } ),
+                newOps( 'divide'            , '&#xf7;'  , function(l, r) { return l / r } ),
 
-                equal       : newOps( '&equiv;' , function(l, r) { return l === r } ),
-                notEqual    : newOps( '&ne;'    , function(l, r) { return l !== r } ),
-                lessThan    : newOps( '&ge;'    , function(l, r) { return l >=  r } ),
-                greaterThan : newOps( '&le;'    , function(l, r) { return l <=  r } ),
+                newOps( 'equal'             , '&equiv;' , function(l, r) { return l === r } ),
+                newOps( 'not equal'         , '&ne;'    , function(l, r) { return l !== r } ),
+                newOps( 'greater than equal', '&ge;'    , function(l, r) { return l >=  r } ),
+                newOps( 'less than equal'   , '&le;'    , function(l, r) { return l <=  r } ),
 
-                bitwiseAnd  : newOps( '&amp;'   , function(l, r) { return l & r  } ),
-                bitwiseOr   : newOps( '|'       , function(l, r) { return l | r  } ),
+                newOps( 'and'               , 'and'     , function(l, r) { return l && r } ),
+                newOps( 'or'                , 'or'      , function(l, r) { return l || r } ),
 
-                and         : newOps( 'and'     , function(l, r) { return l && r } ),
-                or          : newOps( 'or'      , function(l, r) { return l || r } ),
+                newOps( 'bitwise and'       , '&amp;'   , function(l, r) { return l & r  } ),
+                newOps( 'bitwise or'        , '|'       , function(l, r) { return l | r  } ),
 
-                leftShift   : newOps( '&#x226a;', function(l, r) { return l << r } ),
-                rightShift  : newOps( '&#x226b;', function(l, r) { return l >> r } )
-        }
+                newOps( 'left shift'        , '&#x226a;', function(l, r) { return l << r } ),
+                newOps( 'right shift'       , '&#x226b;', function(l, r) { return l >> r } )
+        ]
     })();
 
     /**
@@ -1163,15 +1197,13 @@ window.slate.TouchBar = (function() {
             view.selectEmpty();
         }
 
-        for ( var k in descriptors ) {
-            if ( descriptors.hasOwnProperty(k) ) {
-                (function(descriptor) {
-                    opsRow.append(
-                            SMALL_EMPTY + ' ' + descriptor.html + ' ' + SMALL_EMPTY,
-                            function() { replaceWithDoubleOp( new ast.DoubleOp(descriptor) ); }
-                    )
-                })( descriptors[k] );
-            }
+        for ( var i = 0; i < descriptors.length; i++ ) {
+            (function(descriptor) {
+                opsRow.append(
+                        SMALL_EMPTY + ' ' + descriptor.html + ' ' + SMALL_EMPTY,
+                        function() { replaceWithDoubleOp( new ast.DoubleOp(descriptor, descriptors) ); }
+                )
+            })( descriptors[i] );
         }
 
         addSection( this, 'operators', opsRow );
