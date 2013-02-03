@@ -1,0 +1,36 @@
+
+.transient-menu {
+    opacity: 0;
+
+    -webkit-transition:
+            100ms opacity linear 1s,
+               1s z-index linear 0s;
+
+    z-index: -1;
+
+    width: 100%;
+}
+.transient-menu.show {
+    opacity: 1;
+
+    -webkit-transition:
+            100ms opacity linear 0s,
+               0s z-index linear 100ms;
+
+    z-index: 1000;
+}
+    .transient-menu-list {
+        width: 100%;
+    }
+        .transient-menu-item {
+            width: 100%;
+
+            vertical-align: middle;
+            text-align: center;
+
+            padding: 12px 0;
+        }
+        .transient-menu-item.disable *,
+        .transient-menu-item.disable {
+            color: #555 !important;
+        }
