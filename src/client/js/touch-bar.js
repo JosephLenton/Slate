@@ -255,22 +255,29 @@ window.slate.TouchBar = (function() {
             return this;
         },
 
-        run: function( onSuccess, onError ) {
-            if ( this.validate(onError) ) {
-                setTimeout( function() {
-                    var val = this.evaluate();
-
-                    setTimeout( function() {
-                        onSuccess( val );
-                    } );
-                }, 0 );
-            } else {
-                return undefined;
-            }
-        },
-
+        /**
+         * Iterates through this tree,
+         * validating this node, and any nodes below.
+         *
+         * By default this just raises an error,
+         * and should be overridden to add validation behaviour.
+         *
+         * The return value is used to quit validation, early,
+         * and to denote if it was successful or not.
+         *
+         * @param onError A callback for reporting errors.
+         * @return True if validation was successful and should continue, false if not.
+         */
         validate: function(onError) {
             throw new Error( "Validate has not been overridden" );
+        },
+
+        evaluateCallback: function( onSuccess ) {
+            var val = this.evaluate();
+
+            setTimeout( function() {
+                onSuccess( val );
+            }, 0 );
         },
 
         evaluate: function() {
@@ -989,20 +996,20 @@ window.slate.TouchBar = (function() {
                 this.setAST( new ast.Empty() );
             },
 
-            run: function() {
-                var self = this;
-                this.getRootAST().run(
-                    /* success :D */
-                    function() {
-                        self.clear();
-                    },
+            validate: function( callback ) {
+                var success = this.getRootAST.validate(function(node, errMsg) {
+                    // todo, display the error
+                } );
 
-                    /* fail :( */
-                    function( node, msg ) {
-                        self.setCurrent( node );
-                        // todo show the error message for the user
-                    }
-                )
+                if ( success ) {
+                    setTimeout( function() {
+                        callback();
+                    }, 0 );
+                }
+            },
+
+            evaluate: function( callback ) {
+                this.getRootAST().evaluateCallback( callback );
             },
 
             getCurrent: function() {
@@ -1111,7 +1118,13 @@ window.slate.TouchBar = (function() {
 
         var controlsDom = newButtons( 'touch-controls', {
                 'touch-controls-run'   : function() {
-                    view.run();
+                    view.validate( function() {
+                        view.evaluate( function(r) {
+                            execute(r, function() {
+                                view.clear();
+                            });
+                        } );
+                    } );
                 },
                 'touch-controls-redo'  : function() {
                     /* todo: perform a redo */
