@@ -460,8 +460,10 @@ window.slate.TouchBar = (function() {
             })
         }
 
-        this.text = new TransientMenu( menuItems, metaIndex );
-        this.text.getDom().classList.add( 'touch-ast-text' );
+        //this.text = new TransientMenu( menuItems, metaIndex );
+        //this.text.getDom().classList.add( 'touch-ast-text' );
+        
+        this.text = astText( '', 'touch-ast-op-text' );
         this.add(
                 astText('(', 'touch-ast-left-paren'),
                 this.left,
