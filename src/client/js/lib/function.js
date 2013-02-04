@@ -42,15 +42,45 @@
         return obj;
     }
 
+    /**
+     * Copies this function, and returns a new one,
+     * with the parameters given tacked on.
+     */ 
     Function.prototype.curry = function() {
         var args = arguments,
             self = this;
 
         return copyProto( this, function() {
-            return self.apply( this, args );
+            /*
+             * Concat the old and new arguments together,
+             * into one.
+             *
+             * The first check allows us to skip this process,
+             * if arguments were not supplied for the second call.
+             */
+            var fullArgs;
+            if ( arguments.length === 0 ) {
+                fullArgs = args;
+            } else {
+                var argsLen = args.length;
+                fullArgs = new Array( argsLen + arguments.length );
+
+                for ( var i = 0; i < argsLen; i++ ) {
+                    fullArgs[i] = args[i];
+                }
+
+                for ( var i = 0; i < arguments.length; i++ ) {
+                    fullArgs[i + argsLen] = arguments[i];
+                }
+            }
+
+            return self.apply( this, fullArgs );
         })
     }
 
+    /**
+     * Copies this function, tacking on the 'post' function given.
+     */
     Function.prototype.then = function( post ) {
         var self = this;
         return copyProto( this, function() {
@@ -58,8 +88,16 @@
             return post.call( this, arguments );
         })
     }
+
+    /**
+     * An alias for 'then'.
+     */
     Function.prototype.after = Function.prototype.then;
 
+    /**
+     * When called, a copy of this function is returned,
+     * with the given 'pre' function tacked on before it.
+     */
     Function.prototype.before = function( pre ) {
         var self = this;
         return copyProto( this, function() {
