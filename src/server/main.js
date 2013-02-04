@@ -52,5 +52,31 @@
         });
     } );
 
-    rockServer.start( CLIENT_ROOT, 80 );
+    var options = (function() {
+        var options = {};
+
+        process.argv.forEach( function(val, index, arr) {
+            if ( val.match(/^[0-9]+$/) !== null && options.port === undefined ) {
+                options.port = parseInt( val );
+            }
+        } );
+
+        options.port = options.port !== undefined ? options.port : 80 ;
+    })()
+
+    var optionsModule = new require( './options.js' );
+    var options = optionsModule.parse( {
+            port: {
+                    'default': 80,
+                    'short'  : 'p',
+                    'value'  : true,
+                    'check'  : function( val ) {
+                        if ( val.length > 0 && val.match(/^[0-9]+$/) !== null ) {
+                            return parseInt( val );
+                        }
+                    }
+            }
+    } )
+
+    rockServer.start( CLIENT_ROOT, options.port );
 })();

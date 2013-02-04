@@ -1,2 +1,2 @@
-node %~dp0\src\server\main.js
+node %~dp0\src\server\main.js --port=80
 
