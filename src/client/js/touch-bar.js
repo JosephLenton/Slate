@@ -585,6 +585,10 @@ window.slate.TouchBar = (function() {
             }
         },
 
+        toJS: function() {
+            return this.meta.toJS( this.left.toJS(), this.right.toJS() );
+        },
+
         evaluate: function() {
             return this.meta.evaluate();
         },
@@ -647,11 +651,14 @@ window.slate.TouchBar = (function() {
     } );
 
     var descriptors = (function() {
-        var newOps = function( name, sym, fun ) {
+        var newOps = function( name, sym, print, fun ) {
             return {
                     name    : name,
                     html    : sym,
-                    evaluate: fun
+                    evaluate: fun,
+                    toJS    : function( left, right ) {
+                        return '(' + left + ' ' + print + ' ' + right + ')';
+                    }
             }
         }
 
@@ -691,27 +698,31 @@ window.slate.TouchBar = (function() {
                             this.left.assign( right );
 
                             return right;
+                        },
+
+                        toJS: function( left, right ) {
+                            return left + ' = ' + right;
                         }
                 },
 
-                newOps( 'add'               , '+'       , function(l, r) { return l + r } ),
-                newOps( 'subtract'          , '-'       , function(l, r) { return l - r } ),
-                newOps( 'multiply'          , '&times;' , function(l, r) { return l * r } ),
-                newOps( 'divide'            , '&#xf7;'  , function(l, r) { return l / r } ),
+                newOps( 'add'               , '+'       , '+'  , function(l, r) { return l + r } ),
+                newOps( 'subtract'          , '-'       , '-'  , function(l, r) { return l - r } ),
+                newOps( 'multiply'          , '&times;' , '*'  , function(l, r) { return l * r } ),
+                newOps( 'divide'            , '&#xf7;'  , '/'  , function(l, r) { return l / r } ),
 
-                newOps( 'equal'             , '&equiv;' , function(l, r) { return l === r } ),
-                newOps( 'not equal'         , '&ne;'    , function(l, r) { return l !== r } ),
-                newOps( 'greater than equal', '&ge;'    , function(l, r) { return l >=  r } ),
-                newOps( 'less than equal'   , '&le;'    , function(l, r) { return l <=  r } ),
+                newOps( 'equal'             , '&equiv;' , '===', function(l, r) { return l === r } ),
+                newOps( 'not equal'         , '&ne;'    , '!==', function(l, r) { return l !== r } ),
+                newOps( 'greater than equal', '&ge;'    , '>=' , function(l, r) { return l >=  r } ),
+                newOps( 'less than equal'   , '&le;'    , '<=' , function(l, r) { return l <=  r } ),
 
-                newOps( 'and'               , 'and'     , function(l, r) { return l && r } ),
-                newOps( 'or'                , 'or'      , function(l, r) { return l || r } ),
+                newOps( 'and'               , 'and'     , '&&' , function(l, r) { return l && r } ),
+                newOps( 'or'                , 'or'      , '||' , function(l, r) { return l || r } ),
 
-                newOps( 'bitwise and'       , '&amp;'   , function(l, r) { return l & r  } ),
-                newOps( 'bitwise or'        , '|'       , function(l, r) { return l | r  } ),
+                newOps( 'bitwise and'       , '&amp;'   , '&'  , function(l, r) { return l & r  } ),
+                newOps( 'bitwise or'        , '|'       , '|'  , function(l, r) { return l | r  } ),
 
-                newOps( 'left shift'        , '&#x226a;', function(l, r) { return l << r } ),
-                newOps( 'right shift'       , '&#x226b;', function(l, r) { return l >> r } )
+                newOps( 'left shift'        , '&#x226a;', '<<' , function(l, r) { return l << r } ),
+                newOps( 'right shift'       , '&#x226b;', '>>' , function(l, r) { return l >> r } )
         ]
     })();
 
