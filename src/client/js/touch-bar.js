@@ -2,6 +2,74 @@
 
 window.slate = window.slate || {};
 window.slate.TouchBar = (function() {
+    var addSlashes = function( str ) {
+        return (str+'').replace(/([\\"'])/g, "\\$1").replace(/\0/g, "\\0");
+    }
+
+    /**
+     * Returns true if the given string represents a valid
+     * JavaScript identifier, and false if not.
+     *
+     * @param str The string to test.
+     * @return True if it is valid, and false if not.
+     */
+    /*
+     * Reserved words from: https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Reserved_Words
+     */
+    var isValidIdentifier = function( str ) {
+        return str.length > 0 &&
+                str.replace(/^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/, '') === '' &&
+                str !== 'break' &&
+                str !== 'case' &&
+                str !== 'catch' &&
+                str !== 'continue' &&
+                str !== 'debugger' &&
+                str !== 'default' &&
+                str !== 'delete' &&
+                str !== 'do' &&
+                str !== 'else' &&
+                str !== 'finally' &&
+                str !== 'for' &&
+                str !== 'function' &&
+                str !== 'if' &&
+                str !== 'in' &&
+                str !== 'instance' &&
+                str !== 'new' &&
+                str !== 'return' &&
+                str !== 'switch' &&
+                str !== 'this' &&
+                str !== 'throw' &&
+                str !== 'try' &&
+                str !== 'typeof' &&
+                str !== 'var' &&
+                str !== 'void' &&
+                str !== 'while' &&
+                str !== 'with' &&
+
+                str !== 'class' &&
+                str !== 'enum' &&
+                str !== 'export' &&
+                str !== 'extends' &&
+                str !== 'import' &&
+                str !== 'super' &&
+
+                str !== 'implements' &&
+                str !== 'interface' &&
+                str !== 'let' &&
+                str !== 'package' &&
+                str !== 'private' &&
+                str !== 'protected' &&
+                str !== 'public' &&
+                str !== 'static' &&
+                str !== 'yield' &&
+
+                str !== 'const' &&
+
+                str !== 'nil' &&
+                str !== 'true' &&
+                str !== 'false' ;
+    }
+
     var newASTText = function( args ) {
         var klass = 'touch-ast-text';
         for ( var i = 1; i < args.length; i++ ) {
@@ -80,33 +148,27 @@ window.slate.TouchBar = (function() {
         },
 
         setError: function() {
-            var self = this;
-
             // timeout is to ensure it fades in
-            setTimeout( function() {
-                self.addClass( 'error' );
-            }, 0 );
+            this.addClass.callLater( this, 'error' );
 
             return this;
         },
 
         removeError: function() {
-            var self = this;
-
-            setTimeout( function() {
-                self.removeClass( 'error' );
-            }, 0 );
+            this.removeClass.callLater( this, 'error' );
 
             return this;
         },
         
         addClass: function( klass ) {
             this.dom.classList.add( klass );
+
             return this;
         },
         
         removeClass: function( klass ) {
             this.dom.classList.remove( klass );
+
             return this;
         },
 
@@ -272,12 +334,12 @@ window.slate.TouchBar = (function() {
             throw new Error( "Validate has not been overridden" );
         },
 
-        evaluateCallback: function( onSuccess ) {
-            var val = this.evaluate();
+        toJS: function() {
+            throw new Error( "toJS has not been overridden" );
+        },
 
-            setTimeout( function() {
-                onSuccess( val );
-            }, 0 );
+        evaluateCallback: function( onSuccess ) {
+            onSuccess.callLater( null, this.evaluate() );
         },
 
         evaluate: function() {
@@ -339,6 +401,10 @@ window.slate.TouchBar = (function() {
             return true;
         },
 
+        toJS: function() {
+            throw new Error( "converting to code but node is still empty" );
+        },
+
         evaluate: function() {
             throw new Error( "evaluating but node is still empty" );
         },
@@ -368,6 +434,10 @@ window.slate.TouchBar = (function() {
     ast.Literal.prototype = slate.util.extend( ast.Node, {
         validate: function() {
             return true;
+        },
+
+        toJS: function() {
+            return this.value;
         },
 
         evaluate: function() {
@@ -489,9 +559,7 @@ window.slate.TouchBar = (function() {
 
             this.text.innerHTML = meta.html;
             if ( meta.css ) {
-                setTimeout( function() {
-                    this.dom.classList.add( meta.css );
-                }, 0 );
+                this.dom.classList.add.callLater( meta.css );
             }
             this.meta = meta;
 
@@ -679,11 +747,16 @@ window.slate.TouchBar = (function() {
         this.add( this.input );
 
         this.lastInput = '';
+        this.inputFuns = [];
 
         var self = this;
-
         this.input.addEventListener( 'input', function() {
             self.resizeInput();
+
+            var funs = self.inputFuns;
+            for ( var i = 0; i < funs.length; i++ ) {
+                funs.call( self );
+            }
         } );
 
         this.resizeInput();
@@ -718,6 +791,12 @@ window.slate.TouchBar = (function() {
     })();
 
     ast.Input.prototype = slate.util.extend( ast.Node, {
+        onInput: function( fun ) {
+            assertFun( fun, "non function given for input event" );
+
+            this.inputFuns.push( fun );
+        },
+
         validate: function( onError ) {
             if ( !this.emptyAllowed && this.input.value === '' ) {
                 onError( this, "this is missing a value" );
@@ -782,114 +861,91 @@ window.slate.TouchBar = (function() {
         }
     } );
 
-    var newASTInput = function( args, extraMethods ) {
-        var cons = function() {
-            ast.Input.apply( this, args );
-        }
-
-        cons.prototype = slate.util.extend( ast.Input.prototype, extraMethods || {} );
-
-        return cons;
-    }
-
     ast.RegExpInput = (function() {
-        var input = newASTInput(
-                [
+                ast.Input.call( this,
                         'text',
                         'touch-ast-regexp',
                         undefined,
                         true
-                ],
-                {
-                        isRegExpValid: function() {
-                            try {
-                                new RegExp( this.getInputValue() );
-                                return true;
-                            } catch ( err ) {
-                                return false;
-                            }
-                        },
-                        validate: function() {
-                            return this.isRegExpValid();
-                        },
-                        evaluate: function() {
-                            return new RegExp( this.getInputValue() );
+                )
+
+                /*
+                 * Add in input validation checks.
+                 */
+
+                this.onInput( function() {
+                    if ( this.isRegExpValid() ) {
+                        this.removeError();
+                    } else {
+                        this.setError();
+                    }
+                })
+
+                /*
+                 * Wrap the RegExp with //'s on either side.
+                 */
+                var dom = this.getDom();
+
+                dom.insertBefore( astText('/'), this.getInputDom() );
+                dom.appendChild( astText('/') );
+            } ).
+            extend({ 
+                    isRegExpValid: function() {
+                        try {
+                            new RegExp( this.getInputValue() );
+                            return true;
+                        } catch ( err ) {
+                            return false;
                         }
-                }
-        );
-
-        /*
-         * This is here to wrap the constructor,
-         * so we can inject two extra text nodes,
-         * around the input element.
-         */
-        var fun = function() {
-            input.apply( this, arguments );
-
-            var self = this;
-            this.getInputDom().addEventListener( 'input', function() {
-                if ( self.isRegExpValid() ) {
-                    self.removeError();
-                } else {
-                    self.setError();
-                }
-            } );
-
-            /*
-             * Wrap the RegExp with //'s on either side.
-             */
-            var dom = this.getDom();
-
-            dom.insertBefore( astText('/'), this.getInputDom() );
-            dom.appendChild( astText('/') );
-        }
-        fun.prototype = input.prototype;
-
-        return fun;
-    })();
+                    },
+                    validate: function() {
+                        return this.isRegExpValid();
+                    },
+                    evaluate: function() {
+                        return new RegExp( this.getInputValue() );
+                    },
+                    toJS: function() {
+                        return "new RegExp( \"" + addSlashes(this.getInputValue()) + "\" )";
+                    }
+            })
 
     ast.StringInput = (function() {
-        var input = newASTInput(
-                [
+                ast.Input.call( this,
                         'text',
                         'touch-ast-string',
                         undefined,
                         true
-                ],
-                {
-                        validate: function() {
-                            return true;
-                        },
-                        evaluate: function() {
-                            return this.getInputValue();
-                        },
-                }
-        );
+                )
 
-        /*
-         * This is here to wrap the constructor,
-         * so we can inject two extra text nodes,
-         * around the input element.
-         */
-        var fun = function() {
-            input.apply( this, arguments );
-            var dom = this.getDom();
+                /*
+                 * This is here to wrap the constructor,
+                 * so we can inject two extra text nodes,
+                 * around the input element.
+                 */
+                var dom = this.getDom();
 
-            dom.insertBefore( astText('"'), this.getInputDom() );
-            dom.appendChild( astText('"') );
-        }
-        fun.prototype = input.prototype;
+                dom.insertBefore( astText('"'), this.getInputDom() );
+                dom.appendChild( astText('"') );
+            }).
+            extend( ast.Input, {
+                    validate: function() {
+                        return true;
+                    },
+                    evaluate: function() {
+                        return this.getInputValue();
+                    },
+                    toJS: function() {
+                        return "\"" + addSlashes(this.getInputValue()) + "\"";
+                    }
+            })
 
-        return fun;
-    })();
-    ast.NumberInput = newASTInput(
-            [
+    ast.NumberInput = ast.Input.curry(
                     'number',
                     'touch-ast-number',
                     0,
                     false
-            ],
-            {
+            ).
+            extend({
                     validate: function( onError ) {
                         if ( this.getInputValue().length > 0 ) {
                             return true;
@@ -904,37 +960,55 @@ window.slate.TouchBar = (function() {
                         return value.indexOf('.') !== -1 ?
                                 parseFloat( value ) :
                                 parseInt( value )   ;
+                    },
+                    toJS: function() {
+                        return this.getInputValue();
                     }
-            }
-    );
-    ast.VariableInput = newASTInput(
-            [
-                    'text',
-                    'touch-ast-variable',
-                    '',
-                    false
-            ],
-            {
+            })
+
+    ast.VariableInput = (function() {
+                ast.Input.call( this, 
+                        'text',
+                        'touch-ast-variable',
+                        '',
+                        false
+                )
+
+                this.onInput( function() {
+                    if ( isValidIdentifier(this.getInputValue()) ) {
+                        this.removeError();
+                    } else {
+                        this.setError();
+                    }
+                } )
+            }).
+            extend( ast.Input, {
                     validate: function( onError ) {
-                        if ( this.getValue().length > 0 ) {
-                            return true;
-                        } else {
+                        var str = this.getInputValue();
+
+                        if ( str.length === 0 ) {
                             onError( this, "no variable name provided" );
                             return false;
+                        } else if ( ! isValidIdentifier(str) ) {
+                            onError( this, "invalid variable name given" );
+                            return false;
+                        } else {
+                            return true;
                         }
                     },
 
-                    evaluate: function() {
-                        return window[ this.getInputValue().value ];
+                    toJS: function() {
+                        return this.getInputValue();
                     },
 
+                    evaluate: function() {
+                        return window[ this.getInputValue() ];
+                    },
                     isAssignable: function() { return true; },
-
                     onAssignment: function( expr ) {
-                        window[ this.getInputValue().value ] = expr;
+                        window[ this.getInputValue() ] = expr;
                     }
-            }
-    );
+            })
 
     /**
      * A horizontal row of options to select.
@@ -1004,10 +1078,12 @@ window.slate.TouchBar = (function() {
                 } );
 
                 if ( success ) {
-                    setTimeout( function() {
-                        callback();
-                    }, 0 );
+                    callback.later();
                 }
+            },
+
+            toJS: function() {
+                return this.getRootAST().toJS();
             },
 
             evaluate: function( callback ) {
