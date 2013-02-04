@@ -15,7 +15,10 @@ function AssertionError( msg ) {
         msg = "assertion failed";
     }
 
-    Error.call(this, msg);
+    Error.call( this, msg );
+
+    this.name = "AssertionError";
+    this.message = msg;
 }
 AssertionError.prototype = new Error();
 AssertionError.prototype.constructor = AssertionError;

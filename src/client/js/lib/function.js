@@ -9,14 +9,14 @@
      * but it actually makes the other functions simpler
      * and more elegant.
      */
-    var copyProto = function( dest, src ) {
+    var copyProto = function( src, dest ) {
         dest.prototype = src.prototype;
 
         return dest;
     }
 
-    Function.prototype.extend = function() {
-        var proto = this.prototype;
+    var newPrototypeArray = function( src, arr ) {
+        var proto = src.prototype;
         var obj = {};
 
         for ( var k in proto ) {
@@ -25,8 +25,8 @@
             }
         }
 
-        for ( var i = 0; i < arguments.length; i++ ) {
-            var srcObj = arguments[i];
+        for ( var i = 0; i < arr.length; i++ ) {
+            var srcObj = arr[i];
 
             if ( (typeof srcObj === 'function') || (srcObj instanceof Function) ) {
                 srcObj = srcObj.prototype;
@@ -40,6 +40,34 @@
         }
 
         return obj;
+    }
+
+    /**
+     * This creates a new prototype,
+     * with the methods provided extending it.
+     *
+     * it's the same as 'extend', but returns an object for use
+     * as a prototype instead of a funtion.
+     */
+    Function.prototype.newPrototype = function() {
+        return newPrototypeArray( this, arguments );
+    }
+
+    /**
+     * Given functions and prototypes,
+     * this will create a new prototype that combines all of their methods.
+     *
+     * It then returns a copy of this function,
+     * with the generated prototype tacked on.
+     */
+    Function.prototype.extend = function() {
+        var self = this;
+        var newFun = function() {
+            return self.apply( this, arguments );
+        }
+        newFun.prototype = newPrototypeArray( this, arguments );
+
+        return newFun;
     }
 
     /**

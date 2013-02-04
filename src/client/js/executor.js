@@ -317,7 +317,7 @@
          * so translate it into a regular SyntaxError.
          */
         try {
-            esprima.parse( js );
+            acorn.parse( js );
         } catch ( err ) {
             var message = fileName ?
                     fileName + ' ' + err.message :
@@ -682,6 +682,11 @@
             if ( ! onDisplay ) throw new Error( 'falsy onDisplay function given' );
 
             return function( type, cmd, post ) {
+                assertString( type, "non-string given for language; should be 'js' or 'coffee' or whatever" );
+                assertString( cmd, "non-string given as command" );
+                assertFun( post, "non-function given for post execution" );
+                assert( languages[type], "language not found: " + type );
+
                 executeInner( head, languages, type, cmd, post, function(cmd, r) {
                     if ( r !== undefined ) {
                         r = new slate.formatter.ignoreHandler(r)

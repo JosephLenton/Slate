@@ -437,7 +437,7 @@ window.slate.TouchBar = (function() {
         },
 
         toJS: function() {
-            return this.value;
+            return this.value + '';
         },
 
         evaluate: function() {
@@ -1084,7 +1084,7 @@ window.slate.TouchBar = (function() {
             },
 
             validate: function( callback ) {
-                var success = this.getRootAST.validate(function(node, errMsg) {
+                var success = this.getRootAST().validate(function(node, errMsg) {
                     // todo, display the error
                 } );
 
@@ -1094,6 +1094,7 @@ window.slate.TouchBar = (function() {
             },
 
             toJS: function() {
+                console.log( this.getRootAST() );
                 return this.getRootAST().toJS();
             },
 
@@ -1123,16 +1124,12 @@ window.slate.TouchBar = (function() {
             },
 
             getRootAST: function() {
-                var children = this.dom.children;
-                for ( var i = 0; i < children.length; i++ ) {
-                    var child = children[i];
-
-                    if ( child.classList.contains('touch-ast') ) {
-                        return child;
-                    }
+                var root = null;
+                for ( var current = this.current; current !== null; current = current.getParent() ) {
+                    root = current;
                 }
 
-                return null;
+                return root;
             },
 
             /**
@@ -1141,7 +1138,7 @@ window.slate.TouchBar = (function() {
              */
             setAST: function( ast ) {
                 if ( this.current ) {
-                    this.dom.removeChild( this.getRootAST() );
+                    this.dom.removeChild( this.getRootAST().getDom() );
                     this.current = null;
                 }
 
@@ -1208,10 +1205,9 @@ window.slate.TouchBar = (function() {
         var controlsDom = newButtons( 'touch-controls', {
                 'touch-controls-run'   : function() {
                     view.validate( function() {
-                        view.evaluate( function(r) {
-                            execute(r, function() {
-                                view.clear();
-                            });
+                        var js = view.toJS();
+                        execute( 'js', js, function() {
+                            view.clear();
                         } );
                     } );
                 },
