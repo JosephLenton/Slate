@@ -369,6 +369,10 @@
         color: #444;
         font-size: 32px;
     }
+    .touch-bar-view > .touch-ast > .touch-ast-left-paren,
+    .touch-bar-view > .touch-ast > .touch-ast-right-paren {
+        display: none;
+    }
     .touch-ast-left-paren {
         padding-right: 0;
     }
