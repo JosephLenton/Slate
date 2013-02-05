@@ -1,24 +1,198 @@
 "use static";
 
-(function() {
-    /**
-     * Sets the prototype property of the 'dest' function,
-     * to that of the 'src' function.
-     *
-     * Might seem too trivial to build a function for,
-     * but it actually makes the other functions simpler
-     * and more elegant.
-     */
-    var copyProto = function( src, dest ) {
-        dest.prototype = src.prototype;
+/**
+ * Function.js
+ *
+ * A Function utility library. Helps with building
+ * classes, with aspects-related constructs.
+ *
+ * Also includes some helper functions, to make
+ * working with functions easier.
+ */
 
-        return dest;
+(function() {
+    var wrapFun = function( inner, givenPres, givenPosts ) {
+        var pres, posts;
+
+        if ( givenPres !== undefined ) {
+            pres = new Array( givenPres.length );
+
+            for ( var i = 0; i < givenPres.length; i++ ) {
+                pres[i] = givenPres[i];
+            }
+        }
+
+        if ( givenPosts !== undefined ) {
+            posts = new Array( givenPosts.length );
+
+            for ( var i = 0; i < givenPosts.length; i++ ) {
+                posts[i] = givenPosts[i];
+            }
+        }
+
+        var fun = function() {
+            // constructor call!
+            if ( this && (this instanceof fun) && (this.isWrapped !== true) ) {
+                var obj,
+                    argsLen = arguments.length;
+
+                if ( argsLen === 0 ) {
+                    obj = new inner();
+                } else if ( argsLen === 1 ) {
+                    obj = new inner( arguments[0] );
+                } else if ( argsLen === 2 ) {
+                    obj = new inner( arguments[0], arguments[1] );
+                } else if ( argsLen === 3 ) {
+                    obj = new inner( arguments[0], arguments[1], arguments[2] );
+                } else if ( argsLen === 4 ) {
+                    obj = new inner( arguments[0], arguments[1], arguments[2], arguments[3] );
+                } else if ( argsLen === 5 ) {
+                    obj = new inner( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4] );
+                } else if ( argsLen === 6 ) {
+                    obj = new inner( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5] );
+                } else {
+                    var TempFun = function() { };
+                    TempFun.prototype = inner.prototype;
+
+                    var obj = new TempFun();
+                    var altObj = inner.apply( obj, arguments );
+
+                    if ( Object(altObj) === altObj ) {
+                        obj = altObj;
+                    }
+                }
+
+                // handle the prototype stuff
+                var proto = this.__proto__;
+                for ( var k in proto ) {
+                    if ( proto.hasOwnProperty(k) ) {
+                        var meth = proto[k];
+
+                        if ( (typeof meth === 'function') || (meth instanceof Function) ) {
+                            obj[k] = wrapFun( meth );
+                        } else {
+                            obj[k] = meth;
+                        }
+                    }
+                }
+
+                return obj;
+            // regular function call
+            } else {
+                var hasArgs = arguments.length > 0;
+                var returnVal = undefined;
+
+                if ( pres !== undefined ) {
+                    for ( var i = 0; i < pres.length; i++ ) {
+                        if ( hasArgs ) {
+                            returnVal = pres[i].apply( this, arguments );
+                        } else {
+                            returnVal = pres[i].call( this );
+                        }
+                    }
+                }
+
+                if ( hasArgs ) {
+                    returnVal = inner.apply( this, arguments );
+                } else {
+                    returnVal = inner.call( this );
+                }
+
+                if ( posts !== undefined ) {
+                    for ( var i = 0; i < posts.length; i++ ) {
+                        if ( hasArgs ) {
+                            returnVal = posts[i].apply( this, arguments );
+                        } else {
+                            returnVal = posts[i].call( this );
+                        }
+                    }
+                }
+
+                return returnVal;
+            }
+        }
+
+        fun.isWrapped = true;
+
+        var argumentFunsToArray = function( args, arr ) {
+            var argsLength = args.length;
+
+            if ( arr === undefined ) {
+                arr = new Array( argsLength );
+
+                for ( var i = 0; i < argsLength; i++ ) {
+                    var fun = args[i];
+
+                    if ( (typeof fun !== 'function') || !(fun instanceof Function) ) {
+                        throw new Error( "none function given" );
+                    }
+
+                    arr[i] = fun;
+                }
+            } else {
+                for ( var i = 0; i < argsLength; i++ ) {
+                    var fun = args[i];
+
+                    if ( (typeof fun !== 'function') || !(fun instanceof Function) ) {
+                        throw new Error( "none function given" );
+                    }
+
+                    arr.push( fun );
+                }
+            }
+
+            return arr;
+        }
+
+        fun.preAdd = function() {
+            pres = argumentFunsToArray( arguments, pres );
+
+            return fun;
+        }
+
+        fun.add = function() {
+            posts = argumentFunsToArray( arguments, posts );
+
+            return fun;
+        }
+
+        /**
+         * The instance form of clone,
+         * tacks on it's own behaviour to ensure
+         * that pre/posts get cloned too.
+         *
+         * @return A shallow clone of this function.
+         */
+        fun.clone = function() {
+            return wrapFun( inner, pres, posts ).
+                    proto( this.prototype );
+        }
+
+        return fun;
     }
 
-    var newPrototypeArray = function( src, arr ) {
-        var proto = src.prototype;
-        var obj = {};
+    Function.prototype.eventFields = function( field ) {
+        for ( var i = 0; i < arguments.length; i++ ) {
+            var field = arguments[i];
 
+            if ( this[field] !== undefined ) {
+                throw new Error("overriding existing field with new event stack");
+            }
+
+            this[field] = Function.eventField( this );
+        }
+
+        return this;
+    }
+
+    /**
+     *
+     */
+    var newPrototypeArray = function( src, arr, check ) {
+        var hasCheck = ( arguments.length >= 3 );
+        var proto = src.prototype;
+
+        var obj = {};
         for ( var k in proto ) {
             if ( proto.hasOwnProperty(k) ) {
                 obj[k] = proto[k];
@@ -28,18 +202,67 @@
         for ( var i = 0; i < arr.length; i++ ) {
             var srcObj = arr[i];
 
-            if ( (typeof srcObj === 'function') || (srcObj instanceof Function) ) {
+            while ( (typeof srcObj === 'function') || (srcObj instanceof Function) ) {
                 srcObj = srcObj.prototype;
             }
 
             for ( var k in srcObj ) {
                 if ( srcObj.hasOwnProperty(k) ) {
-                    obj[k] = srcObj[k];
+                    if ( hasCheck ) {
+                        var alt = check( obj, k, srcObj[k] );
+
+                        if ( alt !== undefined ) {
+                            obj[k] = alt;
+                        } else {
+                            obj[k] = srcObj[k];
+                        }
+                    } else {
+                        obj[k] = srcObj[k];
+                    }
                 }
             }
         }
 
         return obj;
+    }
+
+    /**
+     * @return A function with the same properties set as this function, like a shallow copy.
+     */
+    /*
+     * If this is being called, then it cannot be a wrapped fun,
+     * because it replaces the clone method.
+     *
+     * However we still have to check, incase it was called manually.
+     */
+    Function.prototype.clone = function() {
+        if ( this.isWrapped && this.hasOwnProperty('clone') ) {
+            return this.clone();
+        } else {
+            var self = this;
+            var fun = function() {
+                self.apply( this, arguments );
+            }
+
+            fun.prototype = this.prototype;
+
+            return wrapFun( this );
+        }
+    }
+
+    /**
+     * Duplicates this function, and sets a new prototype for it.
+     *
+     * @param The new prototype.
+     */
+    Function.prototype.proto = function( newProto ) {
+        while ( (typeof newProto === 'function') || (newProto instanceof Function) ) {
+            newProto = newProto.prototype;
+        }
+
+        this.prototype = newProto;
+
+        return this;
     }
 
     /**
@@ -54,20 +277,62 @@
     }
 
     /**
-     * Given functions and prototypes,
-     * this will create a new prototype that combines all of their methods.
+     * Same as append, but the methods it overrides *must* exist.
      *
-     * It then returns a copy of this function,
-     * with the generated prototype tacked on.
+     * This allows you to have a sanity check.
+     */
+    Function.prototype.override = function() {
+        return this.clone().
+                proto(
+                        newPrototypeArray( this, arguments, function(dest, k, val) {
+                            if ( dest[k] === undefined ) {
+                                throw new Error( "Method " + k + " is overriding, but not found in original" );
+                            }
+                        } )
+                )
+    }
+
+    Function.prototype.before = function() {
+        return this.clone().
+                proto(
+                        newPrototypeArray( this, arguments, function(dest, k, val) {
+                            if ( dest[k] === undefined ) {
+                                throw new Error( "Method " + k + " is adding behaviour before, but method not found in original" );
+                            } else {
+                                return dest[k].preSub( val );
+                            }
+                        } )
+                )
+    }
+
+    Function.prototype.after = function() {
+        return this.clone().
+                proto(
+                        newPrototypeArray( this, arguments, function(dest, k, val) {
+                            if ( dest[k] === undefined ) {
+                                throw new Error( "Method " + k + " is adding behaviour, but not found in original" );
+                            } else {
+                                return dest[k].sub( val );
+                            }
+                        } )
+                )
+    }
+
+    /**
+     * Adds on extra methods, but none of them are allowed 
+     * to override any others.
+     *
+     * This is used as a sanity check.
      */
     Function.prototype.extend = function() {
-        var self = this;
-        var newFun = function() {
-            return self.apply( this, arguments );
-        }
-        newFun.prototype = newPrototypeArray( this, arguments );
-
-        return newFun;
+        return this.clone().
+                proto(
+                        newPrototypeArray( this, arguments, function(dest, k, val) {
+                            if ( dest[k] !== undefined ) {
+                                throw new Error( "Method " + k + " is extend, but already exists" );
+                            }
+                        } )
+                )
     }
 
     /**
@@ -75,64 +340,111 @@
      * with the parameters given tacked on.
      */ 
     Function.prototype.curry = function() {
-        var args = arguments,
-            self = this;
+        return curryAndRice( this, arguments, true );
+    }
 
-        return copyProto( this, function() {
-            /*
-             * Concat the old and new arguments together,
-             * into one.
-             *
-             * The first check allows us to skip this process,
-             * if arguments were not supplied for the second call.
-             */
-            var fullArgs;
-            if ( arguments.length === 0 ) {
-                fullArgs = args;
-            } else {
-                var argsLen = args.length;
-                fullArgs = new Array( argsLen + arguments.length );
+    Function.prototype.rice = function() {
+        return curryAndRice( this, arguments, false );
+    }
 
-                for ( var i = 0; i < argsLen; i++ ) {
-                    fullArgs[i] = args[i];
-                }
+    var curryAndRice = function( self, args, prePend ) {
+        return wrapFun(
+                function() {
+                    /*
+                     * Concat the old and new arguments together,
+                     * into one.
+                     *
+                     * The first check allows us to skip this process,
+                     * if arguments were not supplied for the second call.
+                     */
+                    var fullArgs;
+                    if ( arguments.length === 0 ) {
+                        fullArgs = args;
+                    } else {
+                        if ( prePend ) {
+                            var argsLen = args.length;
+                            fullArgs = new Array( argsLen + arguments.length );
 
-                for ( var i = 0; i < arguments.length; i++ ) {
-                    fullArgs[i + argsLen] = arguments[i];
-                }
-            }
+                            for ( var i = 0; i < argsLen; i++ ) {
+                                fullArgs[i] = args[i];
+                            }
 
-            return self.apply( this, fullArgs );
-        })
+                            for ( var i = 0; i < arguments.length; i++ ) {
+                                fullArgs[i + argsLen] = arguments[i];
+                            }
+                        } else {
+                            var argsLen = arguments.length;
+                            fullArgs = new Array( args.length + argsLen );
+
+                            for ( var i = 0; i < argsLen; i++ ) {
+                                fullArgs[i] = arguments[i];
+                            }
+
+                            for ( var i = 0; i < arguments.length; i++ ) {
+                                fullArgs[i + argsLen] = args[i];
+                            }
+                        }
+                    }
+
+                    return self.apply( this, fullArgs );
+                }).
+                proto( self );
+    }
+
+    /**
+     * Copies this function, tacking on the 'pre' function given.
+     *
+     * That is because the after behaviour does *not* modify this function,
+     * but makes a copy first.
+     *
+     * @param pre A function to call.
+     * @return A new function, with the pre behaviour tacked on, to run before it.
+     */
+    Function.prototype.preSub = function( pre ) {
+        var self = this;
+        return (function() {
+                    pre.call( this, arguments );
+                    return self.call( this, arguments );
+                }).
+                proto( this );
     }
 
     /**
      * Copies this function, tacking on the 'post' function given.
+     *
+     * This is intended for sub-classing,
+     * hence the name, 'sub'.
+     *
+     * That is because the after behaviour does *not* modify this function,
+     * but makes a copy first.
+     *
+     * @param post A function to call.
+     * @return A new function, with the post behaviour tacked on.
      */
-    Function.prototype.then = function( post ) {
+    Function.prototype.sub = function( post ) {
         var self = this;
-        return copyProto( this, function() {
-            self.call( this, arguments );
-            return post.call( this, arguments );
-        })
+        return (function() {
+                    self.call( this, arguments );
+                    return post.call( this, arguments );
+                }).
+                proto( this );
     }
-
-    /**
-     * An alias for 'then'.
-     */
-    Function.prototype.after = Function.prototype.then;
 
     /**
      * When called, a copy of this function is returned,
      * with the given 'pre' function tacked on before it.
      */
-    Function.prototype.before = function( pre ) {
-        var self = this;
-        return copyProto( this, function() {
-            post.call( this, arguments );
-            return self.call( this, arguments );
-        })
+    Function.prototype.subBefore = function( pre ) {
+        return (function() {
+                    post.call( this, arguments );
+                    return self.call( this, arguments );
+                }).
+                proto( this );
     }
+
+    /*
+     *  ### Time Functions ###
+     */
 
     Function.prototype.callLater = function( target ) {
         var argsLen = arguments.length;

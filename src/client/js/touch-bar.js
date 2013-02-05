@@ -96,378 +96,361 @@ window.slate.TouchBar = (function() {
 
     var ast = {};
 
-    ast.Node = function() {
-        this.dom = slate.util.newElement( 'div', 'touch-ast' );
+    ast.Node = (function() {
+                this.dom = slate.util.newElement( 'div', 'touch-ast' );
 
-        this.up = null;
+                this.up = null;
 
-        this.view = null;
+                this.view = null;
 
-        var self = this;
+                var self = this;
 
-        slate.util.click( this.dom, function(ev) {
-            ev.stopPropagation();
+                slate.util.click( this.dom, function(ev) {
+                    ev.stopPropagation();
 
-            if ( self.isSelected() ) {
-                if ( self.onClickFun !== null ) {
-                    self.onClickFun();
+                    if ( self.isSelected() ) {
+                        self.onClick();
+                    } else {
+                        self.getView().setCurrent( self );
+                    }
+                } );
+
+                this.setupDeleteButton();
+            }).
+            proto({
+                onClick: function() { },
+
+                setupDeleteButton: function() {
+                    var self = this;
+
+                    var deleteNode = slate.util.newElement( 'a', 'touch-ast-delete' );
+                    slate.util.click( deleteNode, function(ev) {
+                        ev.stopPropagation();
+
+                        self.replace( new ast.Empty() );
+                    } );
+
+                    this.dom.appendChild( deleteNode );
+                },
+
+                isEmpty: function() {
+                    return false;
+                },
+                isAssignable: function() {
+                    return false;
+                },
+
+                setError: function() {
+                    // timeout is to ensure it fades in
+                    this.addClass.callLater( this, 'error' );
+
+                    return this;
+                },
+
+                removeError: function() {
+                    this.removeClass.callLater( this, 'error' );
+
+                    return this;
+                },
+                
+                addClass: function( klass ) {
+                    this.dom.classList.add( klass );
+
+                    return this;
+                },
+                
+                removeClass: function( klass ) {
+                    this.dom.classList.remove( klass );
+
+                    return this;
+                },
+
+                hasParent: function() {
+                    return ( this.up !== null );
+                },
+
+                getParent: function() {
+                    return this.up;
+                },
+
+                /**
+                 * Private. This should never be called from
+                 * outside of this class!
+                 */
+                setParent: function( newParent ) {
+                    assert( newParent, "falsy parent given" );
+
+                    this.up = newParent;
+
+                    // todo, swap the HTML nodes
+
+                    return this;
+                },
+
+                /**
+                 * Returns the view area, which this AST node is
+                 * present within.
+                 *
+                 * Calling this when the node is not present inside
+                 * of a view, will result in an error.
+                 *
+                 * Essentially you shouldn't be trying to interact
+                 * with the view, if there isn't one.
+                 */
+                getView: function() {
+                    if ( this.view === null ) {
+                        if ( this.hasParent() ) {
+                            this.view = this.getParent().getView();
+                            return this.view;
+                        } else {
+                            throw new Error("getView called when node is not within a view");
+                        }
+                    } else {
+                        return this.view;
+                    }
+                },
+                setView: function( view ) {
+                    assert( view, "falsy view given" );
+                    this.view = view;
+
+                    return this;
+                },
+
+                isSelected: function() {
+                    return this.dom.classList.contains( 'select' );
+                },
+
+                onSelect: function() {
+                    this.dom.classList.add( 'select' );
+
+                    this.selectMore();
+                },
+
+                /**
+                 * A selection hook,
+                 * which is made every time this is selected,
+                 * even if it is already selected.
+                 */
+                onEverySelect: function() {
+                    // do nothing
+                },
+
+                selectMore: function() {
+                    this.withParent( 'touch-ast', function(node) {
+                        node.getDom().classList.add( 'select-parent' );
+                    } );
+                },
+
+                onUnselect: function() {
+                    this.dom.classList.remove( 'select' );
+
+                    this.withParent( 'select-parent', function(node) {
+                        node.getDom().classList.remove( 'select-parent' );
+                    } );
+                },
+
+                /**
+                 * Finds the first parent node with the class given set to it.
+                 * If found, 'fun' is then called with that parent node passed
+                 * in.
+                 *
+                 * Iteration then stops, unless 'fun' returns true.
+                 */
+                withParent: function( klass, fun ) {
+                    var p = this.getParent();
+
+                    for ( var p = this.getParent(); p !== null; p = p.getParent() ) {
+                        if ( p.getDom().classList.contains(klass) ) {
+                            if ( fun(p) !== true ) {
+                                return this;
+                            }
+                        }
+                    }
+
+                    return this;
+                },
+
+                getDom: function() {
+                    return this.dom;
+                },
+
+                setDom: function( dom ) {
+                    var old = this.dom;
+                    this.dom = dom;
+
+                    // swap the old and new nodes
+                    var upDom = old.parentNode;
+                    if ( upDom ) {
+                        upDom.replaceChild( dom, old );
+                    }
+
+                    return this;
+                },
+
+                replaceChild: function( old, newChild ) {
+                    // do nothing
+                },
+
+                /**
+                 * Replaces this AST node with the one given.
+                 * This happens with both it's AST structure,
+                 * and within the DOM.
+                 */
+                replace: function( ast ) {
+                    this.dom.parentNode.replaceChild( ast.getDom(), this.dom );
+
+                    if ( this.hasParent() ) {
+                        this.getParent().replaceChild( this, ast );
+                    }
+
+                    if ( this.isSelected() ) {
+                        this.getView().setCurrent( ast );
+                    }
+                    
+                    return this;
+                },
+
+                /**
+                 * Iterates through this tree,
+                 * validating this node, and any nodes below.
+                 *
+                 * By default this just raises an error,
+                 * and should be overridden to add validation behaviour.
+                 *
+                 * The return value is used to quit validation, early,
+                 * and to denote if it was successful or not.
+                 *
+                 * @param onError A callback for reporting errors.
+                 * @return True if validation was successful and should continue, false if not.
+                 */
+                validate: function(onError) {
+                    throw new Error( "Validate has not been overridden" );
+                },
+
+                toJS: function() {
+                    throw new Error( "toJS has not been overridden" );
+                },
+
+                evaluateCallback: function( onSuccess ) {
+                    onSuccess.callLater( null, this.evaluate() );
+                },
+
+                evaluate: function() {
+                    throw new Error( "evaluate is not yet implemented, override it!" );
+                },
+
+                /**
+                 * Returns the first empty node it can find,
+                 * which is either this node, or below it.
+                 *
+                 * It does not look at siblings, or parents.
+                 *
+                 * By default, it simply returns null.
+                 * Sub-classes are expected to override this
+                 * to add their own behaviour.
+                 */
+                getEmpty: function() {
+                    return null;
+                },
+
+                findEmpty: function() {
+                    var empty = this.getEmpty();
+
+                    if ( empty ) {
+                        return empty;
+                    } else if ( this.hasParent() ) {
+                        return this.getParent().findEmpty();
+                    }
+                },
+
+                add: function() {
+                    for ( var i = 0; i < arguments.length; i++ ) {
+                        var arg = arguments[i];
+
+                        if ( arg instanceof HTMLElement ) {
+                            this.dom.appendChild( arg );
+                        } else if ( arg.getDom !== undefined ) {
+                            this.dom.appendChild( arg.getDom() );
+
+                            if ( arg.setParent ) {
+                                arg.setParent( this );
+                            }
+                        } else {
+                            throw new Error( "unknown argument given" );
+                        }
+                    }
                 }
-            } else {
-                self.getView().setCurrent( self );
-            }
-        } );
+            })
 
-        this.setupDeleteButton();
-        this.onClickFun = null;
-    }
+    ast.Empty = ast.Node.
+            sub(function() {
+                this.addClass( 'touch-ast-empty' );
+                this.dom.innerHTML = '&#x25cf;';
+            }).
+            override({
+                    isEmpty: function() {
+                        return true;
+                    },
 
-    ast.Node.prototype = {
-        setOnClick: function( fun ) {
-            assertFun( fun, "click function is not a function object" );
-            this.onClickFun = fun;
-        },
+                    toJS: function() {
+                        throw new Error( "converting to code but node is still empty" );
+                    },
 
-        setupDeleteButton: function() {
-            var self = this;
+                    evaluate: function() {
+                        throw new Error( "evaluating but node is still empty" );
+                    },
 
-            var deleteNode = slate.util.newElement( 'a', 'touch-ast-delete' );
-            slate.util.click( deleteNode, function(ev) {
-                ev.stopPropagation();
+                    validate: function( onError ) {
+                        onError( this, "empty node still present" );
 
-                self.replace( new ast.Empty() );
-            } );
+                        return false;
+                    },
 
-            this.dom.appendChild( deleteNode );
-        },
-
-        isEmpty: function() {
-            return false;
-        },
-        isAssignable: function() {
-            return false;
-        },
-
-        setError: function() {
-            // timeout is to ensure it fades in
-            this.addClass.callLater( this, 'error' );
-
-            return this;
-        },
-
-        removeError: function() {
-            this.removeClass.callLater( this, 'error' );
-
-            return this;
-        },
-        
-        addClass: function( klass ) {
-            this.dom.classList.add( klass );
-
-            return this;
-        },
-        
-        removeClass: function( klass ) {
-            this.dom.classList.remove( klass );
-
-            return this;
-        },
-
-        hasParent: function() {
-            return ( this.up !== null );
-        },
-
-        getParent: function() {
-            return this.up;
-        },
-
-        /**
-         * Private. This should never be called from
-         * outside of this class!
-         */
-        setParent: function( newParent ) {
-            assert( newParent, "falsy parent given" );
-
-            this.up = newParent;
-
-            // todo, swap the HTML nodes
-
-            return this;
-        },
-
-        /**
-         * Returns the view area, which this AST node is
-         * present within.
-         *
-         * Calling this when the node is not present inside
-         * of a view, will result in an error.
-         *
-         * Essentially you shouldn't be trying to interact
-         * with the view, if there isn't one.
-         */
-        getView: function() {
-            if ( this.view === null ) {
-                if ( this.hasParent() ) {
-                    this.view = this.getParent().getView();
-                    return this.view;
-                } else {
-                    throw new Error("getView called when node is not within a view");
-                }
-            } else {
-                return this.view;
-            }
-        },
-        setView: function( view ) {
-            assert( view, "falsy view given" );
-            this.view = view;
-
-            return this;
-        },
-
-        isSelected: function() {
-            return this.dom.classList.contains( 'select' );
-        },
-
-        onSelect: function() {
-            this.dom.classList.add( 'select' );
-
-            this.selectMore();
-        },
-
-        /**
-         * A selection hook,
-         * which is made every time this is selected,
-         * even if it is already selected.
-         */
-        onEverySelect: function() {
-            // do nothing
-        },
-
-        selectMore: function() {
-            this.withParent( 'touch-ast', function(node) {
-                node.getDom().classList.add( 'select-parent' );
-            } );
-        },
-
-        onUnselect: function() {
-            this.dom.classList.remove( 'select' );
-
-            this.withParent( 'select-parent', function(node) {
-                node.getDom().classList.remove( 'select-parent' );
-            } );
-        },
-
-        /**
-         * Finds the first parent node with the class given set to it.
-         * If found, 'fun' is then called with that parent node passed
-         * in.
-         *
-         * Iteration then stops, unless 'fun' returns true.
-         */
-        withParent: function( klass, fun ) {
-            var p = this.getParent();
-
-            for ( var p = this.getParent(); p !== null; p = p.getParent() ) {
-                if ( p.getDom().classList.contains(klass) ) {
-                    if ( fun(p) !== true ) {
+                    getEmpty: function() {
                         return this;
                     }
+            } )
+
+    ast.Literal = (function(value, klass) {
+                ast.Node.call( this );
+
+                this.value = value;
+
+                this.
+                        addClass( 'touch-ast-literal' ).
+                        addClass( klass ).
+                        dom.appendChild( astText(value) );
+            }).
+            proto( ast.Node ).
+            override({
+                validate: function() {
+                    return true;
+                },
+
+                toJS: function() {
+                    return this.value + '';
+                },
+
+                evaluate: function() {
+                    return this.value;
                 }
-            }
+            } )
 
-            return this;
-        },
-
-        getDom: function() {
-            return this.dom;
-        },
-
-        setDom: function( dom ) {
-            var old = this.dom;
-            this.dom = dom;
-
-            // swap the old and new nodes
-            var upDom = old.parentNode;
-            if ( upDom ) {
-                upDom.replaceChild( dom, old );
-            }
-
-            return this;
-        },
-
-        replaceChild: function( old, newChild ) {
-            // do nothing
-        },
-
-        /**
-         * Replaces this AST node with the one given.
-         * This happens with both it's AST structure,
-         * and within the DOM.
-         */
-        replace: function( ast ) {
-            this.dom.parentNode.replaceChild( ast.getDom(), this.dom );
-
-            if ( this.hasParent() ) {
-                this.getParent().replaceChild( this, ast );
-            }
-
-            if ( this.isSelected() ) {
-                this.getView().setCurrent( ast );
-            }
-            
-            return this;
-        },
-
-        /**
-         * Iterates through this tree,
-         * validating this node, and any nodes below.
-         *
-         * By default this just raises an error,
-         * and should be overridden to add validation behaviour.
-         *
-         * The return value is used to quit validation, early,
-         * and to denote if it was successful or not.
-         *
-         * @param onError A callback for reporting errors.
-         * @return True if validation was successful and should continue, false if not.
-         */
-        validate: function(onError) {
-            throw new Error( "Validate has not been overridden" );
-        },
-
-        toJS: function() {
-            throw new Error( "toJS has not been overridden" );
-        },
-
-        evaluateCallback: function( onSuccess ) {
-            onSuccess.callLater( null, this.evaluate() );
-        },
-
-        evaluate: function() {
-            throw new Error( "evaluate is not yet implemented, override it!" );
-        },
-
-        /**
-         * Returns the first empty node it can find,
-         * which is either this node, or below it.
-         *
-         * It does not look at siblings, or parents.
-         *
-         * By default, it simply returns null.
-         * Sub-classes are expected to override this
-         * to add their own behaviour.
-         */
-        getEmpty: function() {
-            return null;
-        },
-
-        findEmpty: function() {
-            var empty = this.getEmpty();
-
-            if ( empty ) {
-                return empty;
-            } else if ( this.hasParent() ) {
-                return this.getParent().findEmpty();
-            }
-        },
-
-        add: function() {
-            for ( var i = 0; i < arguments.length; i++ ) {
-                var arg = arguments[i];
-
-                if ( arg instanceof HTMLElement ) {
-                    this.dom.appendChild( arg );
-                } else if ( arg.getDom !== undefined ) {
-                    this.dom.appendChild( arg.getDom() );
-
-                    if ( arg.setParent ) {
-                        arg.setParent( this );
-                    }
-                } else {
-                    throw new Error( "unknown argument given" );
+    ast.TrueLiteral = ast.Literal.
+            curry( true, 'touch-ast-boolean' ).
+            override({
+                onClick: function() {
+                    this.replace( new ast.FalseLiteral() );
                 }
-            }
-        }
-    }
+            });
 
-    ast.Empty = function() {
-        ast.Node.call( this );
-
-        this.addClass( 'touch-ast-empty' );
-        this.dom.innerHTML = '&#x25cf;';
-    }
-
-    ast.Empty.prototype = slate.util.extend( ast.Node, {
-        isEmpty: function() {
-            return true;
-        },
-
-        toJS: function() {
-            throw new Error( "converting to code but node is still empty" );
-        },
-
-        evaluate: function() {
-            throw new Error( "evaluating but node is still empty" );
-        },
-
-        validate: function( onError ) {
-            onError( this, "empty node still present" );
-
-            return false;
-        },
-
-        getEmpty: function() {
-            return this;
-        }
-    } )
-
-    ast.Literal = function( value, klass ) {
-        ast.Node.call( this );
-
-        this.value = value;
-
-        this.addClass( 'touch-ast-literal' ).
-                addClass( klass );
-
-        this.dom.appendChild( astText(value) );
-    }
-
-    ast.Literal.prototype = slate.util.extend( ast.Node, {
-        validate: function() {
-            return true;
-        },
-
-        toJS: function() {
-            return this.value + '';
-        },
-
-        evaluate: function() {
-            return this.value;
-        }
-    } )
-
-    ast.TrueLiteral = (function() {
-        var switchToFalse = function() {
-            this.replace( new ast.FalseLiteral() );
-        }
-
-        return function() {
-            var literal = new ast.Literal( true, 'touch-ast-boolean' );
-            literal.setOnClick( switchToFalse );
-            return literal;
-        }
-    })();
-
-    ast.FalseLiteral = (function() {
-        var switchToTrue = function() {
-            this.replace( new ast.TrueLiteral() );
-        }
-
-        return function() {
-            var literal = new ast.Literal( false, 'touch-ast-boolean' );
-            literal.setOnClick( switchToTrue );
-            return literal;
-        }
-    })();
+    ast.FalseLiteral = ast.Literal.
+            curry( false, 'touch-ast-boolean' ).
+            override({
+                onClick: function() {
+                    this.replace( new ast.TrueLiteral() );
+                }
+            });
 
     /**
      * This is a generic operator, with a left
@@ -727,60 +710,13 @@ window.slate.TouchBar = (function() {
     })();
 
     /**
-     * The addFun is used primarily as a way of injecting extra nodes
-     * into this AST node. If provided, it is called when the input
-     * node is added to this AST nodes DOM.
-     *
-     * Then you can add the input node yourself, however you like.
-     *
-     * @param type The type for the HTMLInputElement; i.e. 'text', 'number'. 
-     * @param cssKlass Extra class name for this AST node.
-     * @param defaultVal The default value this input should contain, undefined for none.
-     * @param emptyAllowed True if this node can be left empty, false if that is invalid.
-     */
-    ast.Input = function( type, cssKlass, defaultVal, emptyAllowed ) {
-        ast.Node.call( this );
-
-        var inputDom = document.createElement( 'input' );
-        inputDom.setAttribute( 'type', type );
-        if ( defaultVal !== undefined ) {
-            inputDom.value = defaultVal;
-        }
-
-        var dom = this.getDom();
-        dom.classList.add( 'touch-ast-input' );
-        dom.classList.add( cssKlass );
-
-        this.input = inputDom;
-        this.emptyAllowed = emptyAllowed;
-        this.timeout = null;
-
-        this.add( this.input );
-
-        this.lastInput = '';
-        this.inputFuns = [];
-
-        var self = this;
-        this.input.addEventListener( 'input', function() {
-            self.resizeInput();
-
-            var funs = self.inputFuns;
-            for ( var i = 0; i < funs.length; i++ ) {
-                funs.call( self );
-            }
-        } );
-
-        this.resizeInput();
-    }
-
-    /**
      * Returns the width of the text given,
      * for a 'touch-ast-input > input' node.
      *
      * @param text The text to measure the width of.
      * @return The width, in pixels, but as an int. i.e. '400' not '400px'.
      */
-    ast.Input.textWidth = (function() {
+    var textWidth = (function() {
         var isMeasureSet = false;
 
         var div = document.createElement( 'div' );
@@ -801,90 +737,133 @@ window.slate.TouchBar = (function() {
         }
     })();
 
-    ast.Input.prototype = slate.util.extend( ast.Node, {
-        onInput: function( fun ) {
-            assertFun( fun, "non function given for input event" );
+    /**
+     * The addFun is used primarily as a way of injecting extra nodes
+     * into this AST node. If provided, it is called when the input
+     * node is added to this AST nodes DOM.
+     *
+     * Then you can add the input node yourself, however you like.
+     *
+     * @param type The type for the HTMLInputElement; i.e. 'text', 'number'. 
+     * @param cssKlass Extra class name for this AST node.
+     * @param defaultVal The default value this input should contain, undefined for none.
+     * @param emptyAllowed True if this node can be left empty, false if that is invalid.
+     */
+    ast.Input =
+            (function( type, cssKlass, defaultVal, emptyAllowed ) {
+                ast.Node.call( this );
 
-            this.inputFuns.push( fun );
-        },
+                var inputDom = document.createElement( 'input' );
+                inputDom.setAttribute( 'type', type );
+                if ( defaultVal !== undefined ) {
+                    inputDom.value = defaultVal;
+                }
 
-        validate: function( onError ) {
-            if ( !this.emptyAllowed && this.input.value === '' ) {
-                onError( this, "this is missing a value" );
-                return false;
-            } else {
-                return true;
-            }
-        },
+                var dom = this.getDom();
+                dom.classList.add( 'touch-ast-input' );
+                dom.classList.add( cssKlass );
 
-        evaluate: function() {
-            throw new Error( "no evaluate function provided!" );
-        },
-
-        onEverySelect: function() {
-            this.input.focus();
-            this.resizeInput();
-        },
-
-        onUnselect: function() {
-            ast.Node.prototype.onUnselect.call( this );
-
-            this.input.classList.remove( 'multi-change' );
-        },
-
-        resizeInput: function() {
-            /*
-             * If more than 2 characters are inputted at once,
-             * it will animate the width change.
-             */
-            var thisInput = this.input.value;
-            if ( Math.abs(thisInput.length-this.lastInput.length) > 2 ) {
-                this.input.classList.add( 'multi-change' );
-            } else {
-                this.input.classList.remove( 'multi-change' );
-            }
-            this.lastInput = thisInput;
-
-            this.input.style.width = ast.Input.textWidth( this.input.value ) + 'px';
-        },
-
-        getInputDom: function() {
-            return this.input;
-        },
-
-        getInputValue: function() {
-            return this.input.value;
-        },
-
-        withInput: function( fun ) {
-            var self = this;
-
-            if ( this.timeout !== null ) {
-                clearTimeout( this.timeout );
+                this.input = inputDom;
+                this.emptyAllowed = emptyAllowed;
                 this.timeout = null;
-            }
 
-            this.timeout = setTimeout( function() {
-                this.timeout = null;
-                
-                fun.call( self );
-            }, 0 );
-        }
-    } );
+                this.add( this.input );
 
-    ast.RegExpInput = (function() {
-                ast.Input.call( this,
-                        'text',
-                        'touch-ast-regexp',
-                        undefined,
-                        true
-                )
+                this.lastInput = '';
 
+                var self = this;
+                this.input.addEventListener( 'input', function() {
+                    self.resizeInput();
+                    self.onInput();
+                } );
+
+                this.resizeInput();
+            }).
+            extend( ast.Node ).
+            override({
+                    validate: function( onError ) {
+                        if ( !this.emptyAllowed && this.input.value === '' ) {
+                            onError( this, "this is missing a value" );
+                            return false;
+                        } else {
+                            return true;
+                        }
+                    },
+
+                    evaluate: function() {
+                        throw new Error( "no evaluate function provided!" );
+                    },
+
+                    onEverySelect: function() {
+                        this.input.focus();
+                        this.resizeInput();
+                    },
+
+                    getEmpty: function() {
+                        return this;
+                    }
+            }).
+            after({
+                    onUnselect: function() {
+                        this.input.classList.remove( 'multi-change' );
+                    },
+            }).
+            extend({
+                    onInput: function() { },
+
+                    resizeInput: function() {
+                        /*
+                         * If more than 2 characters are inputted at once,
+                         * it will animate the width change.
+                         */
+                        var thisInput = this.input.value;
+                        if ( Math.abs(thisInput.length-this.lastInput.length) > 2 ) {
+                            this.input.classList.add( 'multi-change' );
+                        } else {
+                            this.input.classList.remove( 'multi-change' );
+                        }
+                        this.lastInput = thisInput;
+
+                        this.input.style.width = textWidth( this.input.value ) + 'px';
+                    },
+
+                    getInputDom: function() {
+                        return this.input;
+                    },
+
+                    getInputValue: function() {
+                        return this.input.value;
+                    },
+
+                    withInput: function( fun ) {
+                        var self = this;
+
+                        if ( this.timeout !== null ) {
+                            clearTimeout( this.timeout );
+                            this.timeout = null;
+                        }
+
+                        this.timeout = setTimeout( function() {
+                            this.timeout = null;
+                            
+                            fun.call( self );
+                        }, 0 );
+                    }
+            } )
+
+    ast.RegExpInput = ast.Input.
+            curry(
+                    'text',
+                    'touch-ast-regexp',
+                    undefined,
+                    true
+            ).
+            sub(function() {
                 /*
                  * Add in input validation checks.
                  */
 
-                this.onInput( function() {
+                this.onInput.add( function() {
                     if ( this.isRegExpValid() ) {
                         this.removeError();
                     } else {
@@ -899,16 +878,8 @@ window.slate.TouchBar = (function() {
 
                 dom.insertBefore( astText('/'), this.getInputDom() );
                 dom.appendChild( astText('/') );
-            } ).
-            extend({ 
-                    isRegExpValid: function() {
-                        try {
-                            new RegExp( this.getInputValue() );
-                            return true;
-                        } catch ( err ) {
-                            return false;
-                        }
-                    },
+            }).
+            override({
                     validate: function() {
                         return this.isRegExpValid();
                     },
@@ -917,17 +888,27 @@ window.slate.TouchBar = (function() {
                     },
                     toJS: function() {
                         return "new RegExp( \"" + addSlashes(this.getInputValue()) + "\" )";
+                    } 
+            }).
+            extend({
+                    isRegExpValid: function() {
+                        try {
+                            new RegExp( this.getInputValue() );
+                            return true;
+                        } catch ( err ) {
+                            return false;
+                        }
                     }
             })
 
-    ast.StringInput = (function() {
-                ast.Input.call( this,
-                        'text',
-                        'touch-ast-string',
-                        undefined,
-                        true
-                )
-
+    ast.StringInput = ast.Input.
+            curry(
+                    'text',
+                    'touch-ast-string',
+                    undefined,
+                    true
+            ).
+            sub( function() {
                 /*
                  * This is here to wrap the constructor,
                  * so we can inject two extra text nodes,
@@ -938,7 +919,7 @@ window.slate.TouchBar = (function() {
                 dom.insertBefore( astText('"'), this.getInputDom() );
                 dom.appendChild( astText('"') );
             }).
-            extend( ast.Input, {
+            override( ast.Input, {
                     validate: function() {
                         return true;
                     },
@@ -950,13 +931,14 @@ window.slate.TouchBar = (function() {
                     }
             })
 
-    ast.NumberInput = ast.Input.curry(
+    ast.NumberInput = ast.Input.
+            curry(
                     'number',
                     'touch-ast-number',
                     0,
                     false
             ).
-            extend({
+            override({
                     validate: function( onError ) {
                         if ( this.getInputValue().length > 0 ) {
                             return true;
@@ -977,15 +959,15 @@ window.slate.TouchBar = (function() {
                     }
             })
 
-    ast.VariableInput = (function() {
-                ast.Input.call( this, 
-                        'text',
-                        'touch-ast-variable',
-                        '',
-                        false
-                )
-
-                this.onInput( function() {
+    ast.VariableInput = ast.Input.
+            curry(
+                    'text',
+                    'touch-ast-variable',
+                    '',
+                    false
+            ).
+            sub(function() {
+                this.onInput.add( function() {
                     if ( isValidIdentifier(this.getInputValue()) ) {
                         this.removeError();
                     } else {
@@ -993,7 +975,7 @@ window.slate.TouchBar = (function() {
                     }
                 } )
             }).
-            extend( ast.Input, {
+            override( ast.Input, {
                     validate: function( onError ) {
                         var str = this.getInputValue();
 
@@ -1011,11 +993,15 @@ window.slate.TouchBar = (function() {
                     toJS: function() {
                         return this.getInputValue();
                     },
-
                     evaluate: function() {
                         return window[ this.getInputValue() ];
                     },
-                    isAssignable: function() { return true; },
+
+                    isAssignable: function() {
+                        return true;
+                    }
+            }).
+            extend({
                     onAssignment: function( expr ) {
                         window[ this.getInputValue() ] = expr;
                     }
@@ -1094,7 +1080,6 @@ window.slate.TouchBar = (function() {
             },
 
             toJS: function() {
-                console.log( this.getRootAST() );
                 return this.getRootAST().toJS();
             },
 
