@@ -123,9 +123,7 @@
                 for ( var i = 0; i < argsLength; i++ ) {
                     var fun = args[i];
 
-                    if ( (typeof fun !== 'function') || !(fun instanceof Function) ) {
-                        throw new Error( "none function given" );
-                    }
+                    assertFun( fun, "none function given" );
 
                     arr[i] = fun;
                 }
@@ -133,9 +131,7 @@
                 for ( var i = 0; i < argsLength; i++ ) {
                     var fun = args[i];
 
-                    if ( (typeof fun !== 'function') || !(fun instanceof Function) ) {
-                        throw new Error( "none function given" );
-                    }
+                    assertFun( fun, "none function given" );
 
                     arr.push( fun );
                 }
@@ -175,9 +171,7 @@
         for ( var i = 0; i < arguments.length; i++ ) {
             var field = arguments[i];
 
-            if ( this[field] !== undefined ) {
-                throw new Error("overriding existing field with new event stack");
-            }
+            assert( this[field] === undefined, "overriding existing field with new event stack" );
 
             this[field] = Function.eventField( this );
         }
@@ -202,22 +196,36 @@
         for ( var i = 0; i < arr.length; i++ ) {
             var srcObj = arr[i];
 
-            while ( (typeof srcObj === 'function') || (srcObj instanceof Function) ) {
-                srcObj = srcObj.prototype;
-            }
+            if ( srcObj instanceof Array ) {
+                for ( var j = 0; j < srcObj.length; j++ ) {
+                    var k = srcObj[j];
 
-            for ( var k in srcObj ) {
-                if ( srcObj.hasOwnProperty(k) ) {
-                    if ( hasCheck ) {
-                        var alt = check( obj, k, srcObj[k] );
+                    assert( hasCheck, "Function implementation missing for " + k );
 
-                        if ( alt !== undefined ) {
-                            obj[k] = alt;
+                    var alt = check( obj, k, undefined );
+
+                    assert( alt !== undefined, "Function implementation missing for " + k );
+
+                    obj[k] = alt;
+                }
+            } else {
+                while ( (typeof srcObj === 'function') || (srcObj instanceof Function) ) {
+                    srcObj = srcObj.prototype;
+                }
+
+                for ( var k in srcObj ) {
+                    if ( srcObj.hasOwnProperty(k) ) {
+                        if ( hasCheck ) {
+                            var alt = check( obj, k, srcObj[k] );
+
+                            if ( alt !== undefined ) {
+                                obj[k] = alt;
+                            } else {
+                                obj[k] = srcObj[k];
+                            }
                         } else {
                             obj[k] = srcObj[k];
                         }
-                    } else {
-                        obj[k] = srcObj[k];
                     }
                 }
             }
@@ -359,6 +367,19 @@
             }
     )
 
+    Function.prototype.require = newFunctionExtend(
+            "Pre-Adding method behaviour, but original method not found,",
+            function(dest, k, val) {
+                if ( dest[k] !== undefined ) {
+                    return dest[k];
+                } else {
+                    return function() {
+                        throw new Error( "Function not implemented " + k );
+                    }
+                }
+            }
+    )
+
     /**
      * Copies this function, and returns a new one,
      * with the parameters given tacked on.
@@ -426,8 +447,43 @@
     Function.prototype.preSub = function( pre ) {
         var self = this;
         return (function() {
-                    pre.call( this, arguments );
-                    return self.call( this, arguments );
+                    pre.apply( this, arguments );
+                    return self.apply( this, arguments );
+                }).
+                proto( this );
+    }
+
+    /**
+     * This allows you to wrap around this function,
+     * with new functionality.
+     *
+     * Note that with the given 'wrap' function,
+     * the first parameter is always the function being wrapped.
+     * So parameters start from index 1, not 0.
+     *
+     * i.e.
+     *
+     *      foo.wrap( function(fooCaller, param1, param2, param3) {
+     *          param1 *= 2;
+     *          var fooResult = fooCaller( param1, param2 );
+     *          return param3 + fooResult;
+     *      } );
+     *
+     * @param wrap The variable to wrap functionality with.
+     */
+    Function.prototype.wrap = function( wrap ) {
+        assertFun( wrap, "function not provided for wrap parameter" );
+
+        var self = this;
+        return (function() {
+                    var args = new Array( arguments.length+1 );
+                    for ( var i = 0; i < arguments.length; i++ ) {
+                        args[i+1] = arguments[i];
+                    }
+
+                    args[0] = self.bind( this );
+
+                    return wrap.call( this, arguments );
                 }).
                 proto( this );
     }
@@ -447,8 +503,8 @@
     Function.prototype.sub = function( post ) {
         var self = this;
         return (function() {
-                    self.call( this, arguments );
-                    return post.call( this, arguments );
+                    self.apply( this, arguments );
+                    return post.apply( this, arguments );
                 }).
                 proto( this );
     }

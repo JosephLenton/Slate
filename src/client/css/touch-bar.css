@@ -55,6 +55,10 @@
         font-size  : 21px;
         font-weight: 100;
     }
+    .touch-controls > a.disabled {
+        color: #777;
+        background: #ccc;
+    }
 
     .touch-controls-run:before   {    content: 'run';   }
     .touch-controls-run          { background: #78A68F; }

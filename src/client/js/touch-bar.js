@@ -2,6 +2,22 @@
 
 window.slate = window.slate || {};
 window.slate.TouchBar = (function() {
+    var Events = function( target ) {
+        var events = [];
+
+        var fun = function( ev ) {
+            events.push( ev );
+        }
+        
+        fun.run = function() {
+            for ( var i = 0; i < events.length; i++ ) {
+                events[i].apply( target, arguments );
+            }
+        }
+
+        return fun;
+    }
+
     var addSlashes = function( str ) {
         return (str+'').replace(/([\\"'])/g, "\\$1").replace(/\0/g, "\\0");
     }
@@ -103,13 +119,14 @@ window.slate.TouchBar = (function() {
 
                 this.view = null;
 
+                this.onClick = new Events( this );
                 var self = this;
 
                 slate.util.click( this.dom, function(ev) {
                     ev.stopPropagation();
 
                     if ( self.isSelected() ) {
-                        self.onClick();
+                        self.onClick.run();
                     } else {
                         self.getView().setCurrent( self );
                     }
@@ -117,7 +134,40 @@ window.slate.TouchBar = (function() {
 
                 this.setupDeleteButton();
             }).
-            proto({
+
+            /*
+             * Blank, but required, methods.
+             */
+            require({
+                /**
+                 * Runs this node,
+                 * and the result is then returned.
+                 *
+                 * @return The result of running this node.
+                 */
+                evaluate: function() { },
+
+                /**
+                 * Iterates through this tree,
+                 * validating this node, and any nodes below.
+                 *
+                 * By default this just raises an error,
+                 * and should be overridden to add validation behaviour.
+                 *
+                 * The return value is used to quit validation, early,
+                 * and to denote if it was successful or not.
+                 *
+                 * @param onError A callback for reporting errors.
+                 * @return True if validation was successful and should continue, false if not.
+                 */
+                validate: function( onError ) { },
+
+                /**
+                 * @return The JavaScript equivalent for this node, if executed.
+                 */
+                toJS: function() { }
+            }).
+            extend({
                 onClick: function() { },
 
                 setupDeleteButton: function() {
@@ -310,33 +360,8 @@ window.slate.TouchBar = (function() {
                     return this;
                 },
 
-                /**
-                 * Iterates through this tree,
-                 * validating this node, and any nodes below.
-                 *
-                 * By default this just raises an error,
-                 * and should be overridden to add validation behaviour.
-                 *
-                 * The return value is used to quit validation, early,
-                 * and to denote if it was successful or not.
-                 *
-                 * @param onError A callback for reporting errors.
-                 * @return True if validation was successful and should continue, false if not.
-                 */
-                validate: function(onError) {
-                    throw new Error( "Validate has not been overridden" );
-                },
-
-                toJS: function() {
-                    throw new Error( "toJS has not been overridden" );
-                },
-
                 evaluateCallback: function( onSuccess ) {
                     onSuccess.callLater( null, this.evaluate() );
-                },
-
-                evaluate: function() {
-                    throw new Error( "evaluate is not yet implemented, override it!" );
                 },
 
                 /**
@@ -411,6 +436,41 @@ window.slate.TouchBar = (function() {
                     }
             } )
 
+    ast.Command = ast.Node.
+            sub(function() {
+                this.params = [];
+            }).
+            override({
+                    toJS: function() {
+                    },
+
+                    evaluate: function() {
+                    },
+
+                    validate: function( onError ) {
+                        for ( var i = 0; i < this.params.length; i++ ) {
+                            if ( ! this.params[i].validate(onError) ) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }
+            }).
+            override({
+                replaceChild: function( old, newAst ) {
+                    for ( var i = 0; i < this.params.length; i++ ) {
+                        if ( params[i] === old ) {
+                            params[i] = newAst;
+                            old.replace( newAst );
+                            return this;
+                        }
+                    }
+
+                    assertUnreachable( "old AST node not found" );
+                }
+            })
+
     ast.Literal = (function(value, klass) {
                 ast.Node.call( this );
 
@@ -438,18 +498,18 @@ window.slate.TouchBar = (function() {
 
     ast.TrueLiteral = ast.Literal.
             curry( true, 'touch-ast-boolean' ).
-            override({
-                onClick: function() {
+            sub(function() {
+                this.onClick( function() {
                     this.replace( new ast.FalseLiteral() );
-                }
+                })
             });
 
     ast.FalseLiteral = ast.Literal.
             curry( false, 'touch-ast-boolean' ).
-            override({
-                onClick: function() {
+            sub(function() {
+                this.onClick( function() {
                     this.replace( new ast.TrueLiteral() );
-                }
+                })
             });
 
     /**
@@ -476,162 +536,163 @@ window.slate.TouchBar = (function() {
      *
      *  - opposite      - Optional, (tap) node i.e. equal taps to not equal,
      */
-    ast.DoubleOp = function( meta, metas ) {
-        ast.Node.call( this );
+    ast.DoubleOp = (function( meta, metas ) {
+                ast.Node.call( this );
 
-        this.addClass( 'touch-ast-op' );
+                this.addClass( 'touch-ast-op' );
 
-        this.left  = new ast.Empty();
-        this.right = new ast.Empty();
+                this.left  = new ast.Empty();
+                this.right = new ast.Empty();
 
-        /*
-         * Convert the meta items we have,
-         * into an array of meta items for the menu.
-         */
-        var menuItems = [];
-        var metaIndex = 0,
-            countIndex = true;
-        for ( var i = 0; i < metas.length; i++ ) {
-            var temp = metas[i];
+                /*
+                 * Convert the meta items we have,
+                 * into an array of meta items for the menu.
+                 */
+                var menuItems = [];
+                var metaIndex = 0,
+                    countIndex = true;
+                for ( var i = 0; i < metas.length; i++ ) {
+                    var temp = metas[i];
 
-            if ( countIndex ) {
-                if ( temp === meta ) {
-                    countIndex = false;
-                } else {
-                    metaIndex++;
-                }
-            }
-
-            menuItems.push({
-                    html: temp.html,
-                    css : 'touch-ast-op-text',
-                    fun : (function(m) {
-                        return function() {
-                            self.setMeta( m );
+                    if ( countIndex ) {
+                        if ( temp === meta ) {
+                            countIndex = false;
+                        } else {
+                            metaIndex++;
                         }
-                    })(temp)
-            })
-        }
+                    }
 
-        //this.text = new TransientMenu( menuItems, metaIndex );
-        //this.text.getDom().classList.add( 'touch-ast-text' );
-        
-        this.text = astText( '', 'touch-ast-op-text' );
-        this.add(
-                astText('(', 'touch-ast-left-paren'),
-                this.left,
-                this.text,
-                this.right,
-                astText(')', 'touch-ast-left-paren')
-        );
-
-        this.meta = null;
-        this.setMeta( meta );
-    }
-
-    ast.DoubleOp.prototype = slate.util.extend( ast.Node, {
-        setMeta: function( meta ) {
-            assertString( meta.html, "html display is missing" );
-            assertFun( meta.evaluate, "evaluation function is missing" );
-
-            if ( this.meta !== null ) {
-                if ( this.meta.css ) {
-                    this.dom.classList.remove( this.meta.css );
-                }
-            }
-
-            this.text.innerHTML = meta.html;
-            if ( meta.css ) {
-                this.dom.classList.add.callLater( meta.css );
-            }
-            this.meta = meta;
-
-            this.validateLeft();
-            this.validateRight();
-        },
-
-        validate: function(onError) {
-            if ( this.left.isEmpty() ) {
-                onError( this.left, "left node is still empty" );
-
-                return false;
-            } else if ( this.right.isEmpty() ) {
-                onError( this.right, "right node is still empty" );
-
-                return false;
-            } else {
-                if ( this.meta.validate ) {
-                    return ! this.meta.validate( onError )
-                } else {
-                    return this.left.validate( onError ) && this.right.validate( onError );
-                }
-            }
-        },
-
-        toJS: function() {
-            return this.meta.toJS( this.left.toJS(), this.right.toJS() );
-        },
-
-        evaluate: function() {
-            return this.meta.evaluate();
-        },
-
-        validateLeft: function() {
-            if ( this.meta.validateLeft ) {
-                this.meta.validateLeft( this.left );
-            }
-        },
-
-        validateRight: function() {
-            if ( this.meta.validateRight ) {
-                this.meta.validateRight( this.right );
-            }
-        },
-
-        selectMore: function() {
-            // do nothing
-        },
-
-        /**
-         * Replaces this double operator, i.e. a plus,
-         * with the node given.
-         *
-         * However if the node given is also a double operator,
-         * i.e. replacing a plus with a subtract,
-         * then the left and right values are kept.
-         */
-        replace: function( other ) {
-            if ( other instanceof ast.DoubleOp ) {
-                if ( ! (this.left instanceof ast.Empty) ) {
-                    other.left.replace( this.left );
+                    menuItems.push({
+                            html: temp.html,
+                            css : 'touch-ast-op-text',
+                            fun : (function(m) {
+                                return function() {
+                                    self.setMeta( m );
+                                }
+                            })(temp)
+                    })
                 }
 
-                if ( ! (this.right instanceof ast.Empty) ) {
-                    other.right.replace( this.right );
+                //this.text = new TransientMenu( menuItems, metaIndex );
+                //this.text.getDom().classList.add( 'touch-ast-text' );
+                
+                this.text = astText( '', 'touch-ast-op-text' );
+                this.add(
+                        astText('(', 'touch-ast-left-paren'),
+                        this.left,
+                        this.text,
+                        this.right,
+                        astText(')', 'touch-ast-left-paren')
+                );
+
+                this.meta = null;
+                this.setMeta( meta );
+            }).
+            extend( ast.Node ).
+            override({
+                validate: function(onError) {
+                    if ( this.left.isEmpty() ) {
+                        onError( this.left, "left node is still empty" );
+
+                        return false;
+                    } else if ( this.right.isEmpty() ) {
+                        onError( this.right, "right node is still empty" );
+
+                        return false;
+                    } else {
+                        if ( this.meta.validate ) {
+                            return ! this.meta.validate( onError )
+                        } else {
+                            return this.left.validate( onError ) && this.right.validate( onError );
+                        }
+                    }
+                },
+
+                toJS: function() {
+                    return this.meta.toJS( this.left.toJS(), this.right.toJS() );
+                },
+
+                evaluate: function() {
+                    return this.meta.evaluate();
+                },
+
+                selectMore: function() {
+                    // do nothing
+                },
+
+                /**
+                 * Replaces this double operator, i.e. a plus,
+                 * with the node given.
+                 *
+                 * However if the node given is also a double operator,
+                 * i.e. replacing a plus with a subtract,
+                 * then the left and right values are kept.
+                 */
+                replace: function( other ) {
+                    if ( other instanceof ast.DoubleOp ) {
+                        if ( ! (this.left instanceof ast.Empty) ) {
+                            other.left.replace( this.left );
+                        }
+
+                        if ( ! (this.right instanceof ast.Empty) ) {
+                            other.right.replace( this.right );
+                        }
+                    }
+
+                    ast.Node.prototype.replace.call( this, other );
+                },
+
+                replaceChild: function( old, newChild ) {
+                    if ( this.left === old ) {
+                        this.left = newChild;
+                        this.validateLeft();
+                    } else if ( this.right === old ) {
+                        this.right = newChild;
+                        this.validateRight();
+                    } else {
+                        throw new Error( "old child given, but it is not a child of this AST node" );
+                    }
+
+                    newChild.setParent( this );
+                },
+
+                getEmpty: function() {
+                    return this.left.getEmpty() || this.right.getEmpty();
                 }
-            }
+            }).
+            extend({
+                setMeta: function( meta ) {
+                    assertString( meta.html, "html display is missing" );
+                    assertFun( meta.evaluate, "evaluation function is missing" );
 
-            ast.Node.prototype.replace.call( this, other );
-        },
+                    if ( this.meta !== null ) {
+                        if ( this.meta.css ) {
+                            this.dom.classList.remove( this.meta.css );
+                        }
+                    }
 
-        replaceChild: function( old, newChild ) {
-            if ( this.left === old ) {
-                this.left = newChild;
-                this.validateLeft();
-            } else if ( this.right === old ) {
-                this.right = newChild;
-                this.validateRight();
-            } else {
-                throw new Error( "old child given, but it is not a child of this AST node" );
-            }
+                    this.text.innerHTML = meta.html;
+                    if ( meta.css ) {
+                        this.dom.classList.add.callLater( meta.css );
+                    }
+                    this.meta = meta;
 
-            newChild.setParent( this );
-        },
+                    this.validateLeft();
+                    this.validateRight();
+                },
 
-        getEmpty: function() {
-            return this.left.getEmpty() || this.right.getEmpty();
-        }
-    } );
+                validateLeft: function() {
+                    if ( this.meta.validateLeft ) {
+                        this.meta.validateLeft( this.left );
+                    }
+                },
+
+                validateRight: function() {
+                    if ( this.meta.validateRight ) {
+                        this.meta.validateRight( this.right );
+                    }
+                }
+            } );
 
     var descriptors = (function() {
         var newOps = function( name, sym, print, fun ) {
@@ -1196,10 +1257,10 @@ window.slate.TouchBar = (function() {
                         } );
                     } );
                 },
-                'touch-controls-redo'  : function() {
+                'touch-controls-redo disabled'  : function() {
                     /* todo: perform a redo */
                 },
-                'touch-controls-undo'  : function() {
+                'touch-controls-undo disabled'  : function() {
                     /* todo: perform an undo */
                 },
                 'touch-controls-clear' : function() {
