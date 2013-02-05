@@ -236,7 +236,7 @@
      * However we still have to check, incase it was called manually.
      */
     Function.prototype.clone = function() {
-        if ( this.isWrapped && this.hasOwnProperty('clone') ) {
+        if ( false && this.isWrapped && this.hasOwnProperty('clone') ) {
             return this.clone();
         } else {
             var self = this;
@@ -246,7 +246,7 @@
 
             fun.prototype = this.prototype;
 
-            return wrapFun( this );
+            return this;
         }
     }
 
@@ -277,46 +277,74 @@
     }
 
     /**
+     * Used to generate the Function extension methods.
+     */
+    var newFunctionExtend = function( errMsg, isOkCallback ) {
+        return function() {
+            var errors = null;
+
+            var proto = newPrototypeArray( this, arguments, function(dest, k, val) {
+                var val = isOkCallback(dest, k, val);
+
+                if (
+                        val !== undefined &&
+                        val !== null &&
+                        val !== false &&
+                        val !== true
+                ) {
+                    return val;
+                } else if ( val !== true ) {
+                    if ( errors === null ) {
+                        errors = [ k ];
+                    } else {
+                        errors.push( k );
+                    }
+                } else {
+                    return undefined;
+                }
+            } )
+             
+            if ( errors !== null ) {
+                throw new Error( errMsg + "\n    " + errors.join(', ') );
+            }
+
+            return this.clone().proto( proto );
+        }
+    }
+
+    /**
      * Same as append, but the methods it overrides *must* exist.
      *
      * This allows you to have a sanity check.
      */
-    Function.prototype.override = function() {
-        return this.clone().
-                proto(
-                        newPrototypeArray( this, arguments, function(dest, k, val) {
-                            if ( dest[k] === undefined ) {
-                                throw new Error( "Method " + k + " is overriding, but not found in original" );
-                            }
-                        } )
-                )
-    }
+    Function.prototype.override = newFunctionExtend(
+            "Methods overriding but do not exist,",
+            function(dest, k, val) {
+                return ( dest[k] !== undefined )
+            }
+    )
 
-    Function.prototype.before = function() {
-        return this.clone().
-                proto(
-                        newPrototypeArray( this, arguments, function(dest, k, val) {
-                            if ( dest[k] === undefined ) {
-                                throw new Error( "Method " + k + " is adding behaviour before, but method not found in original" );
-                            } else {
-                                return dest[k].preSub( val );
-                            }
-                        } )
-                )
-    }
+    Function.prototype.before = newFunctionExtend(
+            "Pre-Adding method behaviour, but original method not found,",
+            function(dest, k, val) {
+                if ( dest[k] === undefined ) {
+                    return undefined;
+                } else {
+                    return dest[k].preSub( val );
+                }
+            }
+    )
 
-    Function.prototype.after = function() {
-        return this.clone().
-                proto(
-                        newPrototypeArray( this, arguments, function(dest, k, val) {
-                            if ( dest[k] === undefined ) {
-                                throw new Error( "Method " + k + " is adding behaviour, but not found in original" );
-                            } else {
-                                return dest[k].sub( val );
-                            }
-                        } )
-                )
-    }
+    Function.prototype.after = newFunctionExtend(
+            "Adding method behaviour, but original method not found,",
+            function(dest, k, val) {
+                if ( dest[k] === undefined ) {
+                    return undefined;
+                } else {
+                    return dest[k].sub( val );
+                }
+            }
+    )
 
     /**
      * Adds on extra methods, but none of them are allowed 
@@ -324,16 +352,12 @@
      *
      * This is used as a sanity check.
      */
-    Function.prototype.extend = function() {
-        return this.clone().
-                proto(
-                        newPrototypeArray( this, arguments, function(dest, k, val) {
-                            if ( dest[k] !== undefined ) {
-                                throw new Error( "Method " + k + " is extend, but already exists" );
-                            }
-                        } )
-                )
-    }
+    Function.prototype.extend = newFunctionExtend(
+            "Methods extending but do not exist,",
+            function(dest, k, val) {
+                return ( dest[k] === undefined )
+            }
+    )
 
     /**
      * Copies this function, and returns a new one,
@@ -348,8 +372,7 @@
     }
 
     var curryAndRice = function( self, args, prePend ) {
-        return wrapFun(
-                function() {
+        return (function() {
                     /*
                      * Concat the old and new arguments together,
                      * into one.
