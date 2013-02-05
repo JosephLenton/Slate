@@ -32,6 +32,10 @@ function assert( foo, msg ) {
     }
 }
 
+function assertUnreachable( msg ) {
+    assert( false, msg || "this section of code should never be reached" );
+}
+
 function assertFun( f, msg ) {
     if ( typeof f !== 'function' && !(f instanceof Function) ) {
         throw new AssertionError( msg );
