@@ -168,6 +168,21 @@ window.slate.TouchBar = (function() {
                 toJS: function() { }
             }).
             extend({
+                onTransitionEnd: function( tEnd ) {
+                    var dom = this.getDom();
+
+                    var self = this;
+                    var fun = function() {
+                        tEnd.call( this );
+
+                        dom.removeEventListener( 'transitionend', fun );
+                        dom.removeEventListener( 'webkitTransitionEnd', fun );
+                    }
+
+                    dom.addEventListener( 'transitionend', fun );
+                    dom.addEventListener( 'webkitTransitionEnd', fun );
+                },
+
                 onClick: function() { },
 
                 setupDeleteButton: function() {
@@ -356,6 +371,29 @@ window.slate.TouchBar = (function() {
                     if ( this.isSelected() ) {
                         this.getView().setCurrent( ast );
                     }
+
+                    /*
+                     * If being replaced with an empty,
+                     * animate out.
+                     */
+                    if ( ast.isEmpty() ) {
+                        ast.add( this );
+                        this.addClass( 'pre-remove' );
+
+                        (function() {
+                            this.removeClass( 'pre-remove' );
+                            this.addClass( 'remove' );
+
+                            this.afterTransition( (function() {
+                                var dom = this.getDom();
+                                var parentDom = dom.parentNode;
+
+                                if ( parentDom ) {
+                                    parentDom.removeChild( dom );
+                                }
+                            }).bind(this) )
+                        }).bind( this ).later()
+                    }
                     
                     return this;
                 },
@@ -439,22 +477,36 @@ window.slate.TouchBar = (function() {
     ast.Command = ast.Node.
             sub(function() {
                 this.params = [];
+                
+                this.insertNewEmpty();
             }).
             override({
                     toJS: function() {
+                        return this.name + '( ' +
+                                this.params.map( 'toJS' ).join( ', ' ) +
+                                ' )'
                     },
 
                     evaluate: function() {
+                        var fun = this.getFunction();
+
+                        if ( slate.util.isFunction(fun) ) {
+                            return fun.apply( null,
+                                    this.params.map( 'evaluate' )
+                            )
+                        } else {
+                            throw new Error( "function not found " + this.name );
+                        }
                     },
 
                     validate: function( onError ) {
-                        for ( var i = 0; i < this.params.length; i++ ) {
-                            if ( ! this.params[i].validate(onError) ) {
-                                return false;
-                            }
+                        if ( ! slate.util.isFunction(window) ) {
+                            return onError( this, "command not found" );
+                        } else {
+                            return this.params.inject( true, function(sum, p) {
+                                return p.validate( onError ) && sum
+                            } )
                         }
-
-                        return true;
                     }
             }).
             override({
@@ -463,11 +515,28 @@ window.slate.TouchBar = (function() {
                         if ( params[i] === old ) {
                             params[i] = newAst;
                             old.replace( newAst );
+
+                            if ( i === this.params.length-1 ) {
+                                this.insertNewEmpty();
+                            }
+
                             return this;
                         }
                     }
 
                     assertUnreachable( "old AST node not found" );
+                }
+            }).
+            extend({
+                insertNewEmpty: function() {
+                    var empty = new ast.Empty();
+
+                    this.params.push( empty );
+                    this.add( empty );
+                },
+
+                getFunction: function() {
+                    return window[ this.name ];
                 }
             })
 
@@ -1030,41 +1099,39 @@ window.slate.TouchBar = (function() {
             sub(function() {
                 this.onInput.add( function() {
                     if ( isValidIdentifier(this.getInputValue()) ) {
-                        this.removeError();
+                        this.removeError()
                     } else {
-                        this.setError();
+                        this.setError()
                     }
                 } )
             }).
             override( ast.Input, {
                     validate: function( onError ) {
-                        var str = this.getInputValue();
+                        var str = this.getInputValue()
 
                         if ( str.length === 0 ) {
-                            onError( this, "no variable name provided" );
-                            return false;
+                            return onError( this, "no variable name provided" )
                         } else if ( ! isValidIdentifier(str) ) {
-                            onError( this, "invalid variable name given" );
-                            return false;
+                            return onError( this, "invalid variable name given" )
                         } else {
-                            return true;
+                            return true
                         }
                     },
 
                     toJS: function() {
-                        return this.getInputValue();
+                        return this.getInputValue()
                     },
                     evaluate: function() {
-                        return window[ this.getInputValue() ];
+                        return window[ this.getInputValue() ]
                     },
 
                     isAssignable: function() {
-                        return true;
+                        return true
                     }
             }).
             extend({
                     onAssignment: function( expr ) {
-                        window[ this.getInputValue() ] = expr;
+                        window[ this.getInputValue() ] = expr
                     }
             })
 
@@ -1088,24 +1155,24 @@ window.slate.TouchBar = (function() {
     }
 
     TouchRow.prototype.append = function( item, callback ) {
-        var dom = slate.util.newElement( 'a', 'touch-bar-button' );
+        var dom = slate.util.newElement( 'a', 'touch-bar-button' )
 
         if ( window.slate.util.isString(item) ) {
-            dom.innerHTML = item;
+            dom.innerHTML = item
         } else {
-            dom.appendChild( item );
+            dom.appendChild( item )
         }
 
-        slate.util.click( dom, callback );
+        slate.util.click( dom, callback )
 
-        this.dom.appendChild( dom );
+        this.dom.appendChild( dom )
     }
 
     var addSection = function( touchBar, name, row ) {
         var button = slate.util.newElement( 'a', 'touch-bar-button', name )
 
         slate.util.click( button, function() {
-            touchBar.showRow( row );
+            touchBar.showRow( row )
         } )
 
         touchBar.lower.appendChild( button )
@@ -1115,14 +1182,14 @@ window.slate.TouchBar = (function() {
      * The area that displays the AST.
      */
     var TouchView = function( parentDom ) {
-        var viewArea = slate.util.newElement( 'div', 'touch-bar-view' );
+        var viewArea = slate.util.newElement( 'div', 'touch-bar-view' )
 
-        parentDom.appendChild( viewArea );
-        this.dom = viewArea;
+        parentDom.appendChild( viewArea )
+        this.dom = viewArea
 
-        this.current = null;
+        this.current = null
 
-        this.setAST( new ast.Empty() );
+        this.setAST( new ast.Empty() )
     }
 
     TouchView.prototype = {
@@ -1133,6 +1200,8 @@ window.slate.TouchBar = (function() {
             validate: function( callback ) {
                 var success = this.getRootAST().validate(function(node, errMsg) {
                     // todo, display the error
+                    
+                    return false
                 } );
 
                 if ( success ) {

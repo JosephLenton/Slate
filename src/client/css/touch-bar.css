@@ -191,22 +191,33 @@
         border-radius: 3px;
 
         -webkit-transition:
+                -webkit-transform 150ms linear,
                 background 150ms linear,
                 border 150ms linear,
                 color 150ms linear;
         -moz-transition:
+                -moz-transform 150ms linear,
                 background 150ms linear,
                 border 150ms linear,
                 color 150ms linear;
         -o-transition:
+                -o-transform 150ms linear,
                 background 150ms linear,
                 border 150ms linear,
                 color 150ms linear;
         transition:
+                transform 150ms linear,
                 background 150ms linear,
                 border 150ms linear,
                 color 150ms linear;
+
+        -webkit-transform: translate3d( 0, 0, 0 ) scale3d( 1, 1, 1 );
+           -moz-transform: translate3d( 0, 0, 0 ) scale3d( 1, 1, 1 );
+             -o-transform: translatexy( 0, 0    ) scale2d( 1, 1    );
+             -o-transform: translate3d( 0, 0, 0 ) scale3d( 1, 1, 1 );
+                transform: translate3d( 0, 0, 0 ) scale3d( 1, 1, 1 );
     }
+
     .touch-ast {
         position: relative;
 
@@ -215,6 +226,32 @@
 
         cursor: pointer;
     }
+    .touch-ast.pre-remove,
+    .touch-ast.remove {
+        position: absolute;
+
+        left: 50%;
+        top : 50%;
+
+        -webkit-transform: translate3d( -50%, -50%, 0 ) scale3d( 1, 1, 1 );
+           -moz-transform: translate3d( -50%, -50%, 0 ) scale3d( 1, 1, 1 );
+             -o-transform: translateXY( -50%, -50%    ) scale2d( 1, 1    );
+             -o-transform: translate3d( -50%, -50%, 0 ) scale3d( 1, 1, 1 );
+                transform: translate3d( -50%, -50%, 0 ) scale3d( 1, 1, 1 );
+    }
+    .touch-ast.remove {
+        -webkit-transform: translate3d( -50%, -50%, 0 ) scale3d( 0, 0, 1 );
+           -moz-transform: translate3d( -50%, -50%, 0 ) scale3d( 0, 0, 1 );
+             -o-transform: translateXY( -50%, -50%    ) scale2d( 0, 0    );
+             -o-transform: translate3d( -50%, -50%, 0 ) scale3d( 0, 0, 1 );
+                transform: translate3d( -50%, -50%, 0 ) scale3d( 0, 0, 1 );
+    }
+        .touch-ast.pre-remove .touch-ast,
+        .touch-ast.pre-remove .touch-ast-text,
+        .touch-ast.remove     .touch-ast,
+        .touch-ast.remove     .touch-ast-text {
+            color: #555 !important;
+        }
     .touch-ast.error {
         background: #A60300 !important;
     }
