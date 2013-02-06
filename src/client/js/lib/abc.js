@@ -16,6 +16,8 @@
  * e if for asserts if this is empty
  * f is for print field
  *
+ * k is for printing keys
+ *
  * l is for log console
  *
  * m is for mark object
@@ -26,6 +28,26 @@
  * s is for stack trace
  * t is for timestamp
  * u is for user alert
+ *
+ * v is for printing values
+ *
+ * ## Marking
+ *
+ * Some functions allow you to mark / unmark,
+ * or filter based on mark.
+ *
+ * By 'mark' it means setting an identifier to
+ * that object. Why? Sometimes in large systems,
+ * you have lots of objects floating around,
+ * and being pushed through single functions.
+ *
+ * Marking is a way for you to mark objects in
+ * the data set before a function call, and then
+ * easily see if they turn up later in other parts
+ * of your program.
+ *
+ * 'true' represents 'all marks', and is used
+ * when you ask to mark, but don't specify it.
  */
 (function() {
     /**
@@ -60,8 +82,8 @@
         }
 
         var asserted = ( block !== undefined ) ?
-                !! block( this ) :
-                !! this          ;
+                !! block.call( this, this ) :
+                !! this                     ;
 
         if ( ! asserted ) {
             if ( msg ) {
@@ -114,7 +136,7 @@
      * @return This object.
      */
     Object.prototype.b = function( cmd ) {
-        cmd( this, this.____mark____ );
+        cmd.call( this, this, this.____mark____ );
 
         return this;
     }
@@ -135,10 +157,19 @@
      *
      * Starts the debugger, if available.
      *
+     * To select any object that is marked,
+     * just pass in true.
+     *
+     * @param mark Optional, if provided the debugger is only hit if this has the same mark.
      * @return This.
      */
-    Object.prototype.d = function() {
-        debugger;
+    Object.prototype.d = function( mark ) {
+        if ( arguments.length === 0 ) {
+            debugger;
+        } else if ( mark === true || this.___mark___ === mark ) {
+            debugger;
+        }
+
         return this;
     }
 
@@ -174,6 +205,41 @@
         return this;
     }
 
+    /**
+     * Prints all of the keys for this object.
+     * This only includes keys which are on this
+     * objects property; it ignores prototypal
+     * properties.
+     *
+     * If a block is provided, then the keys will
+     * passed into that on each iteration instead
+     * of being outputted to the console.
+     *
+     * @param block Optional, a block for iterating across all keys.
+     * @return This object.
+     */
+    Object.prototype.k = function( block ) {
+        for ( var k in this ) {
+            if ( this.hasOwnProperty(k) ) {
+                if ( block ) {
+                    block.call( this, k );
+                } else {
+                    console.log( k );
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Prints a message via console.log.
+     * If a msg is provided, it is printed,
+     * and otherwise this object is printed.
+     *
+     * @param Optional, a message to send to the console instead.
+     * @return This.
+     */
     Object.prototype.l = function( msg ) {
         console.log( msg || this );
 
@@ -182,6 +248,17 @@
 
     /**
      * Mark
+     *
+     * ## marking with a value
+     *
+     * The parameter given is the value to use
+     * when marking.
+     *
+     * This allows you to mark different objects,
+     * with different values, so they can be
+     * identified in different ways.
+     *
+     * ## marking via block
      *
      * If called with a block,
      * the object is passed into that block.
@@ -196,17 +273,21 @@
      * in a large system, and then allow you to
      * retrieve them again later.
      *
-     * @param block An optional filter for marking objects.
+     * @param block An optional filter for marking objects, or the value to mark them with.
      * @return This object.
      */
     Object.prototype.m = function( block ) {
         if ( block !== undefined ) {
-            var mark = block( this );
+            if ( typeof block === 'function' || (block instanceof Function) ) {
+                var mark = block.call( this, this );
 
-            if ( mark ) {
-                this.____mark____ = mark;
+                if ( mark ) {
+                    this.____mark____ = mark;
+                } else {
+                    delete this.____mark____;
+                }
             } else {
-                delete this.____mark____;
+                this.___mark___ = block || true;
             }
         } else {
             this.____mark____ = true;
@@ -228,7 +309,7 @@
     Object.prototype.n = function( block ) {
         if ( this.____mark____ !== undefined ) {
             if ( block !== undefined ) {
-                if ( block(this, this.____mark____) ) {
+                if ( block.call(this, this, this.____mark____) ) {
                     delete this.____mark____;
                 }
             } else {
@@ -249,6 +330,12 @@
         return this;
     }
 
+    /**
+     * Stack trace.
+     *
+     * Prints a stack trace to the console.
+     * @return This object.
+     */
     Object.prototype.s = function() {
         var err = new Error();
 
@@ -285,6 +372,35 @@
             alert( msg );
         } else {
             alert( this );
+        }
+
+        return this;
+    }
+
+    /**
+     * This will iterate over all of the key => value pairs
+     * in this object. That is regardless of if this is
+     * an Array, Object, or something else.
+     *
+     * By default, they are printed.
+     *
+     * If a block is provided, they are passed to the block
+     * in turn.
+     *
+     *      foo.v( function(k, val) { ... } )
+     *
+     * @param block An optional block for iterating over the key-value pairs.
+     * @return This object.
+     */
+    Object.prototype.v = function( block ) {
+        for ( var k in this ) {
+            if ( this.hasOwnProperty(k) ) {
+                if ( block ) {
+                    block.call( this, k, this[k] );
+                } else {
+                    console.log( k, this[k] );
+                }
+            }
         }
 
         return this;
