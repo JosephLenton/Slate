@@ -531,20 +531,20 @@
 
         if ( argsLen <= 1 ) {
             return setTimeout( function() {
-                this.call( target );
+                self.call( target );
             }, 0 );
         } else if ( argsLen === 2 ) {
             var param1 = arguments[1];
 
             return setTimeout( function() {
-                this.call( target, param1 );
+                self.call( target, param1 );
             }, 0 );
         } else if ( argsLen === 3 ) {
             var param1 = arguments[1];
             var param2 = arguments[2];
 
             return setTimeout( function() {
-                this.call( target, param1, param2 );
+                self.call( target, param1, param2 );
             }, 0 );
         } else if ( argsLen === 4 ) {
             var param1 = arguments[1];
@@ -552,7 +552,7 @@
             var param3 = arguments[3];
 
             return setTimeout( function() {
-                this.call( target, param1, param2, param3 );
+                self.call( target, param1, param2, param3 );
             }, 0 );
         } else {
             return this.applyLater( target, arguments );
