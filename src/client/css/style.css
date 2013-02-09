@@ -82,6 +82,7 @@ body.touch > .slate-content {
 
         -webkit-transition: opacity 100ms linear 0;
            -moz-transition: opacity 100ms linear 0;
+             -o-transition: opacity 100ms linear 0;
                 transition: opacity 100ms linear 0;
     }
     .slate-content-item.slate-show {
@@ -131,6 +132,7 @@ body.touch > .slate-content {
 
             -webkit-transition: background 100ms linear 0s, color 100ms linear 0s;
                -moz-transition: background 100ms linear 0s, color 100ms linear 0s;
+                 -o-transition: background 100ms linear 0s, color 100ms linear 0s;
                     transition: background 100ms linear 0s, color 100ms linear 0s;
         }
         .slate-content-item-refresh,
@@ -237,6 +239,7 @@ body.touch > .slate-content {
 
         -webkit-transition: background 100ms linear 0s;
            -moz-transition: background 100ms linear 0s;
+             -o-transition: background 100ms linear 0s;
                 transition: background 100ms linear 0s;
     }
     .slate-bar-type.slate-lang-coffee {
