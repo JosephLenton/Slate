@@ -17,8 +17,25 @@ input {
     text-rendering: geometricPrecision;
 }
 
-.login-page {
+html,
+body {
+    min-width: 100%;
+    min-height: 100%;
+    width: 100%;
+    height: 100%;
+
+    overflow: auto;
+}
+
+html {
     background: #161616;
+}
+
+body {
+    min-height: 600px;
+}
+
+.login-page {
     text-align: center;
 }
 
