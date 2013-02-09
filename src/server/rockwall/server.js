@@ -22,6 +22,7 @@ exports.Server = (function() {
         this.realPublicFolder = '';
 
         this.routing = {};
+        this.preRouting = {};
     };
 
     var ensureSlash = function( str ) {
@@ -120,7 +121,7 @@ exports.Server = (function() {
     }
 
     var runNotFound = function( url, req, res, fun ) {
-        res.writeHead( 404, {'Content-Type': 'text/html'} );
+        res.status( 404, 'text/html' );
 
         console.log( 'unknown ' + req.url );
 
@@ -180,8 +181,43 @@ exports.Server = (function() {
         routes[ last ] = action;
     }
 
+    var iterateArgs = function( obj, args, f ) {
+        if ( arguments.length === 2 ) {
+            f = args;
+            args = obj;
+            obj = null;
+        }
+
+        if ( args.length === 0 ) {
+            throw new Error( "no arguments given" );
+        } else if ( args.length === 1 ) {
+            var arg = args[0];
+
+            if ( typeof arg === 'object' ) {
+                for ( var k in arg ) {
+                    if ( arg.hasOwnProperty(k) ) {
+                        f.call( obj, k, url[k] );
+                    }
+                }
+            } else {
+                throw new Error( 'Invalid argument given' );
+            }
+        } else {
+            var first  = args[0],
+                second = args[1];
+
+            if ( first instanceof Array ) {
+                for ( var i = 0; i < first.length; i++ ) {
+                    f.call( obj, first[i], second );
+                }
+            } else {
+                f.call( obj, first, second );
+            }
+        }
+    }
+
     rockwall.prototype = {
-        serveFile: function( fileUrl, req, res, ifNotFound, success ) {
+        serveFile: function( fileUrl, req, res, success, ifNotFound ) {
             var self = this;
 
             if ( ! ifNotFound ) {
@@ -205,11 +241,12 @@ exports.Server = (function() {
 
                                     console.log( '   file ' + req.url );
 
-                                    res.writeHead( 200, {'Content-Type': mime} );
-                                    res.write( data );
+                                    res.
+                                            status( 200, mime ).
+                                            write( data );
 
                                     if ( success ) {
-                                        success();
+                                        success( req, res );
                                     }
 
                                     res.end();
@@ -224,6 +261,8 @@ exports.Server = (function() {
                 }
             } catch ( err ) {
                 ifNotFound.call( self );
+
+                return true;
             }
 
             return false;
@@ -249,18 +288,28 @@ exports.Server = (function() {
             return this;
         },
 
+        /*
+         * If there is an url with content,
+         * i.e. it's not a blank string (like ""),
+         * then we presume it's a file.
+         *
+         * If that fails, we handle it as a request.
+         *
+         * Empty strings, such as '', the root url,
+         * are always treated as a route.
+         */
         handleFileRequest: function(url, req, res) {
             if ( url.fileUrl !== '' ) {
                 var ifNotFound = function() {
                     this.handleRequest( url, req, res );
                 }
 
-                if ( this.serveFile(url.fileUrl, req, res, ifNotFound) ) {
+                if ( this.serveFile(url.fileUrl, req, res, null, ifNotFound) ) {
                     return;
                 }
+            } else {
+                this.handleRequest( url, req, res );
             }
-
-            this.handleRequest( url, req, res );
         },
 
         handleRequest: function(url, req, res) {
@@ -283,20 +332,30 @@ exports.Server = (function() {
             this.notFoundFun = notFoundFun;
         },
 
+        /**
+         * Allows you to set an action to perform
+         * before a standard route.
+         */
+        preRoute: function( url, action ) {
+            iterateArgs(
+                    arguments,
+                    (function( url, action ) {
+                            setRoute( this.preRouting, url, action );
+                    }).bind(this)
+            );
+
+            return this;
+        },
+
         route: function( url, action ) {
-            if ( arguments.length === 1 ) {
-                if ( typeof url === 'object' ) {
-                    for ( var k in url ) {
-                        if ( url.hasOwnProperty(k) ) {
-                            setRoute( this.routing, k, url[k] );
-                        }
-                    }
-                } else {
-                    throw new Error( 'Invalid argument given' );
-                }
-            } else {
-                setRoute( this.routing, url, action );
-            }
+            iterateArgs(
+                    arguments,
+                    (function( url, action ) {
+                            setRoute( this.routing, url, action );
+                    }).bind(this)
+            );
+
+            return this;
         },
 
         start: function( publicFolder, port ) {
@@ -313,12 +372,19 @@ exports.Server = (function() {
 
             var self = this;
             http.createServer(function(req, res) {
-                var url = parseUrl( req.url );
+                req = new RockwallRequest(req);
+                res = new RockwallResponse(res);
 
-                self.handleFileRequest( url,
-                        new RockwallRequest(req),
-                        new RockwallResponse(res)
-                );
+                var url = parseUrl( req.url );
+                var action = getRoute( self.preRouting, url.parts );
+
+                if ( action !== undefined ) {
+                    if ( action.call(this, url, req, res) !== false ) {
+                        self.handleFileRequest( url, req, res );
+                    }
+                } else {
+                    self.handleFileRequest( url, req, res );
+                }
             }).listen( port );
 
             console.log( 'server listening on port ' + port );

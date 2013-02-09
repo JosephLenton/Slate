@@ -1,0 +1,162 @@
+
+html,
+body,
+.login-page,
+.login-box-error-back,
+h1,
+input {
+    -webkit-backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    -webkit-transform: translateZ(0);
+
+    image-rendering: optimize-contrast;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+
+    text-rendering: optimizeLegibility;
+    text-rendering: geometricPrecision;
+}
+
+.login-page {
+    background: #161616;
+    text-align: center;
+}
+
+.login-box,
+.login-box-error-back {
+    border-radius: 1px;
+}
+.login-box {
+    width: 900px;
+    height: 400px;
+
+    position: relative;
+
+    margin-top: 100px;
+
+    display: inline-block;
+
+    background: #0079BD;
+
+    background: -webkit-linear-gradient( left,
+            #B3E1FF  0%, #B3E1FF 20%,
+            #3CC8FF 20%, #3CC8FF 40%,
+            #39A1D1 40%, #39A1D1 60%,
+            #0079BD 60%, #0079BD 80%,
+            #085087 80%, #085087 100%
+    );
+    background: -moz-linear-gradient( left,
+            #B3E1FF  0%, #B3E1FF 20%,
+            #3CC8FF 20%, #3CC8FF 40%,
+            #39A1D1 40%, #39A1D1 60%,
+            #0079BD 60%, #0079BD 80%,
+            #085087 80%, #085087 100%
+    );
+    background: -o-linear-gradient( left,
+            #B3E1FF  0%, #B3E1FF 20%,
+            #3CC8FF 20%, #3CC8FF 40%,
+            #39A1D1 40%, #39A1D1 60%,
+            #0079BD 60%, #0079BD 80%,
+            #085087 80%, #085087 100%
+    );
+    background: linear-gradient( left,
+            #B3E1FF  0%, #B3E1FF 20%,
+            #3CC8FF 20%, #3CC8FF 40%,
+            #39A1D1 40%, #39A1D1 60%,
+            #0079BD 60%, #0079BD 80%,
+            #085087 80%, #085087 100%
+    );
+
+    padding: 24px 32px;
+
+    -moz-box-sizing: border-box; 
+    box-sizing: border-box; 
+}
+    .login-box-error-back {
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+
+        background: -webkit-linear-gradient( left,
+                #FFB2B2  0%, #FFB2B2 20%,
+                #FF695E 20%, #FF695E 40%,
+                #C93636 40%, #C93636 60%,
+                #BA1414 60%, #BA1414 80%,
+                #7F1912 80%, #7F1912 100%
+        );
+        background: -moz-linear-gradient( left,
+                #FFB2B2  0%, #FFB2B2 20%,
+                #FF695E 20%, #FF695E 40%,
+                #C93636 40%, #C93636 60%,
+                #BA1414 60%, #BA1414 80%,
+                #7F1912 80%, #7F1912 100%
+        );
+        background: -o-linear-gradient( left,
+                #FFB2B2  0%, #FFB2B2 20%,
+                #FF695E 20%, #FF695E 40%,
+                #C93636 40%, #C93636 60%,
+                #BA1414 60%, #BA1414 80%,
+                #7F1912 80%, #7F1912 100%
+        );
+        background: linear-gradient( left,
+                #FFB2B2  0%, #FFB2B2 20%,
+                #FF695E 20%, #FF695E 40%,
+                #C93636 40%, #C93636 60%,
+                #BA1414 60%, #BA1414 80%,
+                #7F1912 80%, #7F1912 100%
+        );
+
+        -webkit-transition: opacity 250ms linear;
+           -moz-transition: opacity 250ms linear;
+             -o-transition: opacity 250ms linear;
+                transition: opacity 250ms linear;
+
+        opacity: 0;
+    }
+    .login-box.error > .login-box-error-back {
+        opacity: 1;
+    }
+    .login-box > h1 {
+        font: arial;
+        font-size: 128px;
+        font-weight: 100;
+        width: 100%;
+        position: absolute;
+
+        right: 24px;
+        top: 0px;
+        text-align: right;
+
+        color: white;
+    }
+        .login-box > form > input {
+            position: absolute;
+            top: 418px;
+
+            background: #fff;
+
+            border: none;
+
+            font-size: 21px;
+
+            padding: 4px 8px 1px 8px;
+
+            border-radius: 0;
+
+            line-height: 32px;
+            height: 40px;
+
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+        .login-box > form > input[type=password] {
+            right: 98px;
+            width: 262px;
+            margin-left: -100px;
+        }
+        .login-box > form > input[type=submit] {
+            right: 0;
+            width: 90px;
+        }
