@@ -40,8 +40,12 @@ body {
 }
 
 .login-box,
-.login-box-error-back {
+.login-box-error-back,
+.login-box > form > input {
     border-radius: 1px;
+    border: 2px solid #000;
+    border-top-width: 0;
+    border-left-width: 0;
 }
 .login-box {
     width: 900px;
@@ -154,13 +158,9 @@ body {
 
             background: #fff;
 
-            border: none;
-
             font-size: 21px;
 
             padding: 4px 8px 1px 8px;
-
-            border-radius: 0;
 
             line-height: 32px;
             height: 40px;
