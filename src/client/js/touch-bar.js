@@ -167,6 +167,27 @@ window.slate.TouchBar = (function() {
                  */
                 toJS: function() { }
             }).
+
+            /*
+             * Marker functions,
+             *
+             * These return 'false' by default, and you override them
+             * to have them return different values.
+             */
+            extend({
+                allowsEmpties: function() {
+                    return false;
+                },
+
+                isEmpty: function() {
+                    return false;
+                },
+
+                isAssignable: function() {
+                    return false;
+                }
+            }).
+
             extend({
                 onTransitionEnd: function( tEnd ) {
                     var dom = this.getDom();
@@ -183,8 +204,6 @@ window.slate.TouchBar = (function() {
                     dom.addEventListener( 'webkitTransitionEnd', fun );
                 },
 
-                onClick: function() { },
-
                 setupDeleteButton: function() {
                     var self = this;
 
@@ -196,13 +215,6 @@ window.slate.TouchBar = (function() {
                     } );
 
                     this.dom.appendChild( deleteNode );
-                },
-
-                isEmpty: function() {
-                    return false;
-                },
-                isAssignable: function() {
-                    return false;
                 },
 
                 setError: function() {
@@ -361,41 +373,60 @@ window.slate.TouchBar = (function() {
                  * This happens with both it's AST structure,
                  * and within the DOM.
                  */
+                /*
+                 * This is built in a way so that it can call it's self
+                 * recursively, by always checking before it makes a change.
+                 *
+                 * It also has a lock, to ignore recursive calls.
+                 */
                 replace: function( ast ) {
-                    this.dom.parentNode.replaceChild( ast.getDom(), this.dom );
+                    if ( this.replaceLock ) {
+                        return this;
+                    } else {
+                        this.replaceLock = true;
 
-                    if ( this.hasParent() ) {
-                        this.getParent().replaceChild( this, ast );
+                        var parentNode = this.dom.parentNode;
+                        if ( parentNode !== null ) {
+                            this.dom.parentNode.replaceChild( ast.getDom(), this.dom );
+                        }
+
+                        var parentAst = this.getParent();
+                        if ( parentAst !== null ) {
+                            parentAst.replaceChild( this, ast );
+                            ast.setParent( parentAst );
+                        }
+
+                        if ( this.isSelected() ) {
+                            this.getView().setCurrent( ast );
+                        }
+
+                        /*
+                         * If being replaced with an empty,
+                         * animate out.
+                         */
+                        if ( ast.isEmpty() ) {
+                            ast.add( this );
+                            this.addClass( 'pre-remove' );
+
+                            (function() {
+                                this.removeClass( 'pre-remove' );
+                                this.addClass( 'remove' );
+
+                                this.onTransitionEnd( (function() {
+                                    var dom = this.getDom();
+                                    var parentDom = dom.parentNode;
+
+                                    if ( parentDom ) {
+                                        parentDom.removeChild( dom );
+                                    }
+                                }).bind(this) )
+                            }).bind( this ).later()
+                        }
+                        
+                        this.replaceLock = false;
+
+                        return this;
                     }
-
-                    if ( this.isSelected() ) {
-                        this.getView().setCurrent( ast );
-                    }
-
-                    /*
-                     * If being replaced with an empty,
-                     * animate out.
-                     */
-                    if ( ast.isEmpty() ) {
-                        ast.add( this );
-                        this.addClass( 'pre-remove' );
-
-                        (function() {
-                            this.removeClass( 'pre-remove' );
-                            this.addClass( 'remove' );
-
-                            this.afterTransition( (function() {
-                                var dom = this.getDom();
-                                var parentDom = dom.parentNode;
-
-                                if ( parentDom ) {
-                                    parentDom.removeChild( dom );
-                                }
-                            }).bind(this) )
-                        }).bind( this ).later()
-                    }
-                    
-                    return this;
                 },
 
                 evaluateCallback: function( onSuccess ) {
@@ -464,9 +495,13 @@ window.slate.TouchBar = (function() {
                     },
 
                     validate: function( onError ) {
-                        onError( this, "empty node still present" );
+                        if ( this.getParent().allowsEmpties() ) {
+                            return true;
+                        } else {
+                            onError( this, "empty node still present" );
 
-                        return false;
+                            return false;
+                        }
                     },
 
                     getEmpty: function() {
@@ -475,48 +510,105 @@ window.slate.TouchBar = (function() {
             } )
 
     ast.Command = ast.Node.
-            sub(function() {
-                this.params = [];
+            sub(function(name) {
+                var text = astText( name );
+                this.name = name;
+
+                this.text = text;
+
+                this.params = new Array();
                 
+                this.addClass( 'touch-ast-command' );
+                this.add( text );
                 this.insertNewEmpty();
             }).
             override({
+                    allowsEmpties: function() {
+                        return true;
+                    },
+
                     toJS: function() {
-                        return this.name + '( ' +
-                                this.params.map( 'toJS' ).join( ', ' ) +
+                        return this.name +
+                                '( ' +
+                                this.getNonEmptyParams().
+                                        map( 'toJS' ).
+                                        join( ', ' ) +
                                 ' )'
                     },
 
                     evaluate: function() {
-                        var fun = this.getFunction();
-
-                        if ( slate.util.isFunction(fun) ) {
-                            return fun.apply( null,
-                                    this.params.map( 'evaluate' )
-                            )
-                        } else {
-                            throw new Error( "function not found " + this.name );
-                        }
+                        return this.getFunction().apply(
+                                null,
+                                this.getNonEmptyParams().map( 'evaluate' )
+                        )
                     },
 
                     validate: function( onError ) {
-                        if ( ! slate.util.isFunction(window) ) {
-                            return onError( this, "command not found" );
-                        } else {
-                            return this.params.inject( true, function(sum, p) {
-                                return p.validate( onError ) && sum
-                            } )
-                        }
+                        return this.params.inject( true, function(sum, p) {
+                            return p.validate( onError ) && sum
+                        } )
                     }
             }).
             override({
+                getEmpty: function() {
+                    var params = this.params;
+                    var firstEmpty  = -1,
+                        hasSelected = false;
+
+                    /*
+                     * There are two types of empties we are looking for:
+                     *  - The first empty after the selected parameter
+                     *  - the earliest non-empty parameter
+                     *
+                     * We chose in those two orders,
+                     * where the first has a higher priority.
+                     */
+                    for ( var i = 0; i < params.length; i++ ) {
+                        var param = params[i];
+
+                        if ( param.isSelected() ) {
+                            hasSelected = true;
+                        } else if ( param.isEmpty() ) {
+                            if ( hasSelected ) {
+                                firstEmpty = i;
+                                break;
+                            } else if ( firstEmpty === -1 ) {
+                                firstEmpty = i;
+                            }
+                        }
+                    }
+
+                    if ( firstEmpty !== -1 ) {
+                        return params[firstEmpty];
+                    } else {
+                        return null;
+                    }
+                }
+            }).
+            override({
+                replace: function( newCommand ) {
+                    if ( newCommand instanceof ast.Command ) {
+                        this.text.textContent = newCommand.getName();
+                        // todo, animate out old text, animate in new text
+
+                        (function() {
+                            this.getView().setCurrent( this.getEmpty() );
+                        }).bind(this).later();
+                    } else {
+                        ast.Node.prototype.replace.call( this, newCommand );
+                    }
+                },
+
                 replaceChild: function( old, newAst ) {
-                    for ( var i = 0; i < this.params.length; i++ ) {
+                    var params = this.params;
+
+                    for ( var i = 0; i < params.length; i++ ) {
                         if ( params[i] === old ) {
                             params[i] = newAst;
                             old.replace( newAst );
+                            old.setParent( this );
 
-                            if ( i === this.params.length-1 ) {
+                            if ( i === params.length-1 ) {
                                 this.insertNewEmpty();
                             }
 
@@ -528,6 +620,14 @@ window.slate.TouchBar = (function() {
                 }
             }).
             extend({
+                getNonEmptyParams: function() {
+                    return this.params.filterOutMethod( 'isEmpty' );
+                },
+
+                getName: function() {
+                    return this.name;
+                },
+
                 insertNewEmpty: function() {
                     var empty = new ast.Empty();
 
@@ -672,7 +772,8 @@ window.slate.TouchBar = (function() {
                         if ( this.meta.validate ) {
                             return ! this.meta.validate( onError )
                         } else {
-                            return this.left.validate( onError ) && this.right.validate( onError );
+                            return this.left.validate( onError ) &&
+                                   this.right.validate( onError );
                         }
                     }
                 },
@@ -867,6 +968,8 @@ window.slate.TouchBar = (function() {
         }
     })();
 
+    var INPUT_WIDTH_PADDING = 4;
+
     /**
      * The addFun is used primarily as a way of injecting extra nodes
      * into this AST node. If provided, it is called when the input
@@ -908,6 +1011,10 @@ window.slate.TouchBar = (function() {
                 } );
 
                 this.resizeInput();
+
+                this.onClick(function() {
+                    this.input.focus();
+                });
             }).
             extend( ast.Node ).
             override({
@@ -925,8 +1032,12 @@ window.slate.TouchBar = (function() {
                     },
 
                     onEverySelect: function() {
-                        this.input.focus();
                         this.resizeInput();
+
+                        var self = this;
+                        setTimeout(function() {
+                            self.input.focus();
+                        }, 0);
                     },
 
                     getEmpty: function() {
@@ -954,7 +1065,7 @@ window.slate.TouchBar = (function() {
                         }
                         this.lastInput = thisInput;
 
-                        this.input.style.width = textWidth( this.input.value ) + 'px';
+                        this.input.style.width = INPUT_WIDTH_PADDING + textWidth( this.input.value ) + 'px';
                     },
 
                     getInputDom: function() {
@@ -1065,7 +1176,7 @@ window.slate.TouchBar = (function() {
             curry(
                     'number',
                     'touch-ast-number',
-                    0,
+                    '',
                     false
             ).
             override({
@@ -1141,17 +1252,24 @@ window.slate.TouchBar = (function() {
      * that can be hidden and shown.
      */
     var TouchRow = function( upperDom ) {
-        this.dom = slate.util.newElement( 'div', 'touch-bar-row-inner' );
+        this.dom    = slate.util.newElement( 'div', 'touch-bar-row-inner' );
+        this.scroll = slate.util.newElement( 'div', 'touch-bar-row-inner-scroll' );
+
+        this.dom.appendChild( this.scroll );
 
         upperDom.appendChild( this.dom );
     }
 
     TouchRow.prototype.show = function() {
         this.dom.classList.add( 'show' );
+
+        return this;
     }
 
     TouchRow.prototype.hide = function() {
         this.dom.classList.remove( 'show' );
+
+        return this;
     }
 
     TouchRow.prototype.append = function( item, callback ) {
@@ -1165,19 +1283,11 @@ window.slate.TouchBar = (function() {
 
         slate.util.click( dom, callback )
 
-        this.dom.appendChild( dom )
+        this.scroll.appendChild( dom )
+
+        return this;
     }
-
-    var addSection = function( touchBar, name, row ) {
-        var button = slate.util.newElement( 'a', 'touch-bar-button', name )
-
-        slate.util.click( button, function() {
-            touchBar.showRow( row )
-        } )
-
-        touchBar.lower.appendChild( button )
-    }
-
+    
     /**
      * The area that displays the AST.
      */
@@ -1199,6 +1309,8 @@ window.slate.TouchBar = (function() {
 
             validate: function( callback ) {
                 var success = this.getRootAST().validate(function(node, errMsg) {
+                    console.log( errMsg );
+
                     // todo, display the error
                     
                     return false
@@ -1240,7 +1352,11 @@ window.slate.TouchBar = (function() {
 
             getRootAST: function() {
                 var root = null;
-                for ( var current = this.current; current !== null; current = current.getParent() ) {
+                for (
+                        var current = this.current;
+                        current !== null;
+                        current = current.getParent()
+                ) {
                     root = current;
                 }
 
@@ -1295,6 +1411,7 @@ window.slate.TouchBar = (function() {
         for ( var k in obj ) {
             if ( obj.hasOwnProperty(k) ) {
                 var button = slate.util.newElement( 'a', k );
+
                 slate.util.click( button, obj[k] );
                 dom.appendChild( button );
             }
@@ -1314,6 +1431,7 @@ window.slate.TouchBar = (function() {
 
         this.bar   = barDom;
         this.row   = null;
+
         this.lower = lower;
         this.upper = upper;
 
@@ -1321,6 +1439,7 @@ window.slate.TouchBar = (function() {
                 'touch-controls-run'   : function() {
                     view.validate( function() {
                         var js = view.toJS();
+
                         execute( 'js', js, function() {
                             view.clear();
                         } );
@@ -1346,11 +1465,12 @@ window.slate.TouchBar = (function() {
 
         var commandsRow = new TouchRow( this.upper );
         for ( var i = 0; i < commands.length; i++ ) {
-            commandsRow.append( commands[i], function() {
-                console.log( 'blah' );
-            } );
+            (function(command) {
+                commandsRow.append( command, function() {
+                    view.insert( new ast.Command(command) );
+                } );
+            })( commands[i] );
         }
-        addSection( this, 'command', commandsRow );
 
         /**
          * Add the values and literals
@@ -1392,8 +1512,6 @@ window.slate.TouchBar = (function() {
             // todo new *inclusive* range
         } );
 
-        addSection( this, 'values', valuesRow );
-
         /*
          * Structural commands, like operators.
          */
@@ -1405,7 +1523,10 @@ window.slate.TouchBar = (function() {
 
             current.replace( op );
             view.setCurrent( op );
-            op.left.replace( current );
+
+            if ( ! current.isEmpty() ) {
+                op.left.replace( current );
+            }
 
             view.selectEmpty();
         }
@@ -1419,7 +1540,22 @@ window.slate.TouchBar = (function() {
             })( descriptors[i] );
         }
 
-        addSection( this, 'operators', opsRow );
+        /*
+         * Lower Row
+         */
+
+        var touchBar = this;
+        var sectionButtons = new TouchRow( this.lower ).
+                append( 'command', function() {
+                    touchBar.showRow( commandsRow );
+                } ).
+                append( 'values', function() {
+                    touchBar.showRow( valuesRow );
+                } ).
+                append( 'operators', function() {
+                    touchBar.showRow( opsRow );
+                } ).
+                show();
 
         this.showRow( commandsRow );
     }
