@@ -776,7 +776,7 @@ window.slate.TouchBar = (function() {
                         return false;
                     } else {
                         if ( this.meta.validate ) {
-                            return ! this.meta.validate( onError, this.left, this.right )
+                            return this.meta.validate( onError, this.left, this.right )
                         } else {
                             return this.left.validate( onError ) &&
                                    this.right.validate( onError );
@@ -890,6 +890,8 @@ window.slate.TouchBar = (function() {
                         html: ':=',
 
                         validateLeft: function( left ) {
+                            console.log( !left.isAssignable() && !left.isEmpty() );
+
                             if ( !left.isAssignable() && !left.isEmpty() ) {
                                 left.setError();
                             }
@@ -1309,11 +1311,15 @@ window.slate.TouchBar = (function() {
      * It's essentially a row of buttons,
      * that can be hidden and shown.
      */
-    var TouchRow = function( upperDom ) {
+    var TouchRow = function( upperDom, isDouble ) {
         this.dom    = slate.util.newElement( 'div', 'touch-bar-row-inner' );
-        this.scroll = slate.util.newElement( 'div', 'touch-bar-row-inner-scroll' );
 
+        this.scroll = slate.util.newElement( 'div', 'touch-bar-row-inner-scroll' );
         this.dom.appendChild( this.scroll );
+
+        if ( isDouble ) {
+            this.isDouble = true;
+        }
 
         upperDom.appendChild( this.dom );
     }
@@ -1330,7 +1336,7 @@ window.slate.TouchBar = (function() {
         return this;
     }
 
-    TouchRow.prototype.append = function( item, callback ) {
+    var newTouchRowButton = function( item, callback ) {
         var dom = slate.util.newElement( 'a', 'touch-bar-button' )
 
         if ( window.slate.util.isString(item) ) {
@@ -1341,7 +1347,43 @@ window.slate.TouchBar = (function() {
 
         slate.util.click( dom, callback )
 
-        this.scroll.appendChild( dom )
+        return dom;
+    }
+
+    TouchRow.prototype.appendSeperator = function() {
+        this.scroll.appendChild(
+                slate.util.newElement( 'div', 'touch-bar-button-seperator' )
+        )
+        
+        return this;
+    }
+
+    TouchRow.prototype.append = function( item, callback ) {
+        var dom;
+
+        if ( arguments.length > 2 ) {
+            dom = slate.util.newElement( 'div', 'touch-bar-button-column' );
+
+            for ( var i = 0; i < arguments.length; i++ ) {
+                var item = arguments[i],
+                    callback;
+
+                if ( item === null ) {
+                    item = '&nbsp;';
+                    callback = function(ev) { /* do nothing */ };
+                } else {
+                    callback = arguments[i+1]
+
+                    i++;
+                }
+
+                dom.appendChild( newTouchRowButton(item, callback) );
+            }
+        } else {
+            dom = newTouchRowButton( item, callback );
+        }
+
+        this.scroll.appendChild( dom );
 
         return this;
     }
@@ -1373,6 +1415,8 @@ window.slate.TouchBar = (function() {
                     
                     return false
                 } );
+
+                console.log( success );
 
                 if ( success ) {
                     callback.later();
@@ -1521,13 +1565,32 @@ window.slate.TouchBar = (function() {
          * Add the initial commands
          */
 
-        var commandsRow = new TouchRow( this.upper );
-        for ( var i = 0; i < commands.length; i++ ) {
-            (function(command) {
-                commandsRow.append( command, function() {
-                    view.insert( new ast.Command(command) );
-                } );
-            })( commands[i] );
+        var commandsRow = new TouchRow( this.upper, true );
+        commands = commands.sort();
+        for ( var i = 0; i < commands.length; i += 2 ) {
+            if ( i === commands.length-1 ) {
+                (function(command) {
+                    commandsRow.append(
+                            command, function() {
+                                view.insert( new ast.Command(command) );
+                            },
+                            
+                            null
+                    );
+                })( commands[i] );
+            } else {
+                (function(top, bottom) {
+                    commandsRow.append(
+                            top, function() {
+                                view.insert( new ast.Command(top) );
+                            },
+
+                            bottom, function() {
+                                view.insert( new ast.Command(bottom) );
+                            }
+                    )
+                })( commands[i], commands[i+1] );
+            }
         }
 
         /**
@@ -1536,45 +1599,77 @@ window.slate.TouchBar = (function() {
 
         var SMALL_EMPTY = '<span class="touch-small">&#x25cf;</span>';
 
-        var valuesRow = new TouchRow( this.upper );
+        var valuesRow = new TouchRow( this.upper, true );
 
-        valuesRow.append( 'var', function() {
-            view.insert( new ast.VariableInput() );
-        } );
-        valuesRow.append( SMALL_EMPTY + ' [' + SMALL_EMPTY + ']', function() {
-            view.insert( new ast.ArrayAssignment() );
-        } );
-        valuesRow.append( '[ &hellip; ]', function() {
-            view.insert( new ast.ArrayLiteral() );
-        } );
-        valuesRow.append( '123', function() {
-            view.insert( new ast.NumberInput() );
-        } );
-        valuesRow.append( '"text"', function() {
-            view.insert( new ast.StringInput() );
-        } );
-        valuesRow.append( 'true', function() {
-            view.insert( new ast.TrueLiteral() );
-        } );
-        valuesRow.append( 'false', function() {
-            view.insert( new ast.FalseLiteral() );
-        } );
+        valuesRow.append(
+                'var', function() {
+                    view.insert( new ast.VariableInput() );
+                },
 
-        valuesRow.append( '/ ' + SMALL_EMPTY + ' /', function() {
-            view.insert( new ast.RegExpInput() );
-        } );
-        valuesRow.append( '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' )', function() {
-            // todo new *exlusive* range
-        } );
-        valuesRow.append( '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' ]', function() {
-            // todo new *inclusive* range
-        } );
+                null
+        )
+
+        valuesRow.append(
+                SMALL_EMPTY + ' [' + SMALL_EMPTY + ']',
+                function() {
+                    view.insert( new ast.ArrayAssignment() );
+                },
+
+                '[ &hellip; ]',
+                function() {
+                    view.insert( new ast.ArrayLiteral() );
+                }
+        )
+
+        valuesRow.append(
+                '123',
+                function() {
+                    view.insert( new ast.NumberInput() );
+                },
+
+                '"text"',
+                function() {
+                    view.insert( new ast.StringInput() );
+                }
+        )
+
+        valuesRow.append(
+                'true',
+                function() {
+                    view.insert( new ast.TrueLiteral() );
+                },
+
+                'false',
+                function() {
+                    view.insert( new ast.FalseLiteral() );
+                }
+        )
+
+        valuesRow.append(
+                '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' )',
+                function() {
+                    // todo new *exlusive* range
+                },
+
+                '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' ]',
+                function() {
+                    // todo new *inclusive* range
+                }
+        )
+
+        valuesRow.append(
+                null,
+
+                '/ ' + SMALL_EMPTY + ' /', function() {
+                    view.insert( new ast.RegExpInput() );
+                }
+        )
 
         /*
          * Structural commands, like operators.
          */
 
-        var opsRow = new TouchRow( this.upper );
+        var opsRow = new TouchRow( this.upper, true );
 
         var replaceWithDoubleOp = function( op ) {
             var current = view.getCurrent();
@@ -1589,14 +1684,56 @@ window.slate.TouchBar = (function() {
             view.selectEmpty();
         }
 
-        for ( var i = 0; i < descriptors.length; i++ ) {
-            (function(descriptor) {
-                opsRow.append(
-                        SMALL_EMPTY + ' ' + descriptor.html + ' ' + SMALL_EMPTY,
-                        function() { replaceWithDoubleOp( new ast.DoubleOp(descriptor, descriptors) ); }
+        var appendDescriptor = function( topName, bottomName ) {
+            var    top =    topName !== null ? descMappings[   topName] : null ;
+            var bottom = bottomName !== null ? descMappings[bottomName] : null ;
+
+            assert(    topName === null || top   , "top descriptor not found " + topName );
+            assert( bottomName === null || bottom, "bottom descriptor not found " + bottomName );
+
+            if ( top !== null && bottom !== null ) {
+                opsRow.append( 
+                        SMALL_EMPTY + ' ' + top.html    + ' ' + SMALL_EMPTY,
+                        function() { replaceWithDoubleOp( new ast.DoubleOp(top   , descriptors) ); },
+
+                        SMALL_EMPTY + ' ' + bottom.html + ' ' + SMALL_EMPTY,
+                        function() { replaceWithDoubleOp( new ast.DoubleOp(bottom, descriptors) ); }
                 )
-            })( descriptors[i] );
+            } else if ( top !== null ) {
+                opsRow.append( 
+                        SMALL_EMPTY + ' ' + top.html    + ' ' + SMALL_EMPTY,
+                        function() { replaceWithDoubleOp( new ast.DoubleOp(top   , descriptors) ); },
+
+                        null
+                )
+            } else if ( bottom !== null ) {
+                opsRow.append( 
+                        null,
+
+                        SMALL_EMPTY + ' ' + bottom.html    + ' ' + SMALL_EMPTY,
+                        function() { replaceWithDoubleOp( new ast.DoubleOp(bottom, descriptors) ); }
+                )
+            }
         }
+
+        appendDescriptor( "assignment"          , null              );
+
+        opsRow.appendSeperator();
+
+        appendDescriptor( "add"                 , "subtract"        );
+        appendDescriptor( "multiply"            , "divide"          );
+
+        opsRow.appendSeperator();
+
+        appendDescriptor( "equal"               , "not equal"       );
+        appendDescriptor( "less than equal"     , "less than"       );
+        appendDescriptor( "greater than equal"  , "greater than"    );
+
+        opsRow.appendSeperator();
+
+        appendDescriptor( "and"                 , "or"              );
+        appendDescriptor( "bitwise and"         , "bitwise or"      );
+        appendDescriptor( "left shift"          , "right shift"     );
 
         /*
          * Lower Row
