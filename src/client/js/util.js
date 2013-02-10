@@ -68,11 +68,10 @@
 
             var xy = { x: 0, y: 0, moveX: 0, moveY: 0 },
                 timestart = 0,
-                finger = 0;
+                finger    = 0;
 
             if ( IS_TOUCH ) {
                 el.addEventListener( 'touchstart', function(ev) {
-if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
                     var touch = ev.changedTouches[ 0 ];
                     
                     if ( touch ) {
@@ -81,19 +80,17 @@ if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
 
                         updateXY( xy, touch, false );
                     }
-                }, false );
+                }, false )
 
                 el.addEventListener( 'touchmove', function(ev) {
-if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
                     var touch = ev.changedTouches[ 0 ];
                     
                     if ( touch && touch.identifier === finger ) {
                         updateXY( xy, touch, true );
                     }
-                }, false );
+                }, false )
 
                 el.addEventListener( 'touchend', function(ev) {
-if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
                     var touch = ev.changedTouches[ 0 ];
                     
                     if ( touch && touch.identifier === finger ) {
@@ -109,18 +106,22 @@ if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
                             callback( ev );
                         }
                     }
-                }, false );
+                }, false )
 
                 el.addEventListener( 'click', function(ev) {
                     ev.preventDefault();
                     ev.stopPropagation();
-                } );
+                } )
             } else {
                 el.addEventListener( 'click', function(ev) {
-                    ev.preventDefault();
+                    ev = ev || window.event;
+
+                    if ( (ev.which || ev.button) === 1 ) {
+                        ev.preventDefault();
                     
-                    callback( ev );
-                } );
+                        callback( ev );
+                    }
+                } )
             }
 
             return el;
