@@ -193,14 +193,20 @@
          * Work out if we should use touch or not.
          * It is used if ...
          *
+         *  = has touch support, use touch by default,
          *  = ?touch is in the query url
          *  = ?touch=true is in the query url
          *  = ?touch=1 is in the query url
          *  = slate.constants.useTouch was set to true.
+         *
+         * Note that the constants allow you to force the use of touch,
+         * or force it to be disabled. The intial touch detection is then
+         * only used to see if it's initially there, for the default.
          */
-        var useTouch = false;
+        var useTouch = !! ('ontouchstart' in window)  // works on most browsers 
+                || !!('onmsgesturechange' in window); // works on IE 10
 
-        if ( options.touch ) {
+        if ( options.touch !== undefined ) {
             useTouch = ( options.touch !== 'false' );
         }
        
