@@ -9,15 +9,119 @@
 
     var anchor = document.createElement( 'a' );
 
+    var IS_TOUCH = !! ('ontouchstart' in window)  // works on most browsers 
+            || !!('onmsgesturechange' in window); // works on IE 10
+
+    /**
+     * How quickly someone must tap,
+     * for it to be a 'fast click'.
+     *
+     * In milliseconds.
+     */
+    var FAST_CLICK_DURATION = 150,
+        FAST_CLICK_DIST = 20,
+        SLOW_CLICK_DIST = 15;
+
+    var updateXY = function( xy, ev, updateMove ) {
+        var x,
+            y;
+
+        if ( ev.offsetX !== undefined ) { // Opera
+            x = ev.offsetX;
+            y = ev.offsetY;
+        } else if ( ev.layerX !== undefined ) { // Firefox
+            x = ev.layerX;
+            y = ev.layerY;
+        } else if ( ev.clientX !== undefined ) {
+            x = ev.clientX;
+            y = ev.clientY;
+
+            for (
+                    var tag = ev.target;
+                    tag.offsetParent;
+                    tag = tag.offsetParent
+            ) {
+                x -= tag.offsetLeft;
+                y -= tag.offsetTop;
+            }
+        // fail, so just put no movement in
+        } else {
+            x = 0;
+            y = 0;
+        }
+
+        if ( updateMove ) {
+            xy.moveX += (xy.x - x)
+            xy.moveY += (xy.y - y)
+        } else {
+            xy.moveX = 0;
+            xy.moveY = 0;
+        }
+
+        xy.x = x;
+        xy.y = y;
+    }
+
     window.slate.util = {
         click: function( el, callback ) {
             assert( el instanceof HTMLElement, "non-html element given" );
 
-            el.addEventListener( 'click', function(ev) {
-                ev.preventDefault();
-                
-                callback( ev );
-            } );
+            var xy = { x: 0, y: 0, moveX: 0, moveY: 0 },
+                timestart = 0,
+                finger = 0;
+
+            if ( IS_TOUCH ) {
+                el.addEventListener( 'touchstart', function(ev) {
+if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
+                    var touch = ev.changedTouches[ 0 ];
+                    
+                    if ( touch ) {
+                        finger = touch.identifier;
+                        timestart = Date.now();
+
+                        updateXY( xy, touch, false );
+                    }
+                }, false );
+
+                el.addEventListener( 'touchmove', function(ev) {
+if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
+                    var touch = ev.changedTouches[ 0 ];
+                    
+                    if ( touch && touch.identifier === finger ) {
+                        updateXY( xy, touch, true );
+                    }
+                }, false );
+
+                el.addEventListener( 'touchend', function(ev) {
+if ( ev.changedTouches === undefined ) { alert( 'no changed' ); }
+                    var touch = ev.changedTouches[ 0 ];
+                    
+                    if ( touch && touch.identifier === finger ) {
+                        updateXY( xy, touch, true );
+
+                        var duration = Date.now() - timestart;
+                        var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
+
+                        if (
+                                ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
+                                  dist < SLOW_CLICK_DIST
+                        ) {
+                            callback( ev );
+                        }
+                    }
+                }, false );
+
+                el.addEventListener( 'click', function(ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                } );
+            } else {
+                el.addEventListener( 'click', function(ev) {
+                    ev.preventDefault();
+                    
+                    callback( ev );
+                } );
+            }
 
             return el;
         },

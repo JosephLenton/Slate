@@ -286,6 +286,16 @@
         return slate;
     }
 
+    slate.commandValues = function( name, fun ) {
+        if ( arguments.length === 1 ) {
+            slate.commands.addValues( name );
+        } else {
+            slate.commands.addValues( name, fun );
+        }
+
+        return slate;
+    }
+
     slate.command = function( name, fun ) {
         if ( arguments.length === 1 ) {
             slate.commands.add( name );

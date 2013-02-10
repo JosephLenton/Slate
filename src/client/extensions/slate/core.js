@@ -94,16 +94,31 @@
         }
     } );
 
-    slate.command( ['clear', 'cls'], function( p, display, state ) {
+    slate.command( 'cls', function( p, display, state ) {
         state.clearDisplay();
 
         return display();
     } );
 
-    slate.command( ['help', 'man'], function() {
+    slate.commandValues( 'help', function( params, display, state ) {
         var str = '';
+        var commands = state.commands;
 
         for ( var k in commands ) {
+            if ( params !== undefined ) {
+                if ( slate.util.isString(params) ) {
+                    if ( k.indexOf(params) !== 0 ) {
+                        continue;
+                    }
+                } else if ( params instanceof RegExp ) {
+                    if ( k.match(params) === null ) {
+                        continue;
+                    }
+                } else if ( params ) {
+                    throw new Error("invalid parameter " + params);
+                }
+            }
+
             if ( commands.hasOwnProperty(k) ) {
                 str += k + "\n";
             }

@@ -776,7 +776,7 @@ window.slate.TouchBar = (function() {
                         return false;
                     } else {
                         if ( this.meta.validate ) {
-                            return ! this.meta.validate( onError )
+                            return ! this.meta.validate( onError, this.left, this.right )
                         } else {
                             return this.left.validate( onError ) &&
                                    this.right.validate( onError );
@@ -789,7 +789,7 @@ window.slate.TouchBar = (function() {
                 },
 
                 evaluate: function() {
-                    return this.meta.evaluate();
+                    return this.meta.evaluate( this.left, this.right );
                 },
 
                 selectMore: function() {
@@ -895,12 +895,13 @@ window.slate.TouchBar = (function() {
                             }
                         },
 
-                        validate: function( onError ) {
-                            if ( ! this.left.isAssignable() ) {
-                                onError( this.left, "illegal assignment" );
+                        validate: function( onError, left, right ) {
+                            if ( ! left.isAssignable() ) {
+                                onError( left, "illegal assignment" );
                                 return false;
                             } else {
-                                return this.left.validate( onError ) && this.right.validate( onError );
+                                return left.validate( onError ) &&
+                                       right.validate( onError );
                             }
                         },
 
@@ -914,11 +915,11 @@ window.slate.TouchBar = (function() {
                          * Since an assignment, is also an expression.
                          *
                          */
-                        evaluate: function() {
-                            var right = this.right.evaluate();
-                            this.left.assign( right );
+                        evaluate: function( left, right ) {
+                            var rightR = right.evaluate();
+                            left.assign( rightR );
 
-                            return right;
+                            return rightR;
                         },
 
                         toJS: function( left, right ) {
@@ -949,28 +950,31 @@ window.slate.TouchBar = (function() {
         ]
     })();
 
+    /**
+     * Convert the Description Array into a mapping of name => description,
+     * and perform some assertions to ensure none are missing,
+     * and stuff like that.
+     */
     var descMappings = (function( descriptors ) {
         var descMappings = {}
-        for ( var i = 0; i < descriptors.length; i++ ) {
-            var desc = descriptors[i];
 
+        descriptors.forEach( function(desc) {
             assert(
                     ! descMappings.hasOwnProperty(desc.name),
                     "duplicate desciption mapping name: " + desc.name
             );
 
             descMappings[ desc.name ] = desc;
-        }
+        } );
 
-        for ( var i = 0; i < descriptors.length; i++ ) {
-            var desc = descriptors[i];
+        descriptors.forEach( function(desc) {
             assert(
                     desc.alt === undefined || descMappings.hasOwnProperty( desc.alt ),
                     "alternative double op description not found: " + desc.alt
             )
 
             desc.altMeta = descMappings[ desc.alt ];
-        }
+        } )
 
         return descMappings;
     })( descriptors );
@@ -1023,6 +1027,10 @@ window.slate.TouchBar = (function() {
 
                 var inputDom = document.createElement( 'input' );
                 inputDom.setAttribute( 'type', type );
+
+                inputDom.setAttribute( 'autocapitalize', "off" );
+                inputDom.setAttribute( 'autocorrect'   , "off" );
+
                 if ( defaultVal !== undefined ) {
                     inputDom.value = defaultVal;
                 }
@@ -1039,16 +1047,20 @@ window.slate.TouchBar = (function() {
 
                 this.lastInput = '';
 
+                this.onInput = new Events( this );
+
                 var self = this;
                 this.input.addEventListener( 'input', function() {
                     self.resizeInput();
-                    self.onInput();
+                    self.onInput.run();
                 } );
 
                 this.resizeInput();
 
                 this.onClick(function() {
-                    this.input.focus();
+                    setTimeout( function() {
+                        this.input.focus();
+                    }, 0 );
                 });
             }).
             extend( ast.Node ).
@@ -1075,7 +1087,20 @@ window.slate.TouchBar = (function() {
                         }, 0);
                     },
 
-                    getEmpty: function() {
+                    /**
+                     * This is overridden,
+                     * because when it gets inserted,
+                     * the view will try to find a new empty node.
+                     *
+                     * Overriding this allows this to stay selected.
+                     *
+                     * Note that we don't override 'getEmpty',
+                     * so that if other elements are doing the finding,
+                     * they can move on to a different node.
+                     * 
+                     * @return This input node.
+                     */
+                    findEmpty: function() {
                         return this;
                     }
             }).
@@ -1085,8 +1110,6 @@ window.slate.TouchBar = (function() {
                     },
             }).
             extend({
-                    onInput: function() { },
-
                     resizeInput: function() {
                         /*
                          * If more than 2 characters are inputted at once,
@@ -1139,7 +1162,7 @@ window.slate.TouchBar = (function() {
                  * Add in input validation checks.
                  */
 
-                this.onInput.add( function() {
+                this.onInput( function() {
                     if ( this.isRegExpValid() ) {
                         this.removeError();
                     } else {
@@ -1243,7 +1266,7 @@ window.slate.TouchBar = (function() {
                     false
             ).
             sub(function() {
-                this.onInput.add( function() {
+                this.onInput( function() {
                     if ( isValidIdentifier(this.getInputValue()) ) {
                         this.removeError()
                     } else {

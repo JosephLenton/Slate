@@ -7,6 +7,53 @@
         commands: {},
 
         /**
+         * The same as 'addEach', however it differs in that
+         * 'undefined' values are filtered out of the array given.
+         *
+         * You are also guaranteed that the method will be called
+         * at least once.
+         *
+         * This is either:
+         *      - for each non-undefined value,
+         *      - once with undefined passed in.
+         */
+        addValues: function( command, fun ) {
+            if ( arguments.length === 2 ) {
+                slate.command( command, function( arr, display, state ) {
+                    if ( slate.util.isArray(arr) ) {
+                        var r;
+                        var iterated = false;
+
+                        for ( var i = 0; i < arr.length; i++ ) {
+                            iterated = true;
+                            var val = arr[i];
+
+                            if ( val !== undefined ) {
+                                r = fun( arr[i], display, state );
+                            }
+                        }
+
+                        if ( ! iterated ) {
+                            r = fun( undefined, display, state );
+                        }
+
+                        return r;
+                    } else {
+                        return fun( arr, display, state );
+                    }
+                } )
+            } else if ( arguments.length === 1 ) {
+                for ( var k in command ) {
+                    if ( command.hasOwnProperty(k) ) {
+                        slate.commands.addValues( k, command[k] );
+                    }
+                }
+            } else {
+                throw new Error( "Too many parameters given" );
+            }
+        },
+
+        /**
          * Acts the same as commands.add,
          * however this ensures that only one value
          * is ever processed at a time.
@@ -172,7 +219,9 @@
                         }
 
                         return wrapCommand( cmd, onDisplayFun );
-                    }
+                    },
+
+                    commands: commands
             }
 
             var onDisplay = (function(onDisplay) {
