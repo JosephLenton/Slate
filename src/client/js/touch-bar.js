@@ -960,9 +960,9 @@ window.slate.TouchBar = (function() {
                         }
                     }
 
-                    this.preText .innerHTML = meta.preText  || '' ;
+                    this.preText .innerHTML = meta.preHtml  || '' ;
                     this.text    .innerHTML = meta.html           ;
-                    this.postText.innerHTML = meta.postText || '' ;
+                    this.postText.innerHTML = meta.postHtml || '' ;
 
                     if ( meta.css ) {
                         this.dom.classList.add.callLater( meta.css );
