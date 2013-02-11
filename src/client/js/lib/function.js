@@ -326,7 +326,7 @@
      * This allows you to have a sanity check.
      */
     Function.prototype.override = newFunctionExtend(
-            "Methods overriding but do not exist,",
+            "Methods are overriding, but they do not exist,",
             function(dest, k, val) {
                 return ( dest[k] !== undefined )
             }
@@ -361,7 +361,7 @@
      * This is used as a sanity check.
      */
     Function.prototype.extend = newFunctionExtend(
-            "Methods extending but do not exist,",
+            "Extending methods exist, ",
             function(dest, k, val) {
                 return ( dest[k] === undefined )
             }
