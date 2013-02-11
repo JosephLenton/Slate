@@ -420,7 +420,7 @@ window.slate.TouchBar = (function() {
                                         parentDom.removeChild( dom );
                                     }
                                 }).bind(this) )
-                            }).bind( this ).later()
+                            }).later( this );
                         }
                         
                         this.replaceLock = false;
@@ -457,6 +457,22 @@ window.slate.TouchBar = (function() {
                     }
                 },
 
+                insertBefore: function( newEl, current ) {
+                    if ( current.getDom !== undefined ) {
+                        current = current.getDom();
+                    }
+
+                    if ( newEl.setParent !== undefined ) {
+                        newEl.setParent( this );
+                    }
+
+                    if ( newEl.getDom !== undefined ) {
+                        newEl = newEl.getDom();
+                    }
+
+                    this.getDom().insertBefore( newEl, current );
+                },
+
                 add: function() {
                     for ( var i = 0; i < arguments.length; i++ ) {
                         var arg = arguments[i];
@@ -466,7 +482,7 @@ window.slate.TouchBar = (function() {
                         } else if ( arg.getDom !== undefined ) {
                             this.dom.appendChild( arg.getDom() );
 
-                            if ( arg.setParent ) {
+                            if ( arg.setParent !== undefined ) {
                                 arg.setParent( this );
                             }
                         } else {
@@ -519,7 +535,14 @@ window.slate.TouchBar = (function() {
                 this.params = new Array();
                 
                 this.addClass( 'touch-ast-command' );
-                this.add( text );
+
+                this.rightParen = astText(')', 'touch-ast-right-paren'),
+                this.add(
+                        astText('(', 'touch-ast-left-paren'),
+                        text,
+                        this.rightParen
+                )
+
                 this.insertNewEmpty();
             }).
             override({
@@ -593,7 +616,7 @@ window.slate.TouchBar = (function() {
 
                         (function() {
                             this.getView().setCurrent( this.getEmpty() );
-                        }).bind(this).later();
+                        }).later( this )
                     } else {
                         ast.Node.prototype.replace.call( this, newCommand );
                     }
@@ -601,22 +624,69 @@ window.slate.TouchBar = (function() {
 
                 replaceChild: function( old, newAst ) {
                     var params = this.params;
+                    var replaceNode = true;
+
+                    /**
+                     * We search for the index of the last non-empty node.
+                     *
+                     * This is a part of a larger feature;
+                     * we want to remove any trailing empty nodes.
+                     *
+                     * This is so over time, a command doesn't end up
+                     * with 10 empty parameters.
+                     */
+                    var lastNonEmpty = -1;
 
                     for ( var i = 0; i < params.length; i++ ) {
-                        if ( params[i] === old ) {
-                            params[i] = newAst;
+                        var param = params[i];
+                        
+                        if ( replaceNode && param === old ) {
+                            param = params[i] = newAst;
                             old.replace( newAst );
                             old.setParent( this );
 
-                            if ( i === params.length-1 ) {
-                                this.insertNewEmpty();
-                            }
-
-                            return this;
+                            replaceNode = false;
+                        }
+                        
+                        if ( ! param.isEmpty() ) {
+                            lastNonEmpty = i;
                         }
                     }
 
-                    assertUnreachable( "old AST node not found" );
+                    /*
+                     * Remove the trailing empty parameters.
+                     * This is up till, the last trailing empty.
+                     *
+                     * Add one to convert from last non-empty,
+                     * to just last empty.
+                     */
+                    var lastEmpty = lastNonEmpty + 1;
+                    if ( lastEmpty < params.length-1 ) {
+                        for ( var i = lastEmpty; i < params.length-1; i++ ) {
+                            this.getDom().removeChild( params[i].getDom() );
+                        }
+
+                        /*
+                         * Resize, and ensure the resulting size is correct.
+                         */
+                        params.splice( lastEmpty, (params.length-1) - lastEmpty );
+                        assert( params.length === lastEmpty+1, "incorrect number of empties following resize" );
+                    } else if ( lastNonEmpty === params.length-1 ) {
+                        this.insertNewEmpty();
+                    }
+
+                    if ( ! replaceNode ) {
+                        return this;
+                    /*
+                     * The node being replaced was never found.
+                     *
+                     * In practice this should never happen,
+                     * because nodes should always be away who their
+                     * parents are, and which node they are within.
+                     */
+                    } else {
+                        assertUnreachable( "old AST node not found" );
+                    }
                 }
             }).
             extend({
@@ -632,7 +702,7 @@ window.slate.TouchBar = (function() {
                     var empty = new ast.Empty();
 
                     this.params.push( empty );
-                    this.add( empty );
+                    this.insertBefore( empty, this.rightParen );
                 },
 
                 getFunction: function() {
@@ -745,13 +815,17 @@ window.slate.TouchBar = (function() {
                 //this.text = new TransientMenu( menuItems, metaIndex );
                 //this.text.getDom().classList.add( 'touch-ast-text' );
                 
+                this.preText = astText( '', 'touch-ast-op-text' );
                 this.text = astText( '', 'touch-ast-op-text' );
+                this.postText = astText( '', 'touch-ast-op-text' );
                 this.add(
                         astText('(', 'touch-ast-left-paren'),
+                        this.preText,
                         this.left,
                         this.text,
                         this.right,
-                        astText(')', 'touch-ast-left-paren')
+                        this.postText,
+                        astText(')', 'touch-ast-right-paren')
                 );
 
                 this.meta = null;
@@ -781,6 +855,14 @@ window.slate.TouchBar = (function() {
                             return this.left.validate( onError ) &&
                                    this.right.validate( onError );
                         }
+                    }
+                },
+
+                isAssignable: function() {
+                    if ( this.meta.isAssignable ) {
+                        return this.meta.isAssignable( this.left, this.right );
+                    } else {
+                        return false;
                     }
                 },
 
@@ -847,10 +929,14 @@ window.slate.TouchBar = (function() {
                         }
                     }
 
-                    this.text.innerHTML = meta.html;
+                    this.preText .innerHTML = meta.preText  || '' ;
+                    this.text    .innerHTML = meta.html           ;
+                    this.postText.innerHTML = meta.postText || '' ;
+
                     if ( meta.css ) {
                         this.dom.classList.add.callLater( meta.css );
                     }
+                    
                     this.meta = meta;
 
                     this.validateLeft();
@@ -890,8 +976,6 @@ window.slate.TouchBar = (function() {
                         html: ':=',
 
                         validateLeft: function( left ) {
-                            console.log( !left.isAssignable() && !left.isEmpty() );
-
                             if ( !left.isAssignable() && !left.isEmpty() ) {
                                 left.setError();
                             }
@@ -927,6 +1011,61 @@ window.slate.TouchBar = (function() {
                         toJS: function( left, right ) {
                             return left + ' = ' + right;
                         }
+                },
+
+                /*
+                 *      foo[ bar ]
+                 */
+                {
+                    name: 'array access',
+                    alt: 'property access',
+                     
+                    html: '[',
+                    postHtml: ']',
+
+                    toJS: function( left, right ) {
+                        return '(' + left.toJS() + ')[' + right.toJS() + '] ';
+                    },
+
+                    evaluate: function( left, right ) {
+                        // todo
+                    },
+
+                    isAssignable: function() {
+                        return true;
+                    }
+                },
+
+                /*
+                 *      foo.bar
+                 */
+                {
+                    name: 'property access',
+                    alt: 'array access',
+                    html: '.',
+
+                    toJS: function( left, right ) {
+                        return '(' + left + ').' + right + ' ';
+                    },
+
+                    validate: function( onError, left, right ) {
+                        if (
+                                ! (right instanceof ast.VariableInput) &&
+                                ! (right instanceof ast.Command)
+                        ) {
+                            return onError( right, "invalid construct for property/method access" );
+                        } else {
+                            return left.validate( onError ) && right.validate( onError );
+                        }
+                    },
+
+                    evaluate: function( left, right ) {
+                        // todo
+                    },
+
+                    isAssignable: function( left, right ) {
+                        return right.isAssignable();
+                    }
                 },
 
                 newOps( 'add'               , 'subtract'            , '+'       , '+'  , function(l, r) { return l + r } ),
@@ -1060,9 +1199,9 @@ window.slate.TouchBar = (function() {
                 this.resizeInput();
 
                 this.onClick(function() {
-                    setTimeout( function() {
-                        this.input.focus();
-                    }, 0 );
+                    (function() {
+                        self.input.focus();
+                    }).later( this );
                 });
             }).
             extend( ast.Node ).
@@ -1684,6 +1823,24 @@ window.slate.TouchBar = (function() {
             view.selectEmpty();
         }
 
+        var descriptorHTML = function( d ) {
+            assert( d.html, "descriptor is missing HTML display value, " + d.name );
+
+            var html = '';
+
+            if ( d.preHtml !== undefined ) {
+                html = d.preHtml + ' ';
+            }
+
+            html += SMALL_EMPTY + ' ' + d.html + ' ' + SMALL_EMPTY;
+
+            if ( d.postHtml !== undefined ) {
+                html += ' ' + d.postHtml;
+            }
+
+            return html;
+        }
+
         var appendDescriptor = function( topName, bottomName ) {
             var    top =    topName !== null ? descMappings[   topName] : null ;
             var bottom = bottomName !== null ? descMappings[bottomName] : null ;
@@ -1693,15 +1850,15 @@ window.slate.TouchBar = (function() {
 
             if ( top !== null && bottom !== null ) {
                 opsRow.append( 
-                        SMALL_EMPTY + ' ' + top.html    + ' ' + SMALL_EMPTY,
+                        descriptorHTML( top ),
                         function() { replaceWithDoubleOp( new ast.DoubleOp(top   , descriptors) ); },
 
-                        SMALL_EMPTY + ' ' + bottom.html + ' ' + SMALL_EMPTY,
+                        descriptorHTML( bottom ),
                         function() { replaceWithDoubleOp( new ast.DoubleOp(bottom, descriptors) ); }
                 )
             } else if ( top !== null ) {
                 opsRow.append( 
-                        SMALL_EMPTY + ' ' + top.html    + ' ' + SMALL_EMPTY,
+                        descriptorHTML( top ),
                         function() { replaceWithDoubleOp( new ast.DoubleOp(top   , descriptors) ); },
 
                         null
@@ -1710,13 +1867,14 @@ window.slate.TouchBar = (function() {
                 opsRow.append( 
                         null,
 
-                        SMALL_EMPTY + ' ' + bottom.html    + ' ' + SMALL_EMPTY,
+                        descriptorHTML( bottom ),
                         function() { replaceWithDoubleOp( new ast.DoubleOp(bottom, descriptors) ); }
                 )
             }
         }
 
         appendDescriptor( "assignment"          , null              );
+        appendDescriptor( "property access"     , "array access"    );
 
         opsRow.appendSeperator();
 

@@ -580,14 +580,25 @@
      *
      * Cancelling the timeout can be done using 'clearTimeout'.
      *
-     * @param timeout The timeout to wait before calling this function.
+     * @param target Optional, a target object to bind this function to.
+     * @param timeout Optional, the timeout to wait before calling this function, defaults to 0.
      * @return The setTimeout identifier token, allowing you to cancel the timeout.
      */
     Function.prototype.later = function( timeout ) {
+        var fun = this;
+
         if ( arguments.length === 0 ) {
             timeout = 0;
+        } else if ( ! (typeof timeout === 'number') ) {
+            fun = fun.bind( timeout );
+
+            if ( arguments.length > 1 ) {
+                timeout = arguments[1];
+            } else {
+                timeout = 0;
+            }
         }
 
-        return setTimeout( this, timeout );
+        return setTimeout( fun, timeout );
     }
 })();
