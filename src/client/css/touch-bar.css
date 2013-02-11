@@ -385,7 +385,9 @@ body.slate-touch > .slate-content {
     .touch-ast-command {
     }
         .touch-ast-command.select-parent > .touch-ast-text,
-        .touch-ast-command.select        > .touch-ast-text {
+        .touch-ast-command.select        > .touch-ast-text,
+        .touch-ast-command.select-parent >  input,
+        .touch-ast-command.select        >  input {
             color: #ed3;
         }
     .touch-ast-op {

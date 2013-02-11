@@ -2,6 +2,10 @@
 
 window.slate = window.slate || {};
 window.slate.TouchBar = (function() {
+    var SMALL_EMPTY = '<span class="touch-small">&#x25cf;</span>';
+
+    var INPUT_WIDTH_PADDING = 4;
+
     var Events = function( target ) {
         var events = [];
 
@@ -525,200 +529,20 @@ window.slate.TouchBar = (function() {
                     }
             } )
 
-    ast.Command = ast.Node.
-            sub(function(name) {
-                var text = astText( name );
-                this.name = name;
-
-                this.text = text;
-
-                this.params = new Array();
-                
-                this.addClass( 'touch-ast-command' );
-
-                this.rightParen = astText(')', 'touch-ast-right-paren'),
-                this.add(
-                        astText('(', 'touch-ast-left-paren'),
-                        text,
-                        this.rightParen
-                )
-
-                this.insertNewEmpty();
-            }).
-            override({
-                    allowsEmpties: function() {
-                        return true;
-                    },
-
-                    toJS: function() {
-                        return this.name +
-                                '( ' +
-                                this.getNonEmptyParams().
-                                        map( 'toJS' ).
-                                        join( ', ' ) +
-                                ' )'
-                    },
-
-                    evaluate: function() {
-                        return this.getFunction().apply(
-                                null,
-                                this.getNonEmptyParams().map( 'evaluate' )
-                        )
-                    },
-
-                    validate: function( onError ) {
-                        return this.params.inject( true, function(sum, p) {
-                            return p.validate( onError ) && sum
-                        } )
-                    }
-            }).
-            override({
-                getEmpty: function() {
-                    var params = this.params;
-                    var firstEmpty  = -1,
-                        hasSelected = false;
-
-                    /*
-                     * There are two types of empties we are looking for:
-                     *  - The first empty after the selected parameter
-                     *  - the earliest non-empty parameter
-                     *
-                     * We chose in those two orders,
-                     * where the first has a higher priority.
-                     */
-                    for ( var i = 0; i < params.length; i++ ) {
-                        var param = params[i];
-
-                        if ( param.isSelected() ) {
-                            hasSelected = true;
-                        } else if ( param.isEmpty() ) {
-                            if ( hasSelected ) {
-                                firstEmpty = i;
-                                break;
-                            } else if ( firstEmpty === -1 ) {
-                                firstEmpty = i;
-                            }
-                        }
-                    }
-
-                    if ( firstEmpty !== -1 ) {
-                        return params[firstEmpty];
-                    } else {
-                        return null;
-                    }
-                }
-            }).
-            override({
-                replace: function( newCommand ) {
-                    if ( newCommand instanceof ast.Command ) {
-                        this.text.textContent = newCommand.getName();
-                        // todo, animate out old text, animate in new text
-
-                        (function() {
-                            this.getView().setCurrent( this.getEmpty() );
-                        }).later( this )
-                    } else {
-                        ast.Node.prototype.replace.call( this, newCommand );
-                    }
-                },
-
-                replaceChild: function( old, newAst ) {
-                    var params = this.params;
-                    var replaceNode = true;
-
-                    /**
-                     * We search for the index of the last non-empty node.
-                     *
-                     * This is a part of a larger feature;
-                     * we want to remove any trailing empty nodes.
-                     *
-                     * This is so over time, a command doesn't end up
-                     * with 10 empty parameters.
-                     */
-                    var lastNonEmpty = -1;
-
-                    for ( var i = 0; i < params.length; i++ ) {
-                        var param = params[i];
-                        
-                        if ( replaceNode && param === old ) {
-                            param = params[i] = newAst;
-                            old.replace( newAst );
-                            old.setParent( this );
-
-                            replaceNode = false;
-                        }
-                        
-                        if ( ! param.isEmpty() ) {
-                            lastNonEmpty = i;
-                        }
-                    }
-
-                    /*
-                     * Remove the trailing empty parameters.
-                     * This is up till, the last trailing empty.
-                     *
-                     * Add one to convert from last non-empty,
-                     * to just last empty.
-                     */
-                    var lastEmpty = lastNonEmpty + 1;
-                    if ( lastEmpty < params.length-1 ) {
-                        for ( var i = lastEmpty; i < params.length-1; i++ ) {
-                            this.getDom().removeChild( params[i].getDom() );
-                        }
-
-                        /*
-                         * Resize, and ensure the resulting size is correct.
-                         */
-                        params.splice( lastEmpty, (params.length-1) - lastEmpty );
-                        assert( params.length === lastEmpty+1, "incorrect number of empties following resize" );
-                    } else if ( lastNonEmpty === params.length-1 ) {
-                        this.insertNewEmpty();
-                    }
-
-                    if ( ! replaceNode ) {
-                        return this;
-                    /*
-                     * The node being replaced was never found.
-                     *
-                     * In practice this should never happen,
-                     * because nodes should always be away who their
-                     * parents are, and which node they are within.
-                     */
-                    } else {
-                        assertUnreachable( "old AST node not found" );
-                    }
-                }
-            }).
-            extend({
-                getNonEmptyParams: function() {
-                    return this.params.filterOutMethod( 'isEmpty' );
-                },
-
-                getName: function() {
-                    return this.name;
-                },
-
-                insertNewEmpty: function() {
-                    var empty = new ast.Empty();
-
-                    this.params.push( empty );
-                    this.insertBefore( empty, this.rightParen );
-                },
-
-                getFunction: function() {
-                    return window[ this.name ];
-                }
-            })
-
-    ast.Literal = (function(value, klass) {
+    ast.Literal = (function(value, klass, strValue) {
                 ast.Node.call( this );
 
-                this.value = value;
+                if ( arguments.length < 3 ) {
+                    strValue = value + '';
+                }
+
+                this.strValue = strValue
+                this.value    = value
 
                 this.
                         addClass( 'touch-ast-literal' ).
                         addClass( klass ).
-                        dom.appendChild( astText(value) );
+                        dom.appendChild( astText(strValue) );
             }).
             proto( ast.Node ).
             override({
@@ -727,13 +551,28 @@ window.slate.TouchBar = (function() {
                 },
 
                 toJS: function() {
-                    return this.value + '';
+                    return this.strValue;
                 },
 
                 evaluate: function() {
                     return this.value;
                 }
             } )
+
+    ast.NullLiteral = ast.Literal.
+            curry( null, 'touch-ast-null', 'null' ).
+            sub(function() {
+                this.onClick( function() {
+                    this.replace( new ast.UndefinedLiteral() );
+                } );
+            });
+    ast.UndefinedLiteral = ast.Literal.
+            curry( undefined, 'touch-ast-undefined', 'undefined' ).
+            sub(function() {
+                this.onClick( function() {
+                    this.replace( new ast.NullLiteral() );
+                } );
+            });
 
     ast.TrueLiteral = ast.Literal.
             curry( true, 'touch-ast-boolean' ).
@@ -1148,8 +987,6 @@ window.slate.TouchBar = (function() {
         }
     })();
 
-    var INPUT_WIDTH_PADDING = 4;
-
     /**
      * The addFun is used primarily as a way of injecting extra nodes
      * into this AST node. If provided, it is called when the input
@@ -1269,6 +1106,12 @@ window.slate.TouchBar = (function() {
 
                     getInputDom: function() {
                         return this.input;
+                    },
+
+                    setInputValue: function( val ) {
+                        this.input.value = val;
+
+                        return this;
                     },
 
                     getInputValue: function() {
@@ -1445,6 +1288,190 @@ window.slate.TouchBar = (function() {
                     }
             })
 
+    ast.Command = ast.VariableInput.
+            sub(function(name) {
+                name = name || '';
+
+                this.setInputValue( name );
+
+                this.params = new Array();
+                
+                this.
+                        removeClass( 'touch-ast-variable' ).
+                        addClass( 'touch-ast-command' );
+
+                this.insertBefore(
+                        astText( '(', 'touch-ast-left-paren' ),
+                        this.getInputDom()
+                )
+
+                this.rightParen = astText(')', 'touch-ast-right-paren'),
+                this.add( this.rightParen )
+
+                this.insertNewEmpty();
+            }).
+            override({
+                    allowsEmpties: function() {
+                        return true;
+                    },
+
+                    toJS: function() {
+                        return this.getInputValue() +
+                                '( ' +
+                                this.getNonEmptyParams().
+                                        map( 'toJS' ).
+                                        join( ', ' ) +
+                                ' )'
+                    },
+
+                    evaluate: function() {
+                        return this.getFunction().apply(
+                                null,
+                                this.getNonEmptyParams().map( 'evaluate' )
+                        )
+                    },
+
+                    validate: function( onError ) {
+                        return this.params.inject( true, function(sum, p) {
+                            return p.validate( onError ) && sum
+                        } )
+                    }
+            }).
+            override({
+                getEmpty: function() {
+                    var params = this.params;
+                    var firstEmpty  = -1,
+                        hasSelected = false;
+
+                    /*
+                     * There are two types of empties we are looking for:
+                     *  - The first empty after the selected parameter
+                     *  - the earliest non-empty parameter
+                     *
+                     * We chose in those two orders,
+                     * where the first has a higher priority.
+                     */
+                    for ( var i = 0; i < params.length; i++ ) {
+                        var param = params[i];
+
+                        if ( param.isSelected() ) {
+                            hasSelected = true;
+                        } else if ( param.isEmpty() ) {
+                            if ( hasSelected ) {
+                                firstEmpty = i;
+                                break;
+                            } else if ( firstEmpty === -1 ) {
+                                firstEmpty = i;
+                            }
+                        }
+                    }
+
+                    if ( firstEmpty !== -1 ) {
+                        return params[firstEmpty];
+                    } else {
+                        return null;
+                    }
+                }
+            }).
+            override({
+                replace: function( newCommand ) {
+                    if ( newCommand instanceof ast.Command ) {
+                        this.setInputValue( newCommand.getInputValue() )
+
+                        // todo, animate out old text, animate in new text
+
+                        (function() {
+                            this.getView().setCurrent( this.getEmpty() )
+                        }).later( this )
+                    } else {
+                        ast.Node.prototype.replace.call( this, newCommand )
+                    }
+                },
+
+                replaceChild: function( old, newAst ) {
+                    var params = this.params;
+                    var replaceNode = true;
+
+                    /**
+                     * We search for the index of the last non-empty node.
+                     *
+                     * This is a part of a larger feature;
+                     * we want to remove any trailing empty nodes.
+                     *
+                     * This is so over time, a command doesn't end up
+                     * with 10 empty parameters.
+                     */
+                    var lastNonEmpty = -1;
+
+                    for ( var i = 0; i < params.length; i++ ) {
+                        var param = params[i];
+                        
+                        if ( replaceNode && param === old ) {
+                            param = params[i] = newAst;
+                            old.replace( newAst );
+                            old.setParent( this );
+
+                            replaceNode = false;
+                        }
+                        
+                        if ( ! param.isEmpty() ) {
+                            lastNonEmpty = i;
+                        }
+                    }
+
+                    /*
+                     * Remove the trailing empty parameters.
+                     * This is up till, the last trailing empty.
+                     *
+                     * Add one to convert from last non-empty,
+                     * to just last empty.
+                     */
+                    var lastEmpty = lastNonEmpty + 1;
+                    if ( lastEmpty < params.length-1 ) {
+                        for ( var i = lastEmpty; i < params.length-1; i++ ) {
+                            this.getDom().removeChild( params[i].getDom() );
+                        }
+
+                        /*
+                         * Resize, and ensure the resulting size is correct.
+                         */
+                        params.splice( lastEmpty, (params.length-1) - lastEmpty );
+                        assert( params.length === lastEmpty+1, "incorrect number of empties following resize" );
+                    } else if ( lastNonEmpty === params.length-1 ) {
+                        this.insertNewEmpty();
+                    }
+
+                    if ( ! replaceNode ) {
+                        return this;
+                    /*
+                     * The node being replaced was never found.
+                     *
+                     * In practice this should never happen,
+                     * because nodes should always be away who their
+                     * parents are, and which node they are within.
+                     */
+                    } else {
+                        assertUnreachable( "old AST node not found" );
+                    }
+                }
+            }).
+            extend({
+                getNonEmptyParams: function() {
+                    return this.params.filterOutMethod( 'isEmpty' );
+                },
+
+                insertNewEmpty: function() {
+                    var empty = new ast.Empty();
+
+                    this.params.push( empty );
+                    this.insertBefore( empty, this.rightParen );
+                },
+
+                getFunction: function() {
+                    return window[ this.getInputValue() ];
+                }
+            })
+
     /**
      * A horizontal row of options to select.
      * It's essentially a row of buttons,
@@ -1476,6 +1503,8 @@ window.slate.TouchBar = (function() {
     }
 
     var newTouchRowButton = function( item, callback ) {
+        assert( item !== undefined, "'item' is undefined" );
+
         var dom = slate.util.newElement( 'a', 'touch-bar-button' )
 
         if ( window.slate.util.isString(item) ) {
@@ -1705,6 +1734,15 @@ window.slate.TouchBar = (function() {
          */
 
         var commandsRow = new TouchRow( this.upper, true );
+        commandsRow.append(
+                SMALL_EMPTY,
+                function() {
+                    view.insert( new ast.Command() )
+                },
+
+                null
+        )
+
         commands = commands.sort();
         for ( var i = 0; i < commands.length; i += 2 ) {
             if ( i === commands.length-1 ) {
@@ -1736,8 +1774,6 @@ window.slate.TouchBar = (function() {
          * Add the values and literals
          */
 
-        var SMALL_EMPTY = '<span class="touch-small">&#x25cf;</span>';
-
         var valuesRow = new TouchRow( this.upper, true );
 
         valuesRow.append(
@@ -1748,42 +1784,38 @@ window.slate.TouchBar = (function() {
                 null
         )
 
+/*
         valuesRow.append(
-                SMALL_EMPTY + ' [' + SMALL_EMPTY + ']',
-                function() {
-                    view.insert( new ast.ArrayAssignment() );
-                },
-
                 '[ &hellip; ]',
-                function() {
-                    view.insert( new ast.ArrayLiteral() );
-                }
+                function() { view.insert( new ast.ArrayLiteral() ); }
         )
+*/
 
         valuesRow.append(
                 '123',
-                function() {
-                    view.insert( new ast.NumberInput() );
-                },
+                function() { view.insert( new ast.NumberInput() ); },
 
                 '"text"',
-                function() {
-                    view.insert( new ast.StringInput() );
-                }
+                function() { view.insert( new ast.StringInput() ); }
         )
 
         valuesRow.append(
                 'true',
-                function() {
-                    view.insert( new ast.TrueLiteral() );
-                },
+                function() { view.insert( new ast.TrueLiteral() ); },
 
                 'false',
-                function() {
-                    view.insert( new ast.FalseLiteral() );
-                }
+                function() { view.insert( new ast.FalseLiteral() ); }
         )
 
+        valuesRow.append(
+                'null',
+                function() { view.insert( new ast.NullLiteral() ); },
+
+                'undefined',
+                function() { view.insert( new ast.UndefinedLiteral() ); }
+        )
+
+/*
         valuesRow.append(
                 '[ ' + SMALL_EMPTY + ' &hellip; ' + SMALL_EMPTY + ' )',
                 function() {
@@ -1795,6 +1827,7 @@ window.slate.TouchBar = (function() {
                     // todo new *inclusive* range
                 }
         )
+*/
 
         valuesRow.append(
                 null,
