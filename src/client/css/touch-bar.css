@@ -32,7 +32,7 @@ body.slate-touch > .slate-content {
     top: -4px;
     bottom: 0px;
     right: 0;
-    width: 150px;
+    width: 100px;
 
     overflow: hidden;
 
@@ -83,7 +83,7 @@ body.slate-touch > .slate-content {
 .touch-bar {
     position: absolute;
     left: 0;
-    right: 150px;
+    right: 100px;
 }
     .touch-bar-row {
         text-align: center;
