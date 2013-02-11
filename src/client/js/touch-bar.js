@@ -880,7 +880,7 @@ window.slate.TouchBar = (function() {
             }).
             extend({
                 evaluateParam: function( arg ) {
-                    return this.right.evaluateObjParam( this.left.evaluate(), arg );
+                    return this.right.evaluateParam( this.left.evaluate(), arg );
                 },
 
                 evaluateObjParam: function( obj, arg ) {
@@ -888,14 +888,14 @@ window.slate.TouchBar = (function() {
                 },
 
                 evaluateParams: function( args ) {
-                    return this.right.evaluateObjParams( this.left.evaluate(), args );
+                    return this.right.evaluateParams( this.left.evaluate(), args );
                 },
 
                 evaluateObjParams: function( obj, args ) {
                     return this.right.evaluateObjParams( this.left.evaluateObj(obj), args );
                 },
 
-                evalautePipeReceive: function( pipe ) {
+                evaluatePipeReceive: function( pipe ) {
                     return this.meta.evaluatePipeReceive( this.left, this.right, pipe );
                 },
 
