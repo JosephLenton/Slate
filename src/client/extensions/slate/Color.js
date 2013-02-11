@@ -100,8 +100,8 @@
                     }
 
                     return colors;
-                } else if ( slate.util.isArrayArguments(col) ) {
-                    return colorInternal( col, onDisplay );
+                } else {
+                    return colorInternal( col[0], onDisplay );
                 }
             } else if ( slate.util.isString(col) ) {
                 return colorInternal( colorHexToArray(col), onDisplay );

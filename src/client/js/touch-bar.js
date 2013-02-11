@@ -19,6 +19,12 @@ window.slate.TouchBar = (function() {
         }
     }
 
+    var pipeJSWrapper = function( ast ) {
+        return '(function() { ' +
+                    ast.toJSArguments() +
+               '})';
+    }
+
     var readHelper = function( obj, prop ) {
         if ( obj === null ) {
             throw new Error( "reading from 'null' object" );
@@ -36,6 +42,25 @@ window.slate.TouchBar = (function() {
             throw new Error( "assigning to 'undefined' object" );
         } else {
             return obj[prop] = expr;
+        }
+    }
+
+    var toJSHelper = function( obj, name, params, addArgs ) {
+        var strParams = params.join( '), (' );
+        if ( strParams.length > 0 ) {
+            strParams = '( ' + strParams + ' )';
+        }
+
+        if ( addArgs ) {
+            if ( obj ) {
+                return '(slate.runtime.callObj( ' + obj + ', "' + name + '", [' + strParams + '], arguments ))';
+            } else {
+                return '(slate.runtime.call( window.' + name + ', [' + strParams + '], arguments ))';
+            }
+        } else if ( obj ) {
+            return '(' + obj + ').' + name + '(' + params.join(', ') + ')';
+        } else {
+            return name + '(' + params.join(', ') + ')';
         }
     }
 
@@ -879,6 +904,31 @@ window.slate.TouchBar = (function() {
                 }
             }).
             extend({
+                toJSParam: function( arg ) {
+                    return this.right.toJSParam( this.left.toJS(), arg );
+                },
+
+                toJSObjParam: function( obj, arg ) {
+                    return this.right.toJSObjParam( this.left.toJSObj(obj), arg );
+                },
+
+                toJSArguments: function() {
+                    return this.right.toJSArguments( this.left.toJS() );
+                },
+
+                toJSObjParams: function( obj, args ) {
+                    return this.right.toJSObjParams( this.left.toJSObj(obj), args );
+                },
+
+                toJSPipeReceive: function( pipe ) {
+                    return this.meta.toJSPipeReceive( this.left, this.right, pipe );
+                },
+
+                toJSAssignment: function( expr ) {
+                    return this.meta.toJSAssignment( this.left, this.right, expr );
+                }
+            }).
+            extend({
                 evaluateParam: function( arg ) {
                     return this.right.evaluateParam( this.left.evaluate(), arg );
                 },
@@ -1025,6 +1075,10 @@ window.slate.TouchBar = (function() {
                         return '(' + left.toJS() + ')[' + right.toJS() + '] ';
                     },
 
+                    toJSAssignment: function( left, right, expr ) {
+                        return '(' + left.toJS() + ')[' + right.toJS() + '] = ' + expr;
+                    },
+
                     evaluate: function( left, right ) {
                         var index = right.evaluate();
                         return readHelper( left.evaluate(), index );
@@ -1052,16 +1106,6 @@ window.slate.TouchBar = (function() {
                     alt: 'array access',
                     html: '.',
 
-                    isPipeReceiver: true,
-
-                    isCommandable: function( left, right ) {
-                        return right.isCommandable();
-                    },
-
-                    toJS: function( left, right ) {
-                        return '(' + left.toJS() + ').' + right.toJS() + ' ';
-                    },
-
                     validate: function( onError, left, right ) {
                         if (
                                 ! (right instanceof ast.VariableInput) &&
@@ -1073,16 +1117,34 @@ window.slate.TouchBar = (function() {
                         }
                     },
 
+                    isPipeReceiver: true,
+
+                    isCommandable: function( left, right ) {
+                        return right.isCommandable();
+                    },
+
+                    isAssignable: function( left, right ) {
+                        return right.isAssignable();
+                    },
+
+                    toJS: function( left, right ) {
+                        return '(' + left.toJS() + ').' + right.toJS() + ' ';
+                    },
+
+                    toJSPipeReceive: function( left, right, pipe ) {
+                        return right.toJSObjPipeReceive( left.toJS(), pipe );
+                    },
+
+                    toJSAssignment: function( left, right, expr ) {
+                        return right.toJSObjAssignment( left.toJS(), expr );
+                    },
+
                     evaluate: function( left, right ) {
                         return right.evaluateObj( left.evaluate() );
                     },
 
                     evaluatePipeReceive: function( left, right, pipe ) {
                         return right.evaluateObjPipeReceive( left.evaluate(), pipe );
-                    },
-
-                    isAssignable: function( left, right ) {
-                        return right.isAssignable();
                     },
 
                     evaluateAssignment: function( left, right, expr ) {
@@ -1112,6 +1174,7 @@ window.slate.TouchBar = (function() {
                      * otherwise ...
                      *      -> echo whatever is on the left, into this
                      */
+                    /*
                     toJS: function( left, right ) {
                         var leftStr = left.findPipeReceiver( function(cmd) {
                             return cmd.toJS( '(function() { ' + right.toJS() + ' })' );
@@ -1121,6 +1184,15 @@ window.slate.TouchBar = (function() {
                             return leftStr;
                         } else {
                             return 'echo( ' + left.toJS() + ', (function() { ' + right.toJS() + ' }) )';
+                        }
+                    },
+                    */
+
+                    toJS: function( left, right ) {
+                        if ( left.isPipeReceiver() ) {
+                            return left.toJSPipeReceive( pipeJSWrapper(right) );
+                        } else {
+                            return right.toJSParam( left.toJS() );
                         }
                     },
 
@@ -1177,9 +1249,19 @@ window.slate.TouchBar = (function() {
                     "descriptor '" + desc.name + "' is a pipe receiver, but does not have an 'evaluatePipeReceive' method."
             );
             assert(
+                    (desc.isPipeReceiver === true) === slate.util.isFunction(desc.toJSPipeReceive),
+                    "descriptor '" + desc.name + "' is a pipe receiver, but does not have an 'toJSPipeReceive' method."
+            );
+
+            assert(
                     !!( desc.isAssignable === true || slate.util.isFunction(desc.isAssignable) ) ===
                             slate.util.isFunction( desc.evaluateAssignment ),
                     "descriptor '" + desc.name + "' is assignable, but does not have an 'evaluateAssignment' method."
+            );
+            assert(
+                    !!( desc.isAssignable === true || slate.util.isFunction(desc.isAssignable) ) ===
+                            slate.util.isFunction( desc.toJSAssignment ),
+                    "descriptor '" + desc.name + "' is assignable, but does not have an 'toJSAssignment' method."
             );
 
             descMappings[ desc.name ] = desc;
@@ -1516,6 +1598,7 @@ window.slate.TouchBar = (function() {
                     toJS: function() {
                         return this.getInputValue()
                     },
+
                     evaluate: function() {
                         return window[ this.getInputValue() ]
                     },
@@ -1525,6 +1608,18 @@ window.slate.TouchBar = (function() {
                     }
             }).
             extend({
+                    toJSObj: function( obj ) {
+                        return obj + '.' + this.getInputValue()
+                    },
+
+                    toJSAssignment: function( obj, expr ) {
+                        return this.getInputValue() + ' = ' + expr;
+                    },
+
+                    toJSObjAssignment: function( obj, expr ) {
+                        return obj + '.' + this.getInputValue() + ' = ' + expr;
+                    },
+
                     evaluateObj: function( obj ) {
                         return obj[ this.getInputValue() ];
                     },
@@ -1591,8 +1686,17 @@ window.slate.TouchBar = (function() {
 
                         return this.getInputValue() +
                                 '( ' +
-                                strParams.join( ', ' ) +
+                                    strParams.join( ', ' ) +
                                 ' )'
+                    },
+
+                    toJSObj: function( obj ) {
+                        var args = new Array( arguments.length-1 );
+                        for ( var i = 0; i < args.length; i++ ) {
+                            args[i] = arguments[i+1];
+                        }
+
+                        return obj + '.' + this.toJS.apply( this, args )
                     },
 
                     validate: function( onError ) {
@@ -1616,6 +1720,70 @@ window.slate.TouchBar = (function() {
                                 obj, 
                                 this.getInputValue(),
                                 this.getNonEmptyParams().map( 'evaluate' )
+                        )
+                    }
+            }).
+            extend({
+                    toJSParam: function( arg ) {
+                        var params = this.getNonEmptyParams().map( 'toJS' );
+                        params.push( arg );
+
+                        return toJSHelper(
+                                null, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    toJSArguments: function() {
+                        var params = this.getNonEmptyParams().map( 'toJS' );
+
+                        return toJSHelper(
+                                null, 
+                                this.getInputValue(),
+                                params,
+                                true
+                        )
+                    },
+
+                    /**
+                     * toJS, but with a arguments provided,
+                     * already turned into JavaScript.
+                     *
+                     * @param args The arguments to attach on top of this function call.
+                     */
+                    toJSObjParams: function( obj, args ) {
+                        var params = this.getNonEmptyParams().map( 'toJS' );
+                        for ( var i = 0; i < args.length; i++ ) {
+                            params.push( args[i] );
+                        }
+
+                        return toJSHelper(
+                                obj, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    toJSPipeReceive: function( pipe ) {
+                        var params = this.getNonEmptyParams().map( 'toJS' );
+                        params.push( pipe );
+
+                        return toJSHelper(
+                                null, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    toJSObjPipeReceive: function( obj, pipe ) {
+                        var params = this.getNonEmptyParams().map( 'toJS' );
+                        params.push( pipe );
+
+                        return toJSHelper(
+                                obj, 
+                                this.getInputValue(),
+                                params
                         )
                     }
             }).
@@ -2081,11 +2249,17 @@ window.slate.TouchBar = (function() {
         var controlsDom = newButtons( 'touch-controls', {
                 'touch-controls-run'   : function() {
                     view.validate( function() {
-                        view.evaluate( function(r) {
-                            console.log( r );
+                        if ( false ) {
+                            view.evaluate( function(r) {
+                                console.log( r );
 
-                            view.clear();
-                        } );
+                                view.clear();
+                            } );
+                        } else {
+                            execute( 'js', view.toJS(), function() {
+                                view.clear();
+                            } );
+                        }
                     } );
                 },
                 'touch-controls-redo disabled'  : function() {
