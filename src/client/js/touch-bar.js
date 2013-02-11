@@ -6,6 +6,57 @@ window.slate.TouchBar = (function() {
 
     var INPUT_WIDTH_PADDING = 4;
 
+    /*
+     * Helpers.
+     *
+     * These are helper functions, for the evaluation stage.
+     * It's mostly for the runtime error checks rather than for the logic.
+     */
+
+    var pipeWrapper = function( ast ) {
+        return function() {
+            return ast.evaluateParams( arguments );
+        }
+    }
+
+    var readHelper = function( obj, prop ) {
+        if ( obj === null ) {
+            throw new Error( "reading from 'null' object" );
+        } else if ( obj === undefined ) {
+            throw new Error( "reading from 'undefined' object" );
+        } else {
+            return obj[prop];
+        }
+    }
+
+    var assignHelper = function( obj, prop, expr ) {
+        if ( obj === null ) {
+            throw new Error( "assigning to 'null' object" );
+        } else if ( obj === undefined ) {
+            throw new Error( "assigning to 'undefined' object" );
+        } else {
+            return obj[prop] = expr;
+        }
+    }
+
+    var evaluateHelper = function( desc, obj, name, params ) {
+        if ( obj[name] === undefined ) {
+            throw new Error( desc + " not found, " + name );
+        } else {
+            var fun = obj[ name ];
+
+            if ( ! slate.util.isFunction(fun) ) {
+                throw new Error( desc + " is not a " + desc + ", " + name );
+            } else {
+                return fun.apply( obj, params );
+            }
+        }
+    }
+
+    /*
+     * Utility prototypes.
+     */
+
     var Events = function( target ) {
         var events = [];
 
@@ -189,6 +240,37 @@ window.slate.TouchBar = (function() {
 
                 isAssignable: function() {
                     return false;
+                },
+
+                /**
+                 * Returns true, if the operator can be considered some type of command.
+                 *
+                 * For example:
+                 *  - a function call
+                 *  - a method call
+                 *  - an expression which is then evaluated as a function
+                 *  - a function object which is being evaluated
+                 *
+                 * @return True if this ast node can be considered some type of executing function; false if not.
+                 */
+                isCommandable: function() {
+                    return false;
+                },
+
+                isPipeReceiver: function() {
+                    return false;
+                },
+
+                /**
+                 * Used for finding something,
+                 * which can take a pipe.
+                 * 
+                 * Pipes come in two directions:
+                 *  - literal values: gets passed into the pip
+                 *  - function/methods: they are given the pipe, and chose to call it
+                 */
+                findPipeReceiver: function( callback ) {
+                    return false;
                 }
             }).
 
@@ -262,8 +344,6 @@ window.slate.TouchBar = (function() {
                     assert( newParent, "falsy parent given" );
 
                     this.up = newParent;
-
-                    // todo, swap the HTML nodes
 
                     return this;
                 },
@@ -434,7 +514,20 @@ window.slate.TouchBar = (function() {
                 },
 
                 evaluateCallback: function( onSuccess ) {
-                    onSuccess.callLater( null, this.evaluate() );
+                    var self = this;
+
+                    setTimeout( function() {
+                        var r = undefined;
+
+                        try {
+                            r = self.evaluate();
+                        } catch ( err ) {
+                            r = err;
+                            console.log( err.stack );
+                        }
+
+                        onSuccess.callLater( null, r );
+                    }, 0 );
                 },
 
                 /**
@@ -698,15 +791,43 @@ window.slate.TouchBar = (function() {
                 },
 
                 isAssignable: function() {
-                    if ( this.meta.isAssignable ) {
-                        return this.meta.isAssignable( this.left, this.right );
+                    if ( this.meta.isAssignable !== undefined ) {
+                        if ( slate.util.isFunction(this.meta.isAssignable) ) {
+                            return this.meta.isAssignable( this.left, this.right );
+                        } else {
+                            return this.meta.isAssignable;
+                        }
+                    } else {
+                        return false;
+                    }
+                },
+
+                isCommandable: function() {
+                    if ( this.meta.isCommandable !== undefined ) {
+                        if ( slate.util.isFunction(this.meta.isCommandable) ) {
+                            return this.meta.isCommandable( this.left, this.right );
+                        } else {
+                            return this.meta.isCommandable;
+                        }
+                    } else {
+                        return false;
+                    }
+                },
+
+                isPipeReceiver: function() {
+                    return this.meta.isPipeReceiver && this.right.isPipeReceiver();
+                },
+
+                findPipeReceiver: function( callback ) {
+                    if ( this.meta.isPipeReceiver ) {
+                        return this.right.findPipeReceiver( callback );
                     } else {
                         return false;
                     }
                 },
 
                 toJS: function() {
-                    return this.meta.toJS( this.left.toJS(), this.right.toJS() );
+                    return this.meta.toJS( this.left, this.right );
                 },
 
                 evaluate: function() {
@@ -758,10 +879,31 @@ window.slate.TouchBar = (function() {
                 }
             }).
             extend({
-                setMeta: function( meta ) {
-                    assertString( meta.html, "html display is missing" );
-                    assertFun( meta.evaluate, "evaluation function is missing" );
+                evaluateParam: function( arg ) {
+                    return this.right.evaluateObjParam( this.left.evaluate(), arg );
+                },
 
+                evaluateObjParam: function( obj, arg ) {
+                    return this.right.evaluateObjParam( this.left.evaluateObj(obj), arg );
+                },
+
+                evaluateParams: function( args ) {
+                    return this.right.evaluateObjParams( this.left.evaluate(), args );
+                },
+
+                evaluateObjParams: function( obj, args ) {
+                    return this.right.evaluateObjParams( this.left.evaluateObj(obj), args );
+                },
+
+                evalautePipeReceive: function( pipe ) {
+                    return this.meta.evaluatePipeReceive( this.left, this.right, pipe );
+                },
+
+                evaluateAssignment: function( expr ) {
+                    return this.meta.evaluateAssignment( this.left, this.right, expr );
+                },
+
+                setMeta: function( meta ) {
                     if ( this.meta !== null ) {
                         if ( this.meta.css ) {
                             this.dom.classList.remove( this.meta.css );
@@ -801,9 +943,26 @@ window.slate.TouchBar = (function() {
                     name    : name,
                     alt     : alt,
                     html    : sym,
+                    evaluate: function(left, right) {
+                        var l = left.evaluate(),
+                            r = right.evaluate();
+
+                        return fun( l, r );
+                    },
+                    toJS    : function( left, right ) {
+                        return '(' + left.toJS() + ' ' + print + ' ' + right.toJS() + ')';
+                    }
+            }
+        }
+
+        var newOpsEval = function( name, alt, sym, print, fun ) {
+            return {
+                    name    : name,
+                    alt     : alt,
+                    html    : sym,
                     evaluate: fun,
                     toJS    : function( left, right ) {
-                        return '(' + left + ' ' + print + ' ' + right + ')';
+                        return '(' + left.toJS() + ' ' + print + ' ' + right.toJS() + ')';
                     }
             }
         }
@@ -842,13 +1001,13 @@ window.slate.TouchBar = (function() {
                          */
                         evaluate: function( left, right ) {
                             var rightR = right.evaluate();
-                            left.assign( rightR );
+                            left.evaluateAssignment( rightR );
 
                             return rightR;
                         },
 
                         toJS: function( left, right ) {
-                            return left + ' = ' + right;
+                            return left.toJS() + ' = ' + right.toJS();
                         }
                 },
 
@@ -867,7 +1026,17 @@ window.slate.TouchBar = (function() {
                     },
 
                     evaluate: function( left, right ) {
-                        // todo
+                        var index = right.evaluate();
+                        return readHelper( left.evaluate(), index );
+                    },
+
+                    evaluateAssignment: function( left, right, expr ) {
+                        var index = right.evaluate();
+                        var obj = left.evaluate();
+
+                        assignHelper( obj, index, expr );
+
+                        return expr;
                     },
 
                     isAssignable: function() {
@@ -883,8 +1052,14 @@ window.slate.TouchBar = (function() {
                     alt: 'array access',
                     html: '.',
 
+                    isPipeReceiver: true,
+
+                    isCommandable: function( left, right ) {
+                        return right.isCommandable();
+                    },
+
                     toJS: function( left, right ) {
-                        return '(' + left + ').' + right + ' ';
+                        return '(' + left.toJS() + ').' + right.toJS() + ' ';
                     },
 
                     validate: function( onError, left, right ) {
@@ -899,11 +1074,62 @@ window.slate.TouchBar = (function() {
                     },
 
                     evaluate: function( left, right ) {
-                        // todo
+                        return right.evaluateObj( left.evaluate() );
+                    },
+
+                    evaluatePipeReceive: function( left, right, pipe ) {
+                        return right.evaluateObjPipeReceive( left.evaluate(), pipe );
                     },
 
                     isAssignable: function( left, right ) {
                         return right.isAssignable();
+                    },
+
+                    evaluateAssignment: function( left, right, expr ) {
+                        return right.evaluateObjAssignment( left.evaluate(), expr );
+                    }
+                },
+
+                {
+                    name: 'pipe',
+                    html: '|>',
+
+                    validateRight: function( right ) {
+                        return right.isCommandable();
+                    },
+
+                    validate: function( onError, left, right ) {
+                        if ( ! right.isCommandable() ) {
+                            return onError( right, "right node cannot accept expressions being piped in" );
+                        } else {
+                            return left.validate( onError ) && right.validate( onError );
+                        }
+                    },
+
+                    /*
+                     * If left is a command
+                     *      -> push this as a function into the left, for it to pipe into
+                     * otherwise ...
+                     *      -> echo whatever is on the left, into this
+                     */
+                    toJS: function( left, right ) {
+                        var leftStr = left.findPipeReceiver( function(cmd) {
+                            return cmd.toJS( '(function() { ' + right.toJS() + ' })' );
+                        } )
+
+                        if ( leftStr ) {
+                            return leftStr;
+                        } else {
+                            return 'echo( ' + left.toJS() + ', (function() { ' + right.toJS() + ' }) )';
+                        }
+                    },
+
+                    evaluate: function( left, right ) {
+                        if ( left.isPipeReceiver() ) {
+                            return left.evaluatePipeReceive( pipeWrapper(right) );
+                        } else {
+                            return right.evaluateParam( left.evaluate() );
+                        }
                     }
                 },
 
@@ -919,8 +1145,8 @@ window.slate.TouchBar = (function() {
                 newOps( 'greater than'      , 'greater than equal'  , '&gt;'    , '>'  , function(l, r) { return l >   r } ),
                 newOps( 'less than'         , 'less than equal'     , '&lt;'    , '<'  , function(l, r) { return l <   r } ),
 
-                newOps( 'and'               , 'or'                  , 'and'     , '&&' , function(l, r) { return l && r } ),
-                newOps( 'or'                , 'add'                 , 'or'      , '||' , function(l, r) { return l || r } ),
+                newOpsEval( 'and'               , 'or'                  , 'and'     , '&&' , function(l, r) { return l && r } ),
+                newOpsEval( 'or'                , 'add'                 , 'or'      , '||' , function(l, r) { return l || r } ),
 
                 newOps( 'bitwise and'       , 'bitwise or'          , '&amp;'   , '&'  , function(l, r) { return l & r  } ),
                 newOps( 'bitwise or'        , 'bitwise and'         , '|'       , '|'  , function(l, r) { return l | r  } ),
@@ -942,6 +1168,18 @@ window.slate.TouchBar = (function() {
             assert(
                     ! descMappings.hasOwnProperty(desc.name),
                     "duplicate desciption mapping name: " + desc.name
+            );
+
+            assertString( desc.html, "html display is missing" );
+            assertFun( desc.evaluate, "evaluation function is missing" );
+            assert(
+                    (desc.isPipeReceiver === true) === slate.util.isFunction(desc.evaluatePipeReceive),
+                    "descriptor '" + desc.name + "' is a pipe receiver, but does not have an 'evaluatePipeReceive' method."
+            );
+            assert(
+                    !!( desc.isAssignable === true || slate.util.isFunction(desc.isAssignable) ) ===
+                            slate.util.isFunction( desc.evaluateAssignment ),
+                    "descriptor '" + desc.name + "' is assignable, but does not have an 'evaluateAssignment' method."
             );
 
             descMappings[ desc.name ] = desc;
@@ -1089,19 +1327,21 @@ window.slate.TouchBar = (function() {
             }).
             extend({
                     resizeInput: function() {
-                        /*
-                         * If more than 2 characters are inputted at once,
-                         * it will animate the width change.
-                         */
-                        var thisInput = this.input.value;
-                        if ( Math.abs(thisInput.length-this.lastInput.length) > 2 ) {
-                            this.input.classList.add( 'multi-change' );
-                        } else {
-                            this.input.classList.remove( 'multi-change' );
-                        }
-                        this.lastInput = thisInput;
+                        (function() {
+                            /*
+                             * If more than 2 characters are inputted at once,
+                             * it will animate the width change.
+                             */
+                            var thisInput = this.input.value;
+                            if ( Math.abs(thisInput.length-this.lastInput.length) > 2 ) {
+                                this.input.classList.add( 'multi-change' );
+                            } else {
+                                this.input.classList.remove( 'multi-change' );
+                            }
+                            this.lastInput = thisInput;
 
-                        this.input.style.width = INPUT_WIDTH_PADDING + textWidth( this.input.value ) + 'px';
+                            this.input.style.width = INPUT_WIDTH_PADDING + textWidth( this.input.value ) + 'px';
+                        }).later( this );
                     },
 
                     getInputDom: function() {
@@ -1110,6 +1350,8 @@ window.slate.TouchBar = (function() {
 
                     setInputValue: function( val ) {
                         this.input.value = val;
+
+                        this.resizeInput();
 
                         return this;
                     },
@@ -1283,8 +1525,16 @@ window.slate.TouchBar = (function() {
                     }
             }).
             extend({
-                    onAssignment: function( expr ) {
+                    evaluateObj: function( obj ) {
+                        return obj[ this.getInputValue() ];
+                    },
+
+                    evaluateAssignment: function( expr ) {
                         window[ this.getInputValue() ] = expr
+                    },
+
+                    evaluateObjAssignment: function( obj, expr ) {
+                        assignHelper( obj, this.getInputValue(), expr );
                     }
             })
 
@@ -1293,6 +1543,12 @@ window.slate.TouchBar = (function() {
                 name = name || '';
 
                 this.setInputValue( name );
+
+                if ( name !== '' ) {
+                    (function() {
+                        this.getInputDom().blur();
+                    }).later( this );
+                }
 
                 this.params = new Array();
                 
@@ -1311,33 +1567,141 @@ window.slate.TouchBar = (function() {
                 this.insertNewEmpty();
             }).
             override({
+                    findPipeReceiver: function( callback ) {
+                        return callback( this );
+                    },
+
+                    isPipeReceiver: function() {
+                        return true;
+                    },
+
+                    isCommandable: function() {
+                        return true;
+                    },
+
                     allowsEmpties: function() {
                         return true;
                     },
 
                     toJS: function() {
+                        var strParams = this.getNonEmptyParams().map( 'toJS' );
+                        for ( var i = 0; i < arguments.length; i++ ) {
+                            strParams.push( arguments[i] );
+                        }
+
                         return this.getInputValue() +
                                 '( ' +
-                                this.getNonEmptyParams().
-                                        map( 'toJS' ).
-                                        join( ', ' ) +
+                                strParams.join( ', ' ) +
                                 ' )'
-                    },
-
-                    evaluate: function() {
-                        return this.getFunction().apply(
-                                null,
-                                this.getNonEmptyParams().map( 'evaluate' )
-                        )
                     },
 
                     validate: function( onError ) {
                         return this.params.inject( true, function(sum, p) {
                             return p.validate( onError ) && sum
                         } )
+                    },
+
+                    evaluate: function() {
+                        return evaluateHelper(
+                                'function',
+                                window, 
+                                this.getInputValue(),
+                                this.getNonEmptyParams().map( 'evaluate' )
+                        )
+                    },
+
+                    evaluateObj: function( obj ) {
+                        return evaluateHelper(
+                                'method',
+                                obj, 
+                                this.getInputValue(),
+                                this.getNonEmptyParams().map( 'evaluate' )
+                        )
+                    }
+            }).
+            extend({
+                    /**
+                     * Run as a function, with extra arguments provided, already evaluated.
+                     */
+                    evaluateParam: function( arg ) {
+                        var params = this.getNonEmptyParams().map( 'evaluate' );
+                        params.push( arg );
+
+                        return evaluateHelper(
+                                'function',
+                                window, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    evaluateParams: function( args ) {
+                        var params = this.getNonEmptyParams().map( 'evaluate' );
+                        for ( var i = 0; i < args.length; i++ ) {
+                            params.push( args[i] );
+                        }
+
+                        return evaluateHelper(
+                                'function',
+                                window, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    evaluateObjParams: function( obj, args ) {
+                        var params = this.getNonEmptyParams().map( 'evaluate' );
+                        for ( var i = 0; i < args.length; i++ ) {
+                            params.push( args[i] );
+                        }
+
+                        return evaluateHelper(
+                                'function',
+                                obj, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    evaluatePipeReceive: function( pipe ) {
+                        var params = this.getNonEmptyParams().map( 'evaluate' );
+                        params.push( pipe );
+
+                        return evaluateHelper(
+                                'function',
+                                window, 
+                                this.getInputValue(),
+                                params
+                        )
+                    },
+
+                    evaluateObjPipeReceive: function( obj, pipe ) {
+                        var params = this.getNonEmptyParams().map( 'evaluate' );
+                        params.push( pipe );
+
+                        return evaluateHelper(
+                                'method',
+                                obj, 
+                                this.getInputValue(),
+                                params
+                        )
                     }
             }).
             override({
+                findEmpty: function() {
+                    if ( this.getInputValue() === '' ) {
+                        return this;
+                    } else {
+                        var empty = this.getEmpty();
+
+                        if ( empty !== null ) {
+                            return empty;
+                        } else if ( this.hasParent() ) {
+                            return this.getParent().findEmpty();
+                        }
+                    }
+                },
+
                 getEmpty: function() {
                     var params = this.params;
                     var firstEmpty  = -1,
@@ -1376,13 +1740,13 @@ window.slate.TouchBar = (function() {
             override({
                 replace: function( newCommand ) {
                     if ( newCommand instanceof ast.Command ) {
-                        this.setInputValue( newCommand.getInputValue() )
+                        this.setInputValue( newCommand.getInputValue() );
 
                         // todo, animate out old text, animate in new text
 
                         (function() {
                             this.getView().setCurrent( this.getEmpty() )
-                        }).later( this )
+                        }).later( this );
                     } else {
                         ast.Node.prototype.replace.call( this, newCommand )
                     }
@@ -1567,6 +1931,8 @@ window.slate.TouchBar = (function() {
 
         this.current = null
 
+        this.selectLater = null;
+
         this.setAST( new ast.Empty() )
     }
 
@@ -1615,7 +1981,14 @@ window.slate.TouchBar = (function() {
                     this.current.onSelect();
                 }
 
-                this.current.onEverySelect();
+                if ( this.selectLater !== null ) {
+                    clearTimeout( this.selectLater );
+                }
+
+                this.selectLater = setTimeout( (function() {
+                    this.selectLater = null;
+                    this.current.onEverySelect()
+                }).bind(this), 0 )
 
                 return this;
             },
@@ -1708,9 +2081,9 @@ window.slate.TouchBar = (function() {
         var controlsDom = newButtons( 'touch-controls', {
                 'touch-controls-run'   : function() {
                     view.validate( function() {
-                        var js = view.toJS();
+                        view.evaluate( function(r) {
+                            console.log( r );
 
-                        execute( 'js', js, function() {
                             view.clear();
                         } );
                     } );
@@ -1906,25 +2279,27 @@ window.slate.TouchBar = (function() {
             }
         }
 
-        appendDescriptor( "assignment"          , null              );
-        appendDescriptor( "property access"     , "array access"    );
+        appendDescriptor( 'assignment'          , null              );
+        appendDescriptor( 'property access'     , 'array access'    );
+
+        appendDescriptor( 'pipe'                , null              );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( "add"                 , "subtract"        );
-        appendDescriptor( "multiply"            , "divide"          );
+        appendDescriptor( 'add'                 , 'subtract'        );
+        appendDescriptor( 'multiply'            , 'divide'          );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( "equal"               , "not equal"       );
-        appendDescriptor( "less than equal"     , "less than"       );
-        appendDescriptor( "greater than equal"  , "greater than"    );
+        appendDescriptor( 'equal'               , 'not equal'       );
+        appendDescriptor( 'less than equal'     , 'less than'       );
+        appendDescriptor( 'greater than equal'  , 'greater than'    );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( "and"                 , "or"              );
-        appendDescriptor( "bitwise and"         , "bitwise or"      );
-        appendDescriptor( "left shift"          , "right shift"     );
+        appendDescriptor( 'and'                 , 'or'              );
+        appendDescriptor( 'bitwise and'         , 'bitwise or'      );
+        appendDescriptor( 'left shift'          , 'right shift'     );
 
         /*
          * Lower Row
