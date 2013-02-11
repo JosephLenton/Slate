@@ -127,6 +127,39 @@
             return el;
         },
 
+        getDomLocation: function( from, to, callback ) {
+            if ( arguments.length === 2 ) {
+                callback = to;
+                to = null;
+            }
+
+            var left = 0;
+            var top = 0;
+
+            for (
+                    var node = from;
+                    node !== to && node !== null; 
+                    node = node.parentNode
+            ) {
+                left += node.offsetLeft;
+                top  += node.offsetTop;
+            }
+
+            callback( left, top );
+        },
+
+        transitionEnd: function( dom, tEnd ) {
+            var fun = function() {
+                tEnd.call( dom );
+
+                dom.removeEventListener( 'transitionend', fun );
+                dom.removeEventListener( 'webkitTransitionEnd', fun );
+            }
+
+            dom.addEventListener( 'transitionend', fun );
+            dom.addEventListener( 'webkitTransitionEnd', fun );
+        },
+
         onLoadError: function( obj, onload, onerror ) {
             // ensure we delete the handlers *before* calling them.
             if ( onload ) {

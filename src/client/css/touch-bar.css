@@ -25,8 +25,8 @@ body.slate-touch > .slate-content {
 .touch-controls,
 .touch-bar {
     position: absolute;
-    top: 0;
     bottom: 0;
+    top: 0;
 }
 .touch-controls {
     top: -4px;
@@ -98,12 +98,12 @@ body.slate-touch > .slate-content {
         height: 46px;
     }
     .touch-bar-row.upper {
-        top: 80px;
+        bottom: 46px;
 
         height: 94px;
     }
     .touch-bar-row.lower {
-        top: 174px;
+        bottom: 0;
     }
         .touch-bar-row-inner {
             -webkit-transition: top 120ms linear;
@@ -181,24 +181,101 @@ body.slate-touch > .slate-content {
                 }
 
     .touch-bar-view {
-        line-height: 73px;
-        height: 80px;
+        pointer-events: none;
+
+        height: 500px;
         width : 100%;
 
         position: absolute;
-        top: 0;
-
-        text-align: center;
+        bottom: 140px;
 
         white-space: nowrap;
-        overflow: hidden;
-        overflow-x: scroll;
 
+        overflow: auto;
         -webkit-overflow-scrolling: touch;
     }
-    .touch-bar-view > .touch-ast {
-        margin-top: -5px;
+        .touch-bar-view-ast-bar {
+            position: absolute;
+
+            pointer-events: auto;
+
+            bottom: 0;
+            line-height: 43px;
+            height: 50px;
+
+            vertical-align: middle;
+            text-align: center;
+            min-width: 100%;
+
+            white-space: nowrap;
+        }
+            .touch-bar-view-ast-bar > .touch-ast {
+                margin-top: -5px;
+            }
+    .touch-bar-view-error {
+        left: 50%;
+        bottom: 100%;
+        margin-bottom:  7px;
+        margin-left  : -5px;
+
+        position: absolute;
+
+        -webkit-transition: opacity 150ms linear, visibility 0ms linear 150ms;
+        -moz-transition: opacity 150ms linear, visibility 0ms linear 150ms;
+        -o-transition: opacity 150ms linear, visibility 0ms linear 150ms;
+        transition: opacity 150ms linear, visibility 0ms linear 150ms;
+
+        visibility: hidden;
+        opacity: 0;
+
+        z-index: 1000;
     }
+    .touch-bar-view-error.show {
+        -webkit-transition: opacity 150ms linear, visibility 150ms linear 0s;
+        -moz-transition: opacity 150ms linear, visibility 150ms linear 0s;
+        -o-transition: opacity 150ms linear, visibility 150ms linear 0s;
+        transition: opacity 150ms linear, visibility 150ms linear 0s;
+
+        visibility: visible;
+        opacity: 1;
+    }
+        .touch-bar-view-error-inner {
+            position: relative;
+            left: -50%;
+
+            background: #c00;
+
+            border-right : 1px solid #000;
+            border-bottom: 1px solid #000;
+
+            padding: 3px 9px 5px 9px;
+
+            border-radius: 2px;
+        }
+            .touch-bar-view-error-content {
+                color: #fff;
+
+                font-size: 21px;
+                font-weight: 100;
+            }
+            .touch-bar-view-error-tail {
+                position: absolute;
+
+                top: 100%;
+                margin-top: -2px;
+                left: 50%;
+                margin-left: -4px;
+                border: 0 solid #c00;
+
+                border-top-width: 12px;
+                border-left : 5px solid transparent;
+                border-right: 5px solid transparent;
+
+                border-bottom-left-radius: 3px;
+                border-bottom-right-radius: 3px;
+
+                z-index: 1001;
+            }
     .touch-input-measure-div,
     .touch-ast,
     .touch-ast-input > input,
@@ -360,7 +437,7 @@ body.slate-touch > .slate-content {
 
     .touch-ast-text,
     .touch-ast-input > input,
-    .touch-bar-view > .touch-ast {
+    .touch-bar-view-ast-bar > .touch-ast {
         vertical-align: middle;
     }
     .touch-ast-text {
@@ -451,8 +528,8 @@ body.slate-touch > .slate-content {
         color: #444;
         font-size: 34px;
     }
-    .touch-bar-view > .touch-ast > .touch-ast-left-paren,
-    .touch-bar-view > .touch-ast > .touch-ast-right-paren {
+    .touch-bar-view-ast-bar > .touch-ast > .touch-ast-left-paren,
+    .touch-bar-view-ast-bar > .touch-ast > .touch-ast-right-paren {
         display: none;
     }
     .touch-ast-left-paren {

@@ -301,18 +301,7 @@ window.slate.TouchBar = (function() {
 
             extend({
                 onTransitionEnd: function( tEnd ) {
-                    var dom = this.getDom();
-
-                    var self = this;
-                    var fun = function() {
-                        tEnd.call( this );
-
-                        dom.removeEventListener( 'transitionend', fun );
-                        dom.removeEventListener( 'webkitTransitionEnd', fun );
-                    }
-
-                    dom.addEventListener( 'transitionend', fun );
-                    dom.addEventListener( 'webkitTransitionEnd', fun );
+                    slate.util.transitionEnd( this.getDom(), tEnd );
                 },
 
                 setupDeleteButton: function() {
@@ -505,8 +494,13 @@ window.slate.TouchBar = (function() {
                             ast.setParent( parentAst );
                         }
 
-                        if ( this.isSelected() ) {
-                            this.getView().setCurrent( ast );
+                        var view = this.getView();
+                        if ( view ) {
+                            if ( this.isSelected() ) {
+                                view.setCurrent( ast );
+                            }
+
+                            view.hideError();
                         }
 
                         /*
@@ -633,10 +627,10 @@ window.slate.TouchBar = (function() {
                     },
 
                     validate: function( onError ) {
-                        if ( this.getParent().allowsEmpties() ) {
+                        if ( this.hasParent() && this.getParent().allowsEmpties() ) {
                             return true;
                         } else {
-                            onError( this, "empty node still present" );
+                            onError( this, "node is empty" );
 
                             return false;
                         }
@@ -798,13 +792,9 @@ window.slate.TouchBar = (function() {
             override({
                 validate: function(onError) {
                     if ( this.left.isEmpty() ) {
-                        onError( this.left, "left node is still empty" );
-
-                        return false;
+                        return this.left.validate( onError );
                     } else if ( this.right.isEmpty() ) {
-                        onError( this.right, "right node is still empty" );
-
-                        return false;
+                        return this.right.validate( onError );
                     } else {
                         if ( this.meta.validate ) {
                             return this.meta.validate( onError, this.left, this.right )
@@ -872,17 +862,13 @@ window.slate.TouchBar = (function() {
                  * then the left and right values are kept.
                  */
                 replace: function( other ) {
-                    if ( other instanceof ast.DoubleOp ) {
-                        if ( ! (this.left instanceof ast.Empty) ) {
-                            other.left.replace( this.left );
-                        }
-
-                        if ( ! (this.right instanceof ast.Empty) ) {
-                            other.right.replace( this.right );
+                    if ( ! this.replaceLock ) {
+                        if ( other instanceof ast.DoubleOp ) {
+                            this.setMeta( other.getMeta() );
+                        } else {
+                            ast.Node.prototype.replace.call( this, other );
                         }
                     }
-
-                    ast.Node.prototype.replace.call( this, other );
                 },
 
                 replaceChild: function( old, newChild ) {
@@ -951,6 +937,10 @@ window.slate.TouchBar = (function() {
 
                 evaluateAssignment: function( expr ) {
                     return this.meta.evaluateAssignment( this.left, this.right, expr );
+                },
+
+                getMeta: function() {
+                    return this.meta;
                 },
 
                 setMeta: function( meta ) {
@@ -1351,6 +1341,8 @@ window.slate.TouchBar = (function() {
                 this.input.addEventListener( 'input', function() {
                     self.resizeInput();
                     self.onInput.run();
+
+                    self.getView().hideError();
                 } );
 
                 this.resizeInput();
@@ -2092,10 +2084,25 @@ window.slate.TouchBar = (function() {
      * The area that displays the AST.
      */
     var TouchView = function( parentDom ) {
+        var bar = slate.util.newElement( 'div', 'touch-bar-view-ast-bar' );
+        this.bar = bar;
+
         var viewArea = slate.util.newElement( 'div', 'touch-bar-view' )
+        viewArea.appendChild( bar );
+        this.dom = viewArea
+
+        this.errorDomContent = slate.util.newElement( 'div', 'touch-bar-view-error-content' );
+
+        var errInnerDom = slate.util.newElement( 'div', 'touch-bar-view-error-inner' );
+        errInnerDom.appendChild( this.errorDomContent );
+        errInnerDom.appendChild( slate.util.newElement('div', 'touch-bar-view-error-tail' ) );
+
+        this.errorDom = slate.util.newElement( 'div', 'touch-bar-view-error' );
+        this.errorDom.appendChild( errInnerDom );
+
+        viewArea.appendChild( this.errorDom );
 
         parentDom.appendChild( viewArea )
-        this.dom = viewArea
 
         this.current = null
 
@@ -2105,13 +2112,39 @@ window.slate.TouchBar = (function() {
     }
 
     TouchView.prototype = {
+            showError: function( node, msg ) {
+                if ( ! this.errorDom.classList.contains('show') ) {
+                    slate.util.getDomLocation(
+                            node.getDom(),
+                            this.dom,
+
+                            (function(left, top) {
+                                var bottom = this.dom.clientHeight - top;
+                                left += node.getDom().clientWidth/2;
+
+                                console.log( left, top );
+
+                                this.errorDom.style.left   = left   + 'px';
+                                this.errorDom.style.bottom = bottom + 'px';
+                            }).bind(this)
+                    );
+
+                    this.errorDomContent.textContent = msg;
+                    this.errorDom.classList.add( 'show' );
+                }
+            },
+            hideError: function() {
+                this.errorDom.classList.remove( 'show' );
+            },
+
             clear: function() {
                 this.setAST( new ast.Empty() );
             },
 
             validate: function( callback ) {
+                var self = this;
                 var success = this.getRootAST().validate(function(node, errMsg) {
-                    console.log( errMsg );
+                    self.showError( node, errMsg );
 
                     // todo, display the error
                     
@@ -2180,11 +2213,11 @@ window.slate.TouchBar = (function() {
              */
             setAST: function( ast ) {
                 if ( this.current ) {
-                    this.dom.removeChild( this.getRootAST().getDom() );
+                    this.bar.removeChild( this.getRootAST().getDom() );
                     this.current = null;
                 }
 
-                this.dom.appendChild( ast.getDom() );
+                this.bar.appendChild( ast.getDom() );
                 this.setCurrent( ast );
             },
 
