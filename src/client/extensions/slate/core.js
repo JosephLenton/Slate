@@ -63,7 +63,7 @@
             str += "\n";
         }
 
-        return window.slate.lib.formatter.rawHtml( str );
+        return slate.formatter.rawHtml( str );
     }
 
     /*
@@ -71,7 +71,9 @@
      */
     slate.command( 'describe', function( item ) {
         if ( item ) {
-            for ( var k in obj ) {
+            var results = [];
+
+            for ( var k in item ) {
                 var isProto = item.hasOwnProperty( k );
                 var isFun   = slate.util.isFunction( item[k] );
 
