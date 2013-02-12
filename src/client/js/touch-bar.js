@@ -1438,7 +1438,14 @@ window.slate.TouchBar = (function() {
                 this.onInput = new Events( this );
 
                 var self = this;
-                this.input.addEventListener( 'input', function() {
+                this.input.addEventListener( 'keyup', function(ev) {
+                    // enter key
+                    if ( ev.which === 13 ) {
+                        self.input.blur();
+                        self.getView().execute();
+                    }
+                } );
+                this.input.addEventListener( 'input', function(ev) {
                     self.resizeInput();
                     self.onInput.run();
 
@@ -2217,7 +2224,7 @@ window.slate.TouchBar = (function() {
     /**
      * The area that displays the AST.
      */
-    var TouchView = function() {
+    var TouchView = function( touchBar ) {
         var bar = slate.util.newElement( 'div', 'touch-bar-view-ast-bar' );
         this.bar = bar;
 
@@ -2241,9 +2248,25 @@ window.slate.TouchBar = (function() {
         this.selectLater = null;
 
         this.setAST( new ast.Empty() )
+
+        this.touchBar = touchBar;
     }
 
     TouchView.prototype = {
+            execute: function() {
+                if ( this.touchBar ) {
+                    this.touchBar.execute();
+                }
+            },
+
+            touchBar: function( touchBar ) {
+                if ( arguments.length === 0 ) {
+                    return this.touchBar;
+                } else {
+                    this.touchBar = touchBar;
+                }
+            },
+
             getDom: function() {
                 return this.dom;
             },
@@ -2513,6 +2536,8 @@ window.slate.TouchBar = (function() {
      * This is the top component, and the public facing API.
      */
     var TouchBar = function( parentDom, execute, commands ) {
+        this.executeFun = execute;
+
         var upper  = slate.util.newElement( 'div', 'touch-bar-row upper' );
         var lower  = slate.util.newElement( 'div', 'touch-bar-row lower' );
         this.buttons = new ShiftButtons();
@@ -2533,7 +2558,7 @@ window.slate.TouchBar = (function() {
         parentDom.appendChild(
                 slate.util.newElement( 'div', 'touch-bar-wrap',
                         barDom,
-                        this.newControls( execute )
+                        this.newControls()
                 )
         )
 
@@ -2763,22 +2788,12 @@ window.slate.TouchBar = (function() {
     }
 
     TouchBar.prototype = {
-            newControls: function( execute ) {
+            newControls: function() {
                 var self = this;
 
                 return newButtons( 'touch-controls', {
                         'touch-controls-run'   : function() {
-                            self.view.validate( function() {
-                                if ( false ) {
-                                    self.view.evaluate( function(r) {
-                                        self.newTouchView();
-                                    } );
-                                } else {
-                                    execute( 'touch-js', self.view, function() {
-                                        self.newTouchView();
-                                    } );
-                                }
-                            } );
+                            self.execute();
                         },
                         'touch-controls-redo disabled'  : function() {
                             /* todo: perform a redo */
@@ -2807,14 +2822,30 @@ window.slate.TouchBar = (function() {
                 }
             },
 
+            execute: function() {
+                var self = this;
+                this.view.validate( function() {
+                    if ( false ) {
+                        self.view.evaluate( function(r) {
+                            self.newTouchView();
+                        } );
+                    } else {
+                        self.executeFun( 'touch-js', self.view, function() {
+                            self.newTouchView();
+                        } );
+                    }
+                } );
+            },
+
             newTouchView: function() {
                 if ( this.view !== null ) {
                     if ( this.view.getDom().parentNode === this.bar ) {
                         this.removeChild( this.view.getDom() );
+                        this.view.touchBar( null );
                     }
                 }
 
-                this.view = new TouchView();
+                this.view = new TouchView( this );
                 this.bar.appendChild( this.view.getDom() );
             },
 

@@ -721,17 +721,18 @@
 
                     // then display the result, in the future, after any onDisplay
                     setTimeout( function() {
-                        if (
-                                (
-                                        executor.hasLast === 1 &&
-                                        executor.lastDisplay !== r
-                                ) ||
-                                (
-                                        executor.hasLast !== 1 &&
-                                        r !== undefined
-                                )
-                        ) {
-                            onDisplay( undefined, new window.slate.formatter.ignoreHandler(r) );
+                        if ( r !== undefined ) {
+                            if (
+                                    (
+                                            executor.hasLast === 1 &&
+                                            executor.lastDisplay !== r
+                                    ) ||
+                                    (
+                                            executor.hasLast !== 1
+                                    )
+                            ) {
+                                onDisplay( undefined, new window.slate.formatter.ignoreHandler(r) );
+                            }
                         }
                     }, 0 )
                 } )
