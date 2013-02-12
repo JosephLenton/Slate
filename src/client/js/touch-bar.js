@@ -1452,12 +1452,21 @@ window.slate.TouchBar = (function() {
                     self.getView().hideError();
                 } );
 
+                var propagate = true;
+                this.input.addEventListener( 'click', function(ev) {
+                    self.input.focus();
+
+                    if ( ! propagate ) {
+                        ev.stopPropagation();
+                    }
+                } );
+
                 this.resizeInput();
 
                 this.onClick(function() {
-                    (function() {
-                        self.input.focus();
-                    }).later( this );
+                    propagate = false;
+                    self.input.click();
+                    propagate = true;
                 });
             }).
             extend( ast.Node ).
@@ -1480,7 +1489,7 @@ window.slate.TouchBar = (function() {
 
                         var self = this;
                         setTimeout(function() {
-                            self.input.focus();
+                            self.input.click();
                         }, 0);
                     },
 
