@@ -4,6 +4,10 @@
  * This desribes how to run each of the compilers in the terminal.
  */
 (function() {
+    slate.language( 'touch-js', function(src, next) {
+        next( src.toJS() );
+    } );
+
     /**
      * Here as a stop gap, so it works seamlessly
      * within the system, with no holes drilled

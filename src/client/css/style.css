@@ -35,7 +35,7 @@ body.slate-touch {
 
 .slate-cmd,
 .slate-result,
-.slate-content-item-refresh,
+.slate-content-item-refresh-button,
 .slate-bar-input,
 .slate-bar-input-mark,
 .slate-bar-type {
@@ -116,35 +116,43 @@ body.touch > .slate-content {
             }
         .slate-content-item-refresh {
             position: absolute;
+
             left: 0;
-            top: 0;
-            padding: 2px 3px 4px 3px;
+            top: 50%;
 
-            background: transparent;
-            border-radius: 100px;
-
-            text-align: center;
-
-            font-size: 20px;
-            line-height: 21px;
-
-            min-width: 21px;
-
-            -webkit-transition: background 100ms linear 0s, color 100ms linear 0s;
-               -moz-transition: background 100ms linear 0s, color 100ms linear 0s;
-                 -o-transition: background 100ms linear 0s, color 100ms linear 0s;
-                    transition: background 100ms linear 0s, color 100ms linear 0s;
+            height: 100%;
         }
-        .slate-content-item-refresh,
-        .slate-content-item-refresh:active,
-        .slate-content-item-refresh:hover,
-        .slate-content-item-refresh:focus {
-            color: #888;
-        }
-        .slate-content-item-refresh:hover {
-            background: #333;
-            color: #fff;
-        }
+            .slate-content-item-refresh-button {
+                bottom: 11px;
+                position: relative;
+
+                padding: 2px 10px 4px 10px;
+
+                background: transparent;
+                border-radius: 100px;
+
+                text-align: center;
+
+                font-size: 20px;
+                line-height: 21px;
+
+                min-width: 21px;
+
+                -webkit-transition: background 100ms linear 0s, color 100ms linear 0s;
+                   -moz-transition: background 100ms linear 0s, color 100ms linear 0s;
+                     -o-transition: background 100ms linear 0s, color 100ms linear 0s;
+                        transition: background 100ms linear 0s, color 100ms linear 0s;
+            }
+            .slate-content-item-refresh-button,
+            .slate-content-item-refresh-button:active,
+            .slate-content-item-refresh-button:hover,
+            .slate-content-item-refresh-button:focus {
+                color: #888;
+            }
+            .slate-content-item-refresh-button:hover {
+                background: #333;
+                color: #fff;
+            }
 
 .slate-bar,
 .slate-bar-input {

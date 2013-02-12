@@ -100,6 +100,10 @@
                             return 1;
                         }
                     } else if ( html instanceof HTMLElement ) {
+                        if ( html.parentNode ) {
+                            html.parentNode.removeChild( html );
+                        }
+
                         div.appendChild( html );
 
                         return 1;
@@ -110,6 +114,7 @@
             }
 
             var count = append( html );
+
             if ( count === 0 ) {
                 return;
             }
@@ -138,7 +143,7 @@
                 var button = document.createElement('a');
 
                 button.setAttribute( 'href', '#' );
-                button.className = 'slate-content-item-refresh';
+                button.className = 'slate-content-item-refresh-button';
                 button.innerText = DEFAULT_REFRESH_BUTTON_TEXT;
                 button.addEventListener( 'click', function(ev) {
                     refreshFun();
@@ -147,7 +152,9 @@
                     ev.preventDefault();
                 })
 
-                wrap.appendChild( button );
+                var buttonOuter = slate.util.newElement( 'div', 'slate-content-item-refresh', button );
+
+                wrap.appendChild( buttonOuter );
 
                 addRefresh( button, refreshFun );
             }

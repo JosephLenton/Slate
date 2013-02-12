@@ -159,11 +159,19 @@
      * use the callbacks, and then clear them later.
      */
     var buildCommand = function( js, cmd, scriptId, onDisplay ) {
+        assert(
+                cmd === undefined ||
+                slate.util.isString(cmd) ||
+                slate.util.isFunction(cmd.getDom),
+
+                "invalid command given; must be undefined, a string, or have the method 'getDom' for conversion to HTML"
+        )
+
         var varDisplay = uniqueVar();
+        var cmdDisplay = varDisplay + '_cmd';
 
         window[varDisplay] = onDisplay;
-
-        cmd = window.escape( cmd );
+        window[cmdDisplay] = cmd;
 
         var dumpResult = true,
             grabVar = RESULT_VAR;
@@ -205,10 +213,10 @@
 
         if ( dumpResult ) {
             js +=   "\n" +
-                    '    window["' + varDisplay + '"]( window.unescape("' + cmd + '"), ' + grabVar + ' )';
+                    '    window["' + varDisplay + '"]( window["' + cmdDisplay + '"], ' + grabVar + ' )';
         } else {
             js +=   "\n" +
-                    '    window["' + varDisplay + '"]( window.unescape("' + cmd + '"), window.slate.IGNORE_RESULT )';
+                    '    window["' + varDisplay + '"]( window["' + cmdDisplay + '"], window.slate.IGNORE_RESULT )';
         }
 
         return [
@@ -218,7 +226,7 @@
                 "try {",
                     js,
                 '} catch ( ex ) {',
-                '    window["' + varDisplay + '"]( window.unescape("' + cmd + '"), ex )',
+                '    window["' + varDisplay + '"]( window["' + cmdDisplay + '"], ex )',
                 '}',
                 '',
                 'delete window["' + varDisplay + '"];',
@@ -607,7 +615,10 @@
     }
 
     var executeInner = function( head, languages, type, cmd, post, onDisplay ) {
-        if ( cmd && cmd.trim() !== '' ) {
+        if (
+                cmd &&
+                ! ( slate.util.isString(cmd) && cmd.trim() === '' )
+        ) {
             compileCode( languages, type, cmd, function(ex, js) {
                 if ( ex ) {
                     onDisplay( cmd, ex );
@@ -698,7 +709,7 @@
 
             return function( type, cmd, post ) {
                 assertString( type, "non-string given for language; should be 'js' or 'coffee' or whatever" );
-                assertString( cmd, "non-string given as command" );
+                assert( slate.util.isString(cmd) || slate.util.isFunction(cmd.getDom), "non-string and non-dom-producing command given" );
                 assertFun( post, "non-function given for post execution" );
                 assert( languages[type], "language not found: " + type );
 

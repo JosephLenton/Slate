@@ -230,24 +230,31 @@
     }
 
     var generateCommandHtml = function( cmd, isError, reRun ) {
-        var input = document.createElement( 'div' );
+        if ( slate.util.isFunction(cmd.getDom) ) {
+            return cmd.getDom();
+        } else if ( slate.util.isString(cmd) ) {
+            var input = document.createElement( 'div' );
 
-        input.className = 'slate-cmd' +
-                ( isError ? ' slate-error' : '' );
-        input.innerHTML = window.slate.util.htmlSafe( cmd );
-        input.setAttribute( 'contenteditable', true );
-        input.setAttribute( 'wrap', 'off' );
+            input.className = 'slate-cmd' +
+                    ( isError ? ' slate-error' : '' );
+            input.innerHTML = window.slate.util.htmlSafe( cmd );
+            input.setAttribute( 'contenteditable', true );
+            input.setAttribute( 'wrap', 'off' );
 
-        input.addEventListener( 'keypress', function(ev) {
-            if ( ev.keyCode === ENTER_KEY ) {
-                reRun();
+            input.addEventListener( 'keypress', function(ev) {
+                if ( ev.keyCode === ENTER_KEY ) {
+                    reRun();
 
-                ev.stopPropagation();
-                ev.preventDefault();
-            }
-        } );
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                }
+            } );
 
-        return input;
+            return input;
+        } else if ( cmd !== undefined ) {
+            console.log( cmd );
+            throw new Error( "unknown cmd value given: " + cmd );
+        }
     }
 
     var onDisplay = function( cmd, r, reRun, formatResult, displayFun ) {

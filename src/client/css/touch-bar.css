@@ -403,6 +403,8 @@ body.slate-touch > .slate-content {
         min-width: 32px;
 
         cursor: pointer;
+
+        text-align: center;
     }
     .touch-ast.pre-remove,
     .touch-ast.remove {
@@ -688,4 +690,47 @@ body.slate-touch > .slate-content {
              -o-transition: none;
                 transition: none;
     }
+
+.slate-content-item-contents > .touch-bar-view {
+    float: left;
+    clear: both;
+
+    height: auto;
+
+    position: relative;
+    bottom: auto;
+
+    -moz-box-sizing: border-box;
+         box-sizing: border-box;
+
+    padding: 0 0 0 48px;
+}
+    .slate-content-item-contents > .touch-bar-view > .touch-bar-view-ast-bar {
+        bottom: auto;
+        position: relative;
+        height: auto;
+        text-align: left;
+    }
+        .slate-content-item-contents > .touch-bar-view > .touch-bar-view-ast-bar > .touch-ast {
+            margin-top: 0;
+        }
+        .slate-content-item-contents .touch-ast {
+        }
+
+        .slate-content-item-contents .touch-input-measure-div,
+        .slate-content-item-contents .touch-ast,
+        .slate-content-item-contents .touch-ast-input > input,
+        .slate-content-item-contents .touch-ast-text {
+            font-size: 18px;
+            height: 30px;
+            line-height: 24px;
+        }
+        .slate-content-item-contents .touch-ast-left-paren,
+        .slate-content-item-contents .touch-ast-right-paren {
+            font-size: 21px;
+        }
+            .slate-content-item-contents .touch-ast-empty,
+            .slate-content-item-contents .touch-ast-delete {
+                display: none;
+            }
 

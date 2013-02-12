@@ -2217,7 +2217,7 @@ window.slate.TouchBar = (function() {
     /**
      * The area that displays the AST.
      */
-    var TouchView = function( parentDom ) {
+    var TouchView = function() {
         var bar = slate.util.newElement( 'div', 'touch-bar-view-ast-bar' );
         this.bar = bar;
 
@@ -2236,8 +2236,6 @@ window.slate.TouchBar = (function() {
 
         viewArea.appendChild( this.errorDom );
 
-        parentDom.appendChild( viewArea )
-
         this.current = null
 
         this.selectLater = null;
@@ -2246,6 +2244,10 @@ window.slate.TouchBar = (function() {
     }
 
     TouchView.prototype = {
+            getDom: function() {
+                return this.dom;
+            },
+
             showError: function( node, msg ) {
                 if ( ! this.errorDom.classList.contains('show') ) {
                     slate.util.getDomLocation(
@@ -2505,67 +2507,43 @@ window.slate.TouchBar = (function() {
             }
     }
 
-    var TouchBar = function( dom, execute, commands ) {
+    /**
+     * The actual bar it's self.
+     *
+     * This is the top component, and the public facing API.
+     */
+    var TouchBar = function( parentDom, execute, commands ) {
         var upper  = slate.util.newElement( 'div', 'touch-bar-row upper' );
         var lower  = slate.util.newElement( 'div', 'touch-bar-row lower' );
-        var barDom = slate.util.newElement( 'div', 'touch-bar', upper, lower );
+        this.buttons = new ShiftButtons();
 
-        var view   = new TouchView( barDom );
-
-        var buttons = new ShiftButtons();
-        barDom.appendChild( buttons.getDom() );
-
-        this.view  = view;
-
-        this.bar   = barDom;
-        this.row   = null;
+        var barDom = slate.util.newElement( 'div', 'touch-bar',
+                upper,
+                lower,
+                this.buttons.getDom()
+        )
 
         this.lower = lower;
         this.upper = upper;
 
-        var insert = function( node ) {
-            if ( buttons.isLeft() && buttons.isRight() ) {
-                view.insert( node );
-            } else if ( buttons.isLeft() ) {
-                view.insertLeft( node );
-            } else if ( buttons.isRight() ) {
-                view.insertRight( node );
-            } else {
-                view.insert( node );
-            }
-        }
+        this.bar   = barDom;
+        this.row   = null;
+        this.view  = null;
 
-        var controlsDom = newButtons( 'touch-controls', {
-                'touch-controls-run'   : function() {
-                    view.validate( function() {
-                        if ( false ) {
-                            view.evaluate( function(r) {
-                                view.clear();
-                            } );
-                        } else {
-                            execute( 'js', view.toJS(), function() {
-                                view.clear();
-                            } );
-                        }
-                    } );
-                },
-                'touch-controls-redo disabled'  : function() {
-                    /* todo: perform a redo */
-                },
-                'touch-controls-undo disabled'  : function() {
-                    /* todo: perform an undo */
-                },
-                'touch-controls-clear' : function() {
-                    view.clear();
-                }
-        } )
+        parentDom.appendChild(
+                slate.util.newElement( 'div', 'touch-bar-wrap',
+                        barDom,
+                        this.newControls( execute )
+                )
+        )
 
-        var wrap  = slate.util.newElement( 'div', 'touch-bar-wrap', barDom, controlsDom );
-        dom.appendChild( wrap );
+        this.newTouchView();
 
         /**
          * Add the initial commands
          */
+
+        var insert = this.insert.bind( this );
 
         var commandsRow = new TouchRow( this.upper, true );
         commandsRow.append(
@@ -2784,17 +2762,74 @@ window.slate.TouchBar = (function() {
         this.showRow( commandsRow );
     }
 
-    TouchBar.prototype.showRow = function( row ) {
-        if ( this.row ) {
-            if ( this.row === row ) {
-                return;
-            } else {
-                this.row.hide();
-            }
-        }
+    TouchBar.prototype = {
+            newControls: function( execute ) {
+                var self = this;
 
-        row.show();
-        this.row = row;
+                return newButtons( 'touch-controls', {
+                        'touch-controls-run'   : function() {
+                            self.view.validate( function() {
+                                if ( false ) {
+                                    self.view.evaluate( function(r) {
+                                        self.newTouchView();
+                                    } );
+                                } else {
+                                    execute( 'touch-js', self.view, function() {
+                                        self.newTouchView();
+                                    } );
+                                }
+                            } );
+                        },
+                        'touch-controls-redo disabled'  : function() {
+                            /* todo: perform a redo */
+                        },
+                        'touch-controls-undo disabled'  : function() {
+                            /* todo: perform an undo */
+                        },
+                        'touch-controls-clear' : function() {
+                            this.view.clear();
+                        }
+                } )
+            },
+
+            insert: function( node ) {
+                var buttons = this.buttons,
+                    view = this.view;
+
+                if ( buttons.isLeft() && buttons.isRight() ) {
+                    view.insert( node );
+                } else if ( buttons.isLeft() ) {
+                    view.insertLeft( node );
+                } else if ( buttons.isRight() ) {
+                    view.insertRight( node );
+                } else {
+                    view.insert( node );
+                }
+            },
+
+            newTouchView: function() {
+                if ( this.view !== null ) {
+                    if ( this.view.getDom().parentNode === this.bar ) {
+                        this.removeChild( this.view.getDom() );
+                    }
+                }
+
+                this.view = new TouchView();
+                this.bar.appendChild( this.view.getDom() );
+            },
+
+            showRow: function( row ) {
+                if ( this.row ) {
+                    if ( this.row === row ) {
+                        return;
+                    } else {
+                        this.row.hide();
+                    }
+                }
+
+                row.show();
+                this.row = row;
+            }
     }
 
     return TouchBar;
