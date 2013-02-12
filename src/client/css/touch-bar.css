@@ -272,17 +272,17 @@ body.slate-touch > .slate-content {
             pointer-events: auto;
 
             bottom: 0;
-            line-height: 43px;
-            height: 50px;
+            line-height: 70px;
+            height: 80px;
+            vertical-align: baseline;
 
-            vertical-align: middle;
             text-align: center;
             width: 100%;
 
-            white-space: nowrap;
-
             overflow: auto;
             -webkit-overflow-scrolling: touch;
+
+            white-space: nowrap;
         }
             .touch-bar-view-ast-bar > .touch-ast {
                 margin-top: -5px;
