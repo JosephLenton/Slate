@@ -190,14 +190,19 @@
                                   dist < SLOW_CLICK_DIST
                         ) {
                             callback( ev );
+                            ev.preventDefault();
                         }
                     }
                 }, false )
 
-                el.addEventListener( 'click', function(ev) {
+                var killEvent = function(ev) {
                     ev.preventDefault();
                     ev.stopPropagation();
-                } )
+                }
+
+                el.addEventListener( 'click'    , killEvent );
+                el.addEventListener( 'mouseup'  , killEvent );
+                el.addEventListener( 'mousedown', killEvent );
             } else {
                 el.addEventListener( 'click', function(ev) {
                     ev = ev || window.event;

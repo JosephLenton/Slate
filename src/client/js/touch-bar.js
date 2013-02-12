@@ -24,66 +24,6 @@ window.slate.TouchBar = (function() {
 
     var INPUT_WIDTH_PADDING = 4;
 
-    /**
-     * Opening the keyboard on iOS is broken,
-     * it has to be done via clicking on another component (no joke).
-     *
-     * So here is my implementation.
-     *
-     * We make a button, and hide it in the document.
-     * When we want to focus an input, we add the input
-     * to an 'inputs' array, and call for the button to click.
-     *
-     * When the buttons click event is fired,
-     * it empties the array, focusing each input in turn.
-     */
-    var inputFocus = (function() {
-        var button = document.createElement('a');
-        button.setAttribute( 'href', '#' );
-
-        button.style.position = 'fixed';
-        button.style.width = '0';
-        button.style.height = '0';
-        button.style.display = 'none';
-
-        var inputs = [];
-
-        button.addEventListener( 'click', function() {
-            while ( inputs.length > 0 ) {
-                inputs.shift().focus();
-            }
-        } );
-
-        window.addEventListener( 'load', function() {
-            document.getElementsByTagName( 'body' )[0].appendChild( button );
-        } );
-
-        return function( input ) {
-            inputs.push( input )
-
-            var ev = document.createEvent('MouseEvents');
-            ev.initMouseEvent(
-                    'click',
-                    true,     // Click events bubble
-                    true,     // and they can be cancelled
-                    document.defaultView,  // Use the default view
-                    1,        // Just a single click
-                    0,        // Don't bother with co-ordinates
-                    0,
-                    0,
-                    0,
-                    false,    // Don't apply any key modifiers
-                    false,
-                    false,
-                    false,
-                    0,        // 0 - left, 1 - middle, 2 - right
-                    null      // Click events don't have any targets other than
-            )
-
-            button.dispatchEvent( ev );
-        }
-    })();
-
     /*
      * Helpers.
      *
@@ -281,13 +221,13 @@ window.slate.TouchBar = (function() {
                 var self = this;
 
                 slate.util.click( this.dom, function(ev) {
-                    ev.stopPropagation();
-
                     if ( self.isSelected() ) {
                         self.onClick.run();
                     } else {
                         self.getView().setCurrent( self );
                     }
+
+                    ev.stopPropagation();
                 } );
 
                 this.setupDeleteButton();
@@ -1516,7 +1456,6 @@ window.slate.TouchBar = (function() {
 
                 this.onClick(function() {
                     self.input.focus();
-                    //inputFocus( self.input );
                 });
             }).
             extend( ast.Node ).
@@ -1536,7 +1475,7 @@ window.slate.TouchBar = (function() {
 
                     onEverySelect: function() {
                         this.resizeInput();
-                        inputFocus( this.input );
+                        this.input.focus();
                     },
 
                     /**
@@ -2398,10 +2337,7 @@ window.slate.TouchBar = (function() {
                     clearTimeout( this.selectLater );
                 }
 
-                this.selectLater = setTimeout( (function() {
-                    this.selectLater = null;
-                    this.current.onEverySelect()
-                }).bind(this), 0 )
+                this.current.onEverySelect()
 
                 return this;
             },
