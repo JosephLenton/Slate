@@ -418,6 +418,10 @@
         FileSystem.root = root.replace( /\\/g, '/' );
     }
 
+    FileSystem.prototype.getCWD = function() {
+        return this.root;
+    }
+
     /**
      * Changes the current working directory for this FileSystem.
      */

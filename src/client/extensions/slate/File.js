@@ -17,10 +17,9 @@
     /**
      * Lists the path for the current working directory.
      */
-    function cwd( path, onDisplay ) {
-        path = toPath( path );
+    function cwd( path, onDisplay, state ) {
+        var path = state.fs.getCWD();
 
-        var path = slate.util.absoluteUrl( '.' );
         onDisplay( path );
 
         return path;
