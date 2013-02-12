@@ -24,6 +24,47 @@ window.slate.TouchBar = (function() {
 
     var INPUT_WIDTH_PADDING = 4;
 
+    /**
+     * Opening the keyboard on iOS is broken,
+     * it has to be done via clicking on another component (no joke).
+     *
+     * So here is my implementation.
+     *
+     * We make a button, and hide it in the document.
+     * When we want to focus an input, we add the input
+     * to an 'inputs' array, and call for the button to click.
+     *
+     * When the buttons click event is fired,
+     * it empties the array, focusing each input in turn.
+     */
+    var inputFocus = (function() {
+        var button = document.createElement('a');
+        button.setAttribute( 'href', '#' );
+
+        button.style.position = 'fixed';
+        button.style.width = '0';
+        button.style.height = '0';
+        button.style.display = 'none';
+
+        var inputs = [];
+
+        button.addEventListener( 'click', function() {
+            while ( inputs.length > 0 ) {
+                inputs.shift().focus();
+            }
+        } );
+
+        window.addEventListener( 'load', function() {
+            document.getElementsByTagName( 'body' )[0].appendChild( button );
+        } );
+
+        return function( input ) {
+            inputs.push( input )
+
+            button.click();
+        }
+    })();
+
     /*
      * Helpers.
      *
@@ -1452,21 +1493,10 @@ window.slate.TouchBar = (function() {
                     self.getView().hideError();
                 } );
 
-                var propagate = true;
-                this.input.addEventListener( 'click', function(ev) {
-                    self.input.focus();
-
-                    if ( ! propagate ) {
-                        ev.stopPropagation();
-                    }
-                } );
-
                 this.resizeInput();
 
                 this.onClick(function() {
-                    propagate = false;
-                    self.input.click();
-                    propagate = true;
+                    inputFocus( self.input );
                 });
             }).
             extend( ast.Node ).
@@ -1486,11 +1516,7 @@ window.slate.TouchBar = (function() {
 
                     onEverySelect: function() {
                         this.resizeInput();
-
-                        var self = this;
-                        setTimeout(function() {
-                            self.input.click();
-                        }, 0);
+                        inputFocus( this.input );
                     },
 
                     /**

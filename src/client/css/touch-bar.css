@@ -174,6 +174,7 @@ body.slate-touch > .slate-content {
     }
     .touch-bar-row.lower {
         bottom: 0;
+        background: #333;
     }
         .touch-bar-row-inner {
             -webkit-transition: top 120ms linear;
