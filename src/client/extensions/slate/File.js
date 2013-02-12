@@ -34,7 +34,7 @@
         path = toPath( path );
 
         if ( path === undefined ) {
-            return cwd( undefined, onDisplay );
+            cwd( '.', onDisplay );
         } else {
             state.fs.chdir( path, onDisplay );
         }
