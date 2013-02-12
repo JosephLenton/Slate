@@ -222,7 +222,7 @@
                             }
 
                             str += indentStr +
-                                    slate.util.htmlSafe(k) + ': ' +
+                                    slate.util.htmlSafe(k) + ' : ' +
                                     format( obj[k] );
                         }
                     }
@@ -247,6 +247,6 @@
     }
 
     slate.html([
-            newTabbingHandler( Array , "[", "]", function(r, str) { return r.length + ':' + str; } ),
+            newTabbingHandler( Array , "[", "]", function(r, str) { return r.length + ', ' + str; } ),
     ]);
 })();
