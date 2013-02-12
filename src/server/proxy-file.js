@@ -23,6 +23,7 @@
 exports.ProxyFile = (function() {
     var Handler = require( './handler.js' ).Handler;
     var fs = require( 'fs' );
+    var Path = require( 'path' );
 
     var fail = function( callback, err ) {
         if ( err ) {
@@ -52,7 +53,7 @@ exports.ProxyFile = (function() {
              * always present.
              */
             list: function( req, callback ) {
-                var file = req.file;
+                var file = Path.resolve( req.file );
 
                 fs.readdir( file, function(err, res) {
                     if ( ! fail(callback, err) ) {
@@ -70,6 +71,8 @@ exports.ProxyFile = (function() {
                                     var obj = { name: name };
 
                                     if ( ! err ) {
+
+                                        obj.path        = file,
                                         obj.success     = true;
                                         obj.isDirectory = stat.isDirectory();
                                         obj.isFile      = stat.isFile();
@@ -100,11 +103,12 @@ exports.ProxyFile = (function() {
              *      - file/directory was not found
              */
             query: function( req, callback ) {
-                var file = req.file;
+                var file = Path.resolve( req.file );
 
                 fs.stat( file, function(err, stat) {
                     if ( ! fail(callback, err) ) {
                         success( callback, {
+                                path       : file,
                                 isDirectory: stat && stat.isDirectory(),
                                 isFile     : stat && stat.isFile()
                         } )
@@ -113,7 +117,7 @@ exports.ProxyFile = (function() {
             },
 
             content: function( req, callback ) {
-                var file = req.file;
+                var file = Path.resolve( req.file );
 
                 fs.readFile( file, function(err, res) {
                     result( callback, err, res.toString('base64') );

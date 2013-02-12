@@ -32,7 +32,18 @@
             ) {
                 return path;
             } else {
-                return root + path;
+                /*
+                 * Ensure the result is:
+                 *
+                 *  root/path
+                 *
+                 * So if there is no slash, add in!
+                 */
+                if ( root.charAt(root.length-1) !== '/' && path.charAt(0) !== '/' ) {
+                    return root + '/' + path;
+                } else {
+                    return root + path;
+                }
             }
         } else {
             return root;
@@ -426,12 +437,27 @@
      * Changes the current working directory for this FileSystem.
      */
     FileSystem.prototype.chdir = function( path, callback ) {
-        throw new Error( 'chdir is not yet implemented' );
+        if ( path === '.' || path === undefined ) {
+            callback( this.root );
+        } else {
+            var self = this;
 
-        // todo
-        // request the path given, to check if it exists
-        // if it does, then change the path
-        // if it does not, then give an exception
+            this.core.getObj( path,
+                    function( obj ) {
+                        callback( new Error("path not found: " + path) );
+                    },
+                    function( obj ) {
+                        if ( obj.isDirectory ) {
+                            var path = obj.path.replace( /\\/g, '/' );
+                            self.root = path;
+
+                            callback( path );
+                        } else {
+                            callback( new Error("path is not a folder: " + path) );
+                        }
+                    }
+            )
+        }
     }
 
     /**
@@ -523,7 +549,7 @@
 
     FileSystem.prototype.fileDirs = function( dir, callback, whenDone, includeFiles, includeDirs ) {
         if ( includeFiles || includeDirs ) {
-            this.core.list( dir,
+            this.core.list( combinePath(this.root, dir),
                     function(err) {
                         if ( callback ) {
                             callback( err );

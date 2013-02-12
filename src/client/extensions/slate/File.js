@@ -47,8 +47,9 @@
             path = path.path;
         }
 
+        // list directories
         if ( slate.util.isString(path) ) {
-            // list directories
+            console.log( state.fs.root );
             state.fs.list( path, onDisplay );
         } else if ( path ) {
             for ( var k in path ) {
