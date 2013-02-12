@@ -87,6 +87,9 @@ body.slate-touch > .slate-content {
 
     -webkit-touch-callout: none;
 }
+    .touch-bar a {
+        -webkit-tap-highlight-color: transparent;
+    }
     .touch-shift {
         position: absolute;
         top: -20px;
