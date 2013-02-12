@@ -2,6 +2,24 @@
 
 window.slate = window.slate || {};
 window.slate.TouchBar = (function() {
+    var COMMAND_TO_SYMBOL = {
+            'sqrt' : String.fromCharCode( 8730 ),
+            'sum'  : String.fromCharCode( 8721 )
+    }
+
+    var SYMBOL_TO_COMMAND = (function() {
+        var symToCmd = {};
+
+        for ( var cmd in COMMAND_TO_SYMBOL ) {
+            if ( COMMAND_TO_SYMBOL.hasOwnProperty(cmd) ) {
+                var sym = COMMAND_TO_SYMBOL[cmd];
+                symToCmd[ sym ] = cmd;
+            }
+        }
+
+        return symToCmd;
+    })();
+
     var SMALL_EMPTY = '<span class="touch-small">&#x25cf;</span>';
 
     var INPUT_WIDTH_PADDING = 4;
@@ -481,7 +499,6 @@ window.slate.TouchBar = (function() {
                     if ( this.replaceLock ) {
                         return this;
                     } else {
-                        console.log( ast );
                         this.replaceLock = true;
 
                         var parentNode = this.dom.parentNode;
@@ -543,6 +560,8 @@ window.slate.TouchBar = (function() {
                             r = self.evaluate();
                         } catch ( err ) {
                             r = err;
+                            
+                            // Keep! for debugging
                             console.log( err.stack );
                         }
 
@@ -642,20 +661,23 @@ window.slate.TouchBar = (function() {
                     }
             } )
 
-    ast.Literal = (function(value, klass, strValue) {
+    ast.Literal = (function(value, klass, displayValue, jsValue) {
                 ast.Node.call( this );
 
                 if ( arguments.length < 3 ) {
-                    strValue = value + '';
+                    displayValue = value + '';
+                }
+                if ( arguments.length < 4 ) {
+                    jsValue = displayValue;
                 }
 
-                this.strValue = strValue
+                this.jsValue  = jsValue;
                 this.value    = value
 
                 this.
                         addClass( 'touch-ast-literal' ).
                         addClass( klass ).
-                        dom.appendChild( astText(strValue) );
+                        dom.appendChild( astHTML(displayValue) );
             }).
             proto( ast.Node ).
             override({
@@ -664,7 +686,7 @@ window.slate.TouchBar = (function() {
                 },
 
                 toJS: function() {
-                    return this.strValue;
+                    return this.jsValue;
                 },
 
                 evaluate: function() {
@@ -703,6 +725,19 @@ window.slate.TouchBar = (function() {
                 })
             });
 
+    /**
+     * Used for things like Pi
+     */
+    ast.NumLiteral = (function(str, value, toJSValue) {
+                ast.Literal.call( this,
+                        value,
+                        'touch-ast-num-literal',
+                        str,
+                        toJSValue || value
+                )
+            }).
+            extend( ast.Literal )
+            
     /**
      * This is a generic operator, with a left
      * and right side, but no information on what
@@ -861,10 +896,16 @@ window.slate.TouchBar = (function() {
                  * However if the node given is also a double operator,
                  * i.e. replacing a plus with a subtract,
                  * then the left and right values are kept.
+                 *
+                 * @param other The other node to swap with.
+                 * @param swapMeta Optional, and defaults to true. When true, this will only swap the 'descriptors', when given an ast.DoubleOp.
                  */
-                replace: function( other ) {
+                replace: function( other, swapMeta ) {
                     if ( ! this.replaceLock ) {
-                        if ( other instanceof ast.DoubleOp ) {
+                        if (
+                                swapMeta !== false &&
+                                other instanceof ast.DoubleOp
+                        ) {
                             this.setMeta( other.getMeta() );
                         } else {
                             ast.Node.prototype.replace.call( this, other );
@@ -1636,10 +1677,18 @@ window.slate.TouchBar = (function() {
             })
 
     ast.Command = ast.VariableInput.
-            sub(function(name) {
+            sub(function(name, display) {
                 name = name || '';
+                
+                if ( display !== undefined ) {
+                    var div = document.createElement( 'div' );
+                    div.innerHTML = display;
+                    display = div.textContent;
+                } else {
+                    display = name;
+                }
 
-                this.setInputValue( name );
+                this.setInputValue( display );
 
                 if ( name !== '' ) {
                     (function() {
@@ -1662,6 +1711,18 @@ window.slate.TouchBar = (function() {
                 this.add( this.rightParen )
 
                 this.insertNewEmpty();
+            }).
+            override({
+                    getInputValue: function() {
+                        var val = ast.Input.prototype.getInputValue.call( this );
+                        var alt = SYMBOL_TO_COMMAND[val];
+
+                        if ( alt ) {
+                            return alt;
+                        } else {
+                            return val;
+                        }
+                    }
             }).
             override({
                     findPipeReceiver: function( callback ) {
@@ -2146,8 +2207,6 @@ window.slate.TouchBar = (function() {
                                 var bottom = this.dom.clientHeight - top;
                                 left += node.getDom().clientWidth/2;
 
-                                console.log( left, top );
-
                                 this.errorDom.style.left   = left   + 'px';
                                 this.errorDom.style.bottom = bottom + 'px';
                             }).bind(this)
@@ -2271,7 +2330,7 @@ window.slate.TouchBar = (function() {
              * Inserts a node into the currently empty space.
              */
             insert: function( node, selectEmpty ) {
-                this.current.replace( node );
+                this.current.replace( node, selectEmpty );
 
                 this.current.setView( this );
 
@@ -2410,8 +2469,6 @@ window.slate.TouchBar = (function() {
                     view.validate( function() {
                         if ( false ) {
                             view.evaluate( function(r) {
-                                console.log( r );
-
                                 view.clear();
                             } );
                         } else {
@@ -2452,10 +2509,13 @@ window.slate.TouchBar = (function() {
         commands = commands.sort();
         for ( var i = 0; i < commands.length; i += 2 ) {
             if ( i === commands.length-1 ) {
-                (function(command) {
+                (function(cmd) {
+                    var cmdAlt = COMMAND_TO_SYMBOL[cmd];
+
                     commandsRow.append(
-                            command, function() {
-                                insert( new ast.Command(command) );
+                            ( cmdAlt ? cmdAlt : cmd ),
+                            function() {
+                                insert( new ast.Command(cmd, cmdAlt) );
                             },
                             
                             null
@@ -2463,13 +2523,18 @@ window.slate.TouchBar = (function() {
                 })( commands[i] );
             } else {
                 (function(top, bottom) {
+                    var topAlt    = COMMAND_TO_SYMBOL[top];
+                    var bottomAlt = COMMAND_TO_SYMBOL[bottom];
+
                     commandsRow.append(
-                            top, function() {
-                                insert( new ast.Command(top) );
+                            ( topAlt ? topAlt : top ),
+                            function() {
+                                insert( new ast.Command(top, topAlt) );
                             },
 
-                            bottom, function() {
-                                insert( new ast.Command(bottom) );
+                            ( bottomAlt ? bottomAlt : bottom ),
+                            function() {
+                                insert( new ast.Command(bottom, bottomAlt) );
                             }
                     )
                 })( commands[i], commands[i+1] );
@@ -2519,6 +2584,13 @@ window.slate.TouchBar = (function() {
 
                 'undefined',
                 function() { insert( new ast.UndefinedLiteral() ); }
+        )
+
+        valuesRow.append(
+                '&pi;',
+                function() { insert( new ast.NumLiteral('&pi;', Math.PI, 'Math.PI') ); },
+
+                null
         )
 
 /*

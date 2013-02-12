@@ -185,6 +185,7 @@
         slate.commands.remove( 'help', 'first', 'last', 'log', 'filter' );
         slate.commands.remove( 'reload', 'reloadCSS', 'reloadExtensions' );
         slate.commands.remove( 'ifDev', 'dev' );
+        slate.commands.remove( 'sum' );
 
         slate.commands.remove( 'load' );
         slate.commands.remove( 'cls' );
@@ -258,7 +259,10 @@
 
         window.slate.commands.bindCommands(
                 clear,
-                function( r ) { onDisplay( undefined, r ); },
+                function( r ) {
+                    window.slate.executor.setLastDisplay( r );
+                    onDisplay( undefined, r );
+                },
                 window.slate.data.loaders,
                 new slate.fs.FileSystem(),
                 isDev

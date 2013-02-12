@@ -212,6 +212,8 @@
         }
 
         return [
+                'slate.executor.hasLast = 0;',
+
                 'var ' + RESULT_VAR + ' = undefined',
                 "try {",
                     js,
@@ -650,6 +652,9 @@
         compileJS   : compileJS,
         validateJS  : validateJS,
 
+        hasLast     : 0,
+        lastResult  : undefined,
+
         setEnvironmentNum: function(env) {
             if ( env !== 0 && environments[env] !== undefined ) {
                 executor.envNum = env;
@@ -678,6 +683,16 @@
             delete environments[ num ];
         },
 
+        setLastDisplay: function( r ) {
+            executor.hasLast++;
+
+            if ( executor.hasLast === 1 ) {
+                executor.lastDisplay = r;
+            } else {
+                executor.lastDisplay = undefined;
+            }
+        },
+
         newExecutor: function( head, languages, onDisplay, formatters ) {
             if ( ! onDisplay ) throw new Error( 'falsy onDisplay function given' );
 
@@ -688,13 +703,26 @@
                 assert( languages[type], "language not found: " + type );
 
                 executeInner( head, languages, type, cmd, post, function(cmd, r) {
-                    if ( r !== undefined ) {
-                        r = new slate.formatter.ignoreHandler(r)
-                    }
-
-                    onDisplay( cmd, r, function(cmd, onDisplay) {
+                    // display the command first
+                    onDisplay( cmd, undefined, function(cmd, onDisplay) {
                         executeInner( head, languages, type, cmd, undefined, onDisplay );
                     })
+
+                    // then display the result, in the future, after any onDisplay
+                    setTimeout( function() {
+                        if (
+                                (
+                                        executor.hasLast === 1 &&
+                                        executor.lastDisplay !== r
+                                ) ||
+                                (
+                                        executor.hasLast !== 1 &&
+                                        r !== undefined
+                                )
+                        ) {
+                            onDisplay( undefined, new window.slate.formatter.ignoreHandler(r) );
+                        }
+                    }, 0 )
                 } )
             }
         }

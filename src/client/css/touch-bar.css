@@ -96,10 +96,9 @@ body.slate-touch > .slate-content {
             display: block;
             text-align: center;
             width: 70px;
-            line-height: 36px;
             vertical-align: middle;
 
-            padding: 0;
+            padding: 2px 0 3px 0;
 
             position: absolute;
             top: 0;
@@ -107,6 +106,9 @@ body.slate-touch > .slate-content {
             font-size: 21px;
 
             border-radius: 2px;
+
+            border-right : 1px solid #000;
+            border-bottom: 1px solid #000;
         }
         .touch-shift-button,
         .touch-shift-button:hover,
