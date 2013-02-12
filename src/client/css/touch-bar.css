@@ -525,13 +525,28 @@ body.slate-touch > .slate-content {
 
     .touch-ast-empty {
         background: transparent;
-        color: #444;
         line-height: 46px;
         font-size: 18px;
     }
-    .touch-ast-empty.select {
-        color: #f0b639;
-    }
+        .touch-ast-empty > input {
+            position: absolute;
+
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+
+            z-index: 1;
+
+            opacity: 0;
+        }
+        .touch-ast-empty > .touch-ast-text {
+            color: #444;
+        }
+        .touch-ast-empty.select > .touch-ast-text {
+            color: #f0b639;
+        }
+
     .touch-ast-command {
     }
         .touch-ast-command.select-parent > .touch-ast-text,

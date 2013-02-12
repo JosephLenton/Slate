@@ -641,9 +641,36 @@ window.slate.TouchBar = (function() {
     ast.Empty = ast.Node.
             sub(function() {
                 this.addClass( 'touch-ast-empty' );
-                this.dom.innerHTML = '&#x25cf;';
+
+                var emptyInput = slate.util.newElement( 'input' );
+                emptyInput.setAttribute( 'type', 'text' );
+
+                this.input = emptyInput;
+
+                var self = this;
+                emptyInput.addEventListener( 'input', function(ev) {
+                    var value = emptyInput.value;
+
+                    var newInput = (value.match(/^[0-9]+$/) !== null) ?
+                            new ast.NumberInput()   :
+                            new ast.VariableInput() ;
+
+                    newInput.setInputValue( emptyInput.value );
+
+                    self.replace( newInput );
+
+                    newInput.getInputDom().focus();
+
+                    emptyInput.value = '';
+                } );
+
+                this.add( emptyInput, astHTML('&#x25cf;') );
             }).
             override({
+                    onEverySelect: function() {
+                        this.input.focus();
+                    },
+
                     isEmpty: function() {
                         return true;
                     },
@@ -1493,6 +1520,15 @@ window.slate.TouchBar = (function() {
                      */
                     findEmpty: function() {
                         return this;
+                    },
+
+                    replace: function( other ) {
+                        ast.Node.prototype.replace.call( this, other );
+
+                        // copy this value across
+                        if ( other.setInputValue !== undefined ) {
+                            other.setInputValue( this.getInputValue() );
+                        }
                     }
             }).
             after({
@@ -1740,11 +1776,13 @@ window.slate.TouchBar = (function() {
 
                 this.setInputValue( display );
 
+/*
                 if ( name !== '' ) {
                     (function() {
                         this.getInputDom().blur();
                     }).later( this );
                 }
+*/
 
                 this.params = new Array();
                 
