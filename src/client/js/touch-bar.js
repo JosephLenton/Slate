@@ -2202,6 +2202,10 @@ window.slate.TouchBar = (function() {
         upperDom.appendChild( this.dom );
     }
 
+    TouchRow.prototype.getDom = function() {
+        return this.dom;
+    }
+
     TouchRow.prototype.show = function() {
         this.dom.classList.add( 'show' );
 
@@ -2829,15 +2833,28 @@ window.slate.TouchBar = (function() {
          */
 
         var touchBar = this;
+        var selectButton = function( bs, button ) {
+            var bs = bs.getElementsByClassName( 'select' );
+
+            for ( var i = 0; i < bs.length; i++ ) {
+                bs[i].classList.remove( 'select' );
+            }
+
+            button.classList.add( 'select' );
+        }
+
         var sectionButtons = new TouchRow( this.lower ).
                 append( 'command', function() {
                     touchBar.showRow( commandsRow );
+                    selectButton( sectionButtons.getDom(), this );
                 } ).
                 append( 'values', function() {
                     touchBar.showRow( valuesRow );
+                    selectButton( sectionButtons.getDom(), this );
                 } ).
                 append( 'operators', function() {
                     touchBar.showRow( opsRow );
+                    selectButton( sectionButtons.getDom(), this );
                 } ).
                 show();
 

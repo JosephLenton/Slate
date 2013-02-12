@@ -78,7 +78,7 @@
                         finger = touch.identifier;
                         timestart = Date.now();
 
-                        onDown();
+                        onDown.call( el );
                     }
                 }, false )
 
@@ -98,9 +98,9 @@
                                               dist < SLOW_CLICK_DIST
                                     )
                             ) {
-                                onClick( ev );
+                                onClick.call( el, ev );
                             } else {
-                                onUp( ev );
+                                onUp.call( el, ev );
                             }
 
                             return;
@@ -126,7 +126,7 @@
                         ev.preventDefault();
                     
                         isDown = true;
-                        onDown( ev );
+                        onDown.call( el, ev );
                     }
                 } )
 
@@ -137,7 +137,7 @@
                         ev.preventDefault();
                     
                         isDown = false;
-                        onUp( ev );
+                        onUp.call( el, ev );
                     }
                 } )
             }
@@ -189,7 +189,7 @@
                                     ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
                                       dist < SLOW_CLICK_DIST
                             ) {
-                                callback( ev );
+                                callback.call( el, ev );
                                 ev.preventDefault();
                             }
 
@@ -213,7 +213,7 @@
                     if ( (ev.which || ev.button) === 1 ) {
                         ev.preventDefault();
                     
-                        callback( ev );
+                        callback.call( el, ev );
                     }
                 } )
             }

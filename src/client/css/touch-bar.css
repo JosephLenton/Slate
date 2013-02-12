@@ -35,8 +35,6 @@ body.slate-touch > .slate-content {
     width: 100px;
 
     overflow: hidden;
-
-    box-shadow: -3px 0 9px rgba( 0, 0, 0, 0.6 );
 }
     .touch-controls,
     .touch-controls > a:first-of-type {
@@ -238,13 +236,16 @@ body.slate-touch > .slate-content {
                     outline: 0;
                 }
                 .touch-bar-button:hover {
-                    background: rgba( 255, 255, 255, 0.04 )
+                    background: #444;
                 }
                 .touch-bar-button:first-of-type {
                     border-left: 0 none;
                 }
                 .touch-bar-button:last-of-type {
                     border-right: 0 none;
+                }
+                .touch-bar-row.lower .touch-bar-button.select {
+                    background: #555;
                 }
                 .touch-small {
                     font-size: 12px;
