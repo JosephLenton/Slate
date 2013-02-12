@@ -84,6 +84,8 @@ body.slate-touch > .slate-content {
     position: absolute;
     left: 0;
     right: 100px;
+
+    -webkit-touch-callout: none;
 }
     .touch-shift {
         position: absolute;
