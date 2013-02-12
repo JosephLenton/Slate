@@ -2539,7 +2539,20 @@ window.slate.TouchBar = (function() {
             }
         })
 
-        slate.util.press( dom, onDownFun, onDownFun );
+        slate.util.press( dom,
+                function() {
+                    if ( ! isDown ) {
+                        isDown = true;
+                        onDownFun();
+                    }
+                },
+                function() {
+                    if ( isDown ) {
+                        isDown = false;
+                        onDownFun();
+                    }
+                }
+        );
 
         return dom;
     }

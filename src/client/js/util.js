@@ -82,32 +82,28 @@
                     }
                 }, false )
 
-                el.addEventListener( 'touchmove', function(ev) {
-                    var touch = ev.changedTouches[ 0 ];
-                    
-                    if ( touch && touch.identifier === finger ) {
-                        updateXY( xy, touch, true );
-                    }
-                }, false )
-
                 var touchEnd = function(ev) {
-                    var touch = ev.changedTouches[ 0 ];
+                    for ( var i = 0; i < ev.changedTouches.length; i++ ) {
+                        var touch = ev.changedTouches[ i ];
                     
-                    if ( touch && touch.identifier === finger ) {
-                        updateXY( xy, touch, true );
+                        if ( touch && touch.identifier === finger ) {
+                            updateXY( xy, touch, true );
 
-                        var duration = Date.now() - timestart;
-                        var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
+                            var duration = Date.now() - timestart;
+                            var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
 
-                        if (
-                                onClick && (
-                                        ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
-                                          dist < SLOW_CLICK_DIST
-                                )
-                        ) {
-                            onClick( ev );
-                        } else {
-                            onUp( ev );
+                            if (
+                                    onClick && (
+                                            ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
+                                              dist < SLOW_CLICK_DIST
+                                    )
+                            ) {
+                                onClick( ev );
+                            } else {
+                                onUp( ev );
+                            }
+
+                            return;
                         }
                     }
                 }
@@ -169,28 +165,35 @@
                 }, false )
 
                 el.addEventListener( 'touchmove', function(ev) {
-                    var touch = ev.changedTouches[ 0 ];
+                    for ( var i = 0; i < ev.changedTouches.length; i++ ) {
+                        var touch = ev.changedTouches[ i ];
                     
-                    if ( touch && touch.identifier === finger ) {
-                        updateXY( xy, touch, true );
+                        if ( touch && touch.identifier === finger ) {
+                            updateXY( xy, touch, true );
+                            return;
+                        }
                     }
                 }, false )
 
                 el.addEventListener( 'touchend', function(ev) {
-                    var touch = ev.changedTouches[ 0 ];
-                    
-                    if ( touch && touch.identifier === finger ) {
-                        updateXY( xy, touch, true );
+                    for ( var i = 0; i < ev.changedTouches.length; i++ ) {
+                        var touch = ev.changedTouches[ i ];
+                        
+                        if ( touch && touch.identifier === finger ) {
+                            updateXY( xy, touch, true );
 
-                        var duration = Date.now() - timestart;
-                        var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
+                            var duration = Date.now() - timestart;
+                            var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
 
-                        if (
-                                ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
-                                  dist < SLOW_CLICK_DIST
-                        ) {
-                            callback( ev );
-                            ev.preventDefault();
+                            if (
+                                    ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
+                                      dist < SLOW_CLICK_DIST
+                            ) {
+                                callback( ev );
+                                ev.preventDefault();
+                            }
+
+                            return;
                         }
                     }
                 }, false )
