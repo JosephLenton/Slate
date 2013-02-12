@@ -731,7 +731,7 @@
                                             executor.hasLast !== 1
                                     )
                             ) {
-                                onDisplay( undefined, new window.slate.formatter.ignoreHandler(r) );
+                                onDisplay( undefined, r ); //new window.slate.formatter.ignoreHandler(r) );
                             }
                         }
                     }, 0 )
