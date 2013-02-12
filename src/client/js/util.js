@@ -63,6 +63,92 @@
     }
 
     window.slate.util = {
+        press: function( el, onDown, onUp, onClick ) {
+            assert( el instanceof HTMLElement, "non-html element given" );
+
+            var xy = { x: 0, y: 0, moveX: 0, moveY: 0 },
+                timestart = 0,
+                finger    = 0;
+
+            if ( IS_TOUCH ) {
+                el.addEventListener( 'touchstart', function(ev) {
+                    var touch = ev.changedTouches[ 0 ];
+                    
+                    if ( touch ) {
+                        finger = touch.identifier;
+                        timestart = Date.now();
+
+                        onDown();
+                    }
+                }, false )
+
+                el.addEventListener( 'touchmove', function(ev) {
+                    var touch = ev.changedTouches[ 0 ];
+                    
+                    if ( touch && touch.identifier === finger ) {
+                        updateXY( xy, touch, true );
+                    }
+                }, false )
+
+                var touchEnd = function(ev) {
+                    var touch = ev.changedTouches[ 0 ];
+                    
+                    if ( touch && touch.identifier === finger ) {
+                        updateXY( xy, touch, true );
+
+                        var duration = Date.now() - timestart;
+                        var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
+
+                        if (
+                                onClick && (
+                                        ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
+                                          dist < SLOW_CLICK_DIST
+                                )
+                        ) {
+                            onClick( ev );
+                        } else {
+                            onUp( ev );
+                        }
+                    }
+                }
+
+                document.getElementsByTagName( 'body' )[0].
+                        addEventListener( 'touchend', touchEnd );
+                el.addEventListener( 'touchend', touchEnd, false )
+
+                el.addEventListener( 'click', function(ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                } )
+            } else {
+                var isDown = false;
+
+                el.addEventListener( 'mousedown', function(ev) {
+                    ev = ev || window.event;
+
+                    if ( (ev.which || ev.button) === 1 ) {
+                        ev.preventDefault();
+                    
+                        isDown = true;
+                        onDown( ev );
+                    }
+                } )
+
+                el.addEventListener( 'mouseup', function(ev) {
+                    ev = ev || window.event;
+
+                    if ( (ev.which || ev.button) === 1 && isDown ) {
+                        ev.preventDefault();
+                    
+                        isDown = false;
+                        onUp( ev );
+                    }
+                } )
+            }
+
+            return el;
+        },
+
         click: function( el, callback ) {
             assert( el instanceof HTMLElement, "non-html element given" );
 

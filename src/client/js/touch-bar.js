@@ -481,6 +481,7 @@ window.slate.TouchBar = (function() {
                     if ( this.replaceLock ) {
                         return this;
                     } else {
+                        console.log( ast );
                         this.replaceLock = true;
 
                         var parentNode = this.dom.parentNode;
@@ -887,6 +888,15 @@ window.slate.TouchBar = (function() {
 
                 getEmpty: function() {
                     return this.left.getEmpty() || this.right.getEmpty();
+                }
+            }).
+            extend({
+                replaceLeft: function( node ) {
+                    this.left.replace( node );
+                },
+
+                replaceRight: function( node ) {
+                    this.right.replace( node );
                 }
             }).
             extend({
@@ -1715,6 +1725,20 @@ window.slate.TouchBar = (function() {
                         )
                     }
             }).
+            extend((function() {
+                var replaceLeftRight = function( node ) {
+                    for ( var i = 0; i < this.params.length; i++ ) {
+                        if ( this.params[i].isEmpty() ) {
+                            return this.replaceChild( this.params[i], node );
+                        }
+                    }
+                }
+
+                return {
+                        replaceLeft : replaceLeftRight,
+                        replaceRight: replaceLeftRight
+                }
+            })()).
             extend({
                     toJSParam: function( arg ) {
                         var params = this.getNonEmptyParams().map( 'toJS' );
@@ -2221,14 +2245,39 @@ window.slate.TouchBar = (function() {
                 this.setCurrent( ast );
             },
 
+            insertLeft: function( node ) {
+                var current = this.getCurrent();
+                
+                this.insert( node, false );
+                if ( !current.isEmpty() && node.replaceRight !== undefined ) {
+                    node.replaceRight( current );
+                }
+
+                this.selectEmpty( this.current );
+            },
+
+            insertRight: function( node ) {
+                var current = this.getCurrent();
+
+                this.insert( node, false );
+                if ( !current.isEmpty() && node.replaceLeft !== undefined ) {
+                    node.replaceLeft( current );
+                }
+
+                this.selectEmpty( this.current );
+            },
+
             /**
              * Inserts a node into the currently empty space.
              */
-            insert: function( node ) {
+            insert: function( node, selectEmpty ) {
                 this.current.replace( node );
-                node.setView( this );
 
-                this.selectEmpty( node );
+                this.current.setView( this );
+
+                if ( selectEmpty === undefined || selectEmpty === true ) {
+                    this.selectEmpty( this.current );
+                }
             },
 
             selectEmpty: function( node ) {
@@ -2264,12 +2313,77 @@ window.slate.TouchBar = (function() {
         return dom;
     }
 
+    var newShiftButton = function( fun, key ) {
+        var dom  = slate.util.newElement( 'a', 'touch-shift-button' );
+
+        var onDownFun = function() {
+            dom.classList.toggle( 'highlight' )
+            fun( dom.classList.contains('highlight') )
+        }
+
+        var isDown = false;
+        document.getElementsByTagName('body')[0].addEventListener( 'keydown', function( ev ) {
+            if ( ev.which === key ) {
+                if ( ! isDown ) {
+                    onDownFun();
+                    isDown = true;
+                }
+            }
+        })
+
+        document.getElementsByTagName('body')[0].addEventListener( 'keyup', function( ev ) {
+            if ( ev.which === key ) {
+                if ( isDown ) {
+                    onDownFun();
+                    isDown = false;
+                }
+            }
+        })
+
+        slate.util.press( dom, onDownFun, onDownFun );
+
+        return dom;
+    }
+
+    var ShiftButtons = function() {
+        var self = this;
+
+        var left = newShiftButton(function(isDown) {
+            self.hasLeft = isDown;
+        }, 81)
+        var right = newShiftButton(function(isDown) {
+            self.hasRight = isDown;
+        }, 87)
+
+        this.hasLeft  = false;
+        this.hasRight = false;
+
+        this.dom = slate.util.newElement( 'div', 'touch-shift', left, right );
+    }
+
+    ShiftButtons.prototype = {
+            isLeft: function() {
+                return this.hasLeft;
+            },
+
+            isRight: function() {
+                return this.hasRight;
+            },
+
+            getDom: function() {
+                return this.dom;
+            }
+    }
+
     var TouchBar = function( dom, execute, commands ) {
         var upper  = slate.util.newElement( 'div', 'touch-bar-row upper' );
         var lower  = slate.util.newElement( 'div', 'touch-bar-row lower' );
         var barDom = slate.util.newElement( 'div', 'touch-bar', upper, lower );
 
         var view   = new TouchView( barDom );
+
+        var buttons = new ShiftButtons();
+        barDom.appendChild( buttons.getDom() );
 
         this.view  = view;
 
@@ -2278,6 +2392,18 @@ window.slate.TouchBar = (function() {
 
         this.lower = lower;
         this.upper = upper;
+
+        var insert = function( node ) {
+            if ( buttons.isLeft() && buttons.isRight() ) {
+                view.insert( node );
+            } else if ( buttons.isLeft() ) {
+                view.insertLeft( node );
+            } else if ( buttons.isRight() ) {
+                view.insertRight( node );
+            } else {
+                view.insert( node );
+            }
+        }
 
         var controlsDom = newButtons( 'touch-controls', {
                 'touch-controls-run'   : function() {
@@ -2317,7 +2443,7 @@ window.slate.TouchBar = (function() {
         commandsRow.append(
                 SMALL_EMPTY,
                 function() {
-                    view.insert( new ast.Command() )
+                    insert( new ast.Command() )
                 },
 
                 null
@@ -2329,7 +2455,7 @@ window.slate.TouchBar = (function() {
                 (function(command) {
                     commandsRow.append(
                             command, function() {
-                                view.insert( new ast.Command(command) );
+                                insert( new ast.Command(command) );
                             },
                             
                             null
@@ -2339,11 +2465,11 @@ window.slate.TouchBar = (function() {
                 (function(top, bottom) {
                     commandsRow.append(
                             top, function() {
-                                view.insert( new ast.Command(top) );
+                                insert( new ast.Command(top) );
                             },
 
                             bottom, function() {
-                                view.insert( new ast.Command(bottom) );
+                                insert( new ast.Command(bottom) );
                             }
                     )
                 })( commands[i], commands[i+1] );
@@ -2358,7 +2484,7 @@ window.slate.TouchBar = (function() {
 
         valuesRow.append(
                 'var', function() {
-                    view.insert( new ast.VariableInput() );
+                    insert( new ast.VariableInput() );
                 },
 
                 null
@@ -2367,32 +2493,32 @@ window.slate.TouchBar = (function() {
 /*
         valuesRow.append(
                 '[ &hellip; ]',
-                function() { view.insert( new ast.ArrayLiteral() ); }
+                function() { insert( new ast.ArrayLiteral() ); }
         )
 */
 
         valuesRow.append(
                 '123',
-                function() { view.insert( new ast.NumberInput() ); },
+                function() { insert( new ast.NumberInput() ); },
 
                 '"text"',
-                function() { view.insert( new ast.StringInput() ); }
+                function() { insert( new ast.StringInput() ); }
         )
 
         valuesRow.append(
                 'true',
-                function() { view.insert( new ast.TrueLiteral() ); },
+                function() { insert( new ast.TrueLiteral() ); },
 
                 'false',
-                function() { view.insert( new ast.FalseLiteral() ); }
+                function() { insert( new ast.FalseLiteral() ); }
         )
 
         valuesRow.append(
                 'null',
-                function() { view.insert( new ast.NullLiteral() ); },
+                function() { insert( new ast.NullLiteral() ); },
 
                 'undefined',
-                function() { view.insert( new ast.UndefinedLiteral() ); }
+                function() { insert( new ast.UndefinedLiteral() ); }
         )
 
 /*
@@ -2413,7 +2539,7 @@ window.slate.TouchBar = (function() {
                 null,
 
                 '/ ' + SMALL_EMPTY + ' /', function() {
-                    view.insert( new ast.RegExpInput() );
+                    insert( new ast.RegExpInput() );
                 }
         )
 
@@ -2422,19 +2548,6 @@ window.slate.TouchBar = (function() {
          */
 
         var opsRow = new TouchRow( this.upper, true );
-
-        var replaceWithDoubleOp = function( op ) {
-            var current = view.getCurrent();
-
-            current.replace( op );
-            view.setCurrent( op );
-
-            if ( ! current.isEmpty() ) {
-                op.left.replace( current );
-            }
-
-            view.selectEmpty();
-        }
 
         var descriptorHTML = function( d ) {
             assert( d.html, "descriptor is missing HTML display value, " + d.name );
@@ -2464,15 +2577,15 @@ window.slate.TouchBar = (function() {
             if ( top !== null && bottom !== null ) {
                 opsRow.append( 
                         descriptorHTML( top ),
-                        function() { replaceWithDoubleOp( new ast.DoubleOp(top   , descriptors) ); },
+                        function() { insert( new ast.DoubleOp(top   , descriptors) ); },
 
                         descriptorHTML( bottom ),
-                        function() { replaceWithDoubleOp( new ast.DoubleOp(bottom, descriptors) ); }
+                        function() { insert( new ast.DoubleOp(bottom, descriptors) ); }
                 )
             } else if ( top !== null ) {
                 opsRow.append( 
                         descriptorHTML( top ),
-                        function() { replaceWithDoubleOp( new ast.DoubleOp(top   , descriptors) ); },
+                        function() { insert( new ast.DoubleOp(top   , descriptors) ); },
 
                         null
                 )
@@ -2481,7 +2594,7 @@ window.slate.TouchBar = (function() {
                         null,
 
                         descriptorHTML( bottom ),
-                        function() { replaceWithDoubleOp( new ast.DoubleOp(bottom, descriptors) ); }
+                        function() { insert( new ast.DoubleOp(bottom, descriptors) ); }
                 )
             }
         }

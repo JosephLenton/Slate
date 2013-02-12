@@ -85,6 +85,72 @@ body.slate-touch > .slate-content {
     left: 0;
     right: 100px;
 }
+    .touch-shift {
+        position: absolute;
+        top: -20px;
+        left: 9px;
+        width: 140px;
+        height: 30px;
+    }
+        .touch-shift-button {
+            display: block;
+            text-align: center;
+            width: 70px;
+            line-height: 36px;
+            vertical-align: middle;
+
+            padding: 0;
+
+            position: absolute;
+            top: 0;
+
+            font-size: 21px;
+
+            border-radius: 2px;
+        }
+        .touch-shift-button,
+        .touch-shift-button:hover,
+        .touch-shift-button:visited,
+        .touch-shift-button:active,
+        .touch-shift-button:focus {
+            color: #666;
+            text-decoration: none;
+        }
+        .touch-shift-button.highlight,
+        .touch-shift-button.highlight:hover,
+        .touch-shift-button.highlight:visited,
+        .touch-shift-button.highlight:active,
+        .touch-shift-button.highlight:focus {
+            color: #fff;
+            text-decoration: none;
+        }
+        .touch-shift-button:first-of-type {
+            background: #050E17;
+            left: 0;
+
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .touch-shift-button.highlight:first-of-type {
+            background: #1B3442;
+        }
+        .touch-shift-button:first-of-type:after {
+            content: 'left';
+        }
+        .touch-shift-button:last-of-type {
+            background: #05170C;
+
+            right: 0;
+
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+        .touch-shift-button.highlight:last-of-type {
+            background: #20421B;
+        }
+        .touch-shift-button:last-of-type:after {
+            content: 'right';
+        }
     .touch-bar-row {
         text-align: center;
         position: absolute;
