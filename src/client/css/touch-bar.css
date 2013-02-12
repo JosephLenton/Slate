@@ -265,9 +265,6 @@ body.slate-touch > .slate-content {
         bottom: 140px;
 
         white-space: nowrap;
-
-        overflow: auto;
-        -webkit-overflow-scrolling: touch;
     }
         .touch-bar-view-ast-bar {
             position: absolute;
@@ -280,9 +277,12 @@ body.slate-touch > .slate-content {
 
             vertical-align: middle;
             text-align: center;
-            min-width: 100%;
+            width: 100%;
 
             white-space: nowrap;
+
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
             .touch-bar-view-ast-bar > .touch-ast {
                 margin-top: -5px;
@@ -523,8 +523,12 @@ body.slate-touch > .slate-content {
     .touch-ast.select,
     .touch-ast-text.select {
     }
+
     .touch-ast.select {
         background: #111;
+    }
+    .slate-content-item-contents .touch-ast.select {
+        background: transparent;
     }
 
     .touch-ast-empty {
@@ -556,6 +560,8 @@ body.slate-touch > .slate-content {
 
     .touch-ast-command {
     }
+        .slate-content-item-contents .touch-ast-text,
+        .slate-content-item-contents  input,
         .touch-ast-command.select-parent > .touch-ast-text,
         .touch-ast-command.select        > .touch-ast-text,
         .touch-ast-command.select-parent >  input,
@@ -564,6 +570,7 @@ body.slate-touch > .slate-content {
         }
     .touch-ast-op {
     }
+        .slate-content-item-contents .touch-ast-op-text,
         .touch-ast.select > .touch-ast-op-text,
         .touch-ast.select-parent > .touch-ast-op-text {
             color: #e08000;
@@ -574,6 +581,8 @@ body.slate-touch > .slate-content {
         }
     .touch-ast-op.select {
     }
+        .slate.content-item-contents .touch-ast-number >  input,
+        .slate.content-item-contents .touch-ast-number > .touch-ast-text,
         .touch-ast.select > .touch-ast-number         >  input,
         .touch-ast.select > .touch-ast-number         > .touch-ast-text,
                             .touch-ast-number.select  >  input,
@@ -581,6 +590,10 @@ body.slate-touch > .slate-content {
         {
             color: #b51;
         }
+        .slate.content-item-contents .touch-ast-literal >  input,
+        .slate.content-item-contents .touch-ast-literal > .touch-ast-text,
+        .slate.content-item-contents .touch-ast-string >  input,
+        .slate.content-item-contents .touch-ast-string > .touch-ast-text,
                             .touch-ast-literal.select > .touch-ast-text,
         .touch-ast.select > .touch-ast-string         >  input,
         .touch-ast.select > .touch-ast-string         > .touch-ast-text,
@@ -589,6 +602,8 @@ body.slate-touch > .slate-content {
         {
             color: #18AD18;
         }
+        .slate.content-item-contents .touch-ast-regexp >  input,
+        .slate.content-item-contents .touch-ast-regexp > .touch-ast-text,
         .touch-ast.select > .touch-ast-regexp         >  input,
         .touch-ast.select > .touch-ast-regexp         > .touch-ast-text,
                             .touch-ast-regexp.select  >  input,
@@ -596,6 +611,8 @@ body.slate-touch > .slate-content {
         {
             color: #8E40B8;
         }
+        .slate.content-item-contents .touch-ast-variable >  input,
+        .slate.content-item-contents .touch-ast-variable > .touch-ast-text,
         .touch-ast.select > .touch-ast-variable         >  input,
         .touch-ast.select > .touch-ast-variable         > .touch-ast-text,
                             .touch-ast-variable.select  >  input,
@@ -611,6 +628,8 @@ body.slate-touch > .slate-content {
             color: #369;
         }
 
+    .slate.content-item-contents .touch-ast-left-paren,
+    .slate.content-item-contents .touch-ast-right-paren,
     .touch-ast.select-parent > .touch-ast-left-paren,
     .touch-ast.select-parent > .touch-ast-right-paren,
     .touch-ast.select > .touch-ast-left-paren,
