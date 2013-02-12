@@ -528,6 +528,9 @@ body.slate-touch > .slate-content {
         line-height: 46px;
         font-size: 18px;
     }
+        .touch-ast-empty > .touch-ast-delete {
+            display: none;
+        }
         .touch-ast-empty > input {
             position: absolute;
 

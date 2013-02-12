@@ -329,8 +329,8 @@ window.slate.TouchBar = (function() {
                     slate.util.click( deleteNode, function(ev) {
                         ev.stopPropagation();
 
-                        self.replace( new ast.Empty() );
-                    } );
+                        self.replace( new ast.Empty() )
+                    } )
 
                     this.dom.appendChild( deleteNode );
                 },
@@ -642,6 +642,11 @@ window.slate.TouchBar = (function() {
             sub(function() {
                 this.addClass( 'touch-ast-empty' );
 
+/**
+ * Disabled, because the switching just doesn't work right,
+ * when on the iPad.
+ */
+/*
                 var emptyInput = slate.util.newElement( 'input' );
                 emptyInput.setAttribute( 'type', 'text' );
 
@@ -662,15 +667,15 @@ window.slate.TouchBar = (function() {
                     newInput.getInputDom().focus();
 
                     emptyInput.value = '';
+
+                    ev.preventDefault();
                 } );
 
                 this.add( emptyInput, astHTML('&#x25cf;') );
+*/
+                this.add( astHTML('&#x25cf;') );
             }).
             override({
-                    onEverySelect: function() {
-                        this.input.focus();
-                    },
-
                     isEmpty: function() {
                         return true;
                     },
@@ -2051,7 +2056,7 @@ window.slate.TouchBar = (function() {
                     for ( var i = 0; i < params.length; i++ ) {
                         var param = params[i];
 
-                        if ( param.isSelected() ) {
+                        if ( param.isSelected() && ! param.isEmpty() ) {
                             hasSelected = true;
                         } else if ( param.isEmpty() ) {
                             if ( hasSelected ) {
@@ -2099,14 +2104,17 @@ window.slate.TouchBar = (function() {
                      * with 10 empty parameters.
                      */
                     var lastNonEmpty = -1;
+                    var newAstI = -1;
 
                     for ( var i = 0; i < params.length; i++ ) {
                         var param = params[i];
                         
                         if ( replaceNode && param === old ) {
                             param = params[i] = newAst;
+                            newAstI = i;
+
                             old.replace( newAst );
-                            old.setParent( this );
+                            newAst.setParent( this );
 
                             replaceNode = false;
                         }
@@ -2134,6 +2142,13 @@ window.slate.TouchBar = (function() {
                          */
                         params.splice( lastEmpty, (params.length-1) - lastEmpty );
                         assert( params.length === lastEmpty+1, "incorrect number of empties following resize" );
+
+                        /*
+                         * If we delete the AST node we just added,
+                         * becuase it's an empty,
+                         * then select a new one.
+                         */
+                        this.getView().setCurrent( this.getEmpty() );
                     } else if ( lastNonEmpty === params.length-1 ) {
                         this.insertNewEmpty();
                     }
