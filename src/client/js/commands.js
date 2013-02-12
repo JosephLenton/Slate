@@ -152,6 +152,18 @@
             return commandsArr;
         },
 
+        remove: function() {
+            for ( var i = 0; i < arguments.length; i++ ) {
+                var arg = arguments[i];
+
+                if ( arg instanceof Array ) {
+                    slate.commands.remove.apply( slate.commands, arg );
+                } else {
+                    delete slate.commands.commands[ arg ];
+                }
+            }
+        },
+
         bindCommands : function( clear, display, loaders, fileSystem, isDev ) {
             var commands = slate.commands.commands || {};
             var onDisplayFun = function(r) {

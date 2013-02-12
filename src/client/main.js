@@ -180,6 +180,16 @@
     }
 
     var initialize = function( errors ) {
+        slate.commands.remove( 'get', 'head', 'ignore', 'sleep' );
+        //slate.commands.remove( 'describe' );
+        slate.commands.remove( 'help', 'first', 'last', 'log', 'filter' );
+        slate.commands.remove( 'reload', 'reloadCSS', 'reloadExtensions' );
+        slate.commands.remove( 'ifDev', 'dev' );
+
+        slate.commands.remove( 'load' );
+        slate.commands.remove( 'cls' );
+        slate.commands.remove( 'exit' );
+
         if ( slate.constants.cwd ) {
             slate.fs.FileSystem.setCWD( slate.constants.cwd );
         }
