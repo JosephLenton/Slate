@@ -157,7 +157,6 @@
                 finger    = 0;
 
             if ( IS_TOUCH ) {
-                /*
                 el.addEventListener( 'touchstart', function(ev) {
                     var touch = ev.changedTouches[ 0 ];
                     
@@ -194,12 +193,6 @@
                         }
                     }
                 }, false )
-                */
-
-                el.addEventListener( 'tapone', function(ev) {
-                    ev.preventDefault();
-                    callback( ev );
-                } );
 
                 el.addEventListener( 'click', function(ev) {
                     ev.preventDefault();
