@@ -578,13 +578,23 @@ window.slate.TouchBar = (function() {
                  * By default, it simply returns null.
                  * Sub-classes are expected to override this
                  * to add their own behaviour.
+                 *
+                 * @param value This can optionally take 'value' as a hint, for a future implementation.
+                 * @return An empty node, or null if none found. This specifically always returns null.
                  */
-                getEmpty: function() {
+                getEmpty: function( value ) {
                     return null;
                 },
 
-                findEmpty: function() {
-                    var empty = this.getEmpty();
+                /**
+                 * The value can be anything you want,
+                 * and is there specifically to pass on data,
+                 * for a future implementation.
+                 *
+                 * @param value. An optional value to pass on to this nodes 'getEmpty'.
+                 */
+                findEmpty: function( value ) {
+                    var empty = this.getEmpty( value );
 
                     if ( empty ) {
                         return empty;
@@ -927,8 +937,47 @@ window.slate.TouchBar = (function() {
                     newChild.setParent( this );
                 },
 
-                getEmpty: function() {
-                    return this.left.getEmpty() || this.right.getEmpty();
+                /**
+                 * Returns the empties from the child nodes.
+                 *
+                 * However it favours,
+                 *
+                 *  - if just an insertion, the opposite direction is favoured,
+                 *  - required empties over optional empties
+                 *  - left over right
+                 *
+                 * In regards to the first rule, imagine we have:
+                 *
+                 *      f( _ )
+                 *
+                 * And then insert into a doubleOp, like so:
+                 *
+                 *      f( _ ) * _
+                 *
+                 * Of the two underscores I could jump to,
+                 * I will favour the one on the right,
+                 * because I am building in that direction.
+                 *
+                 * @param Optional. True to favour the left side, false for the right, undefined for neither.
+                 */
+                getEmpty: function( favourLeft ) {
+                    var leftEmpty = this.left.getEmpty();
+
+                    if ( leftEmpty !== null && favourLeft === true ) {
+                        return leftEmpty;
+                    } else {
+                        var rightEmpty = this.right.getEmpty();
+
+                        if ( rightEmpty !== null && favourLeft === false ) {
+                            return rightEmpty;
+                        }
+                    }
+
+                    if ( this.left.allowsEmpties() ) {
+                        return rightEmpty || leftEmpty;
+                    } else {
+                        return  leftEmpty || rightEmpty;
+                    }
                 }
             }).
             extend({
@@ -2304,44 +2353,66 @@ window.slate.TouchBar = (function() {
                 this.setCurrent( ast );
             },
 
-            insertLeft: function( node ) {
+            /**
+             * insertLeft and insertRight are identical,
+             * except for a single line.
+             *
+             * So the implementations are here,
+             * with a boolean flag used to differentiate
+             * between them.
+             */
+            insertLeftRight: function( node, isLeft ) {
                 var current = this.getCurrent();
-                
-                this.insert( node, false );
-                if ( !current.isEmpty() && node.replaceRight !== undefined ) {
-                    node.replaceRight( current );
+
+                if ( current.isEmpty() && current.hasParent() ) {
+                    current = current.getParent();
                 }
 
-                this.selectEmpty( this.current );
+                current.replace( node, false );
+                node.setView( this );
+                
+                if ( !current.isEmpty() && node.replaceRight !== undefined ) {
+                    /*
+                     * Yes I know, these are the wrong way round.
+                     *
+                     *   isLeft -> replaceRight
+                     *  !isLeft -> replaceLeft
+                     */
+                    if ( isLeft ) {
+                        node.replaceRight( current );
+                    } else {
+                        node.replaceLeft( current );
+                    }
+                }
+
+                /*
+                 * isLeft param here is to say we
+                 * favour the one on the left,
+                 * when it searches for an empty node.
+                 */
+                this.selectEmpty( node, isLeft );
+            },
+
+            insertLeft: function( node ) {
+                return this.insertLeftRight( node, true );
             },
 
             insertRight: function( node ) {
-                var current = this.getCurrent();
-
-                this.insert( node, false );
-                if ( !current.isEmpty() && node.replaceLeft !== undefined ) {
-                    node.replaceLeft( current );
-                }
-
-                this.selectEmpty( this.current );
+                return this.insertLeftRight( node, false );
             },
 
             /**
              * Inserts a node into the currently empty space.
              */
-            insert: function( node, selectEmpty ) {
-                this.current.replace( node, selectEmpty );
-
+            insert: function( node ) {
+                this.current.replace( node );
                 this.current.setView( this );
-
-                if ( selectEmpty === undefined || selectEmpty === true ) {
-                    this.selectEmpty( this.current );
-                }
+                this.selectEmpty( this.current );
             },
 
-            selectEmpty: function( node ) {
+            selectEmpty: function( node, findEmptyVal ) {
                 node = ( node || this.current );
-                this.setCurrent( node.findEmpty() || node );
+                this.setCurrent( node.findEmpty(findEmptyVal) || node );
             }
     }
 
