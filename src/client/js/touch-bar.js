@@ -61,7 +61,26 @@ window.slate.TouchBar = (function() {
         return function( input ) {
             inputs.push( input )
 
-            button.click();
+            var ev = document.createEvent('MouseEvents');
+            ev.initMouseEvent(
+                    'click',
+                    true,     // Click events bubble
+                    true,     // and they can be cancelled
+                    document.defaultView,  // Use the default view
+                    1,        // Just a single click
+                    0,        // Don't bother with co-ordinates
+                    0,
+                    0,
+                    0,
+                    false,    // Don't apply any key modifiers
+                    false,
+                    false,
+                    false,
+                    0,        // 0 - left, 1 - middle, 2 - right
+                    null      // Click events don't have any targets other than
+            )
+
+            button.dispatchEvent( ev );
         }
     })();
 
@@ -1496,7 +1515,8 @@ window.slate.TouchBar = (function() {
                 this.resizeInput();
 
                 this.onClick(function() {
-                    inputFocus( self.input );
+                    self.input.focus();
+                    //inputFocus( self.input );
                 });
             }).
             extend( ast.Node ).
