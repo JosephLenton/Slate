@@ -184,51 +184,35 @@ window.slate.TouchBar = (function() {
                 str !== 'false' ;
     }
 
-    var newASTText = function( args ) {
-        var klass = 'touch-ast-text';
-        for ( var i = 1; i < args.length; i++ ) {
-            klass += ' ' + args[i];
-        }
-
-        var textDiv = document.createElement( 'div' );
-        textDiv.className = klass;
-
-        return textDiv;
-    }
-
     var astHTML = function( html ) {
-        var div = newASTText( arguments );
-        div.innerHTML = html;
-        return div;
+        return xdom.html(
+                xdom.createArray( 'touch-ast-text', arguments, 1 ),
+                html
+        )
     }
 
     var astText = function( text ) {
-        var div = newASTText( arguments );
-        div.textContent = text;
-        return div;
+        return xdom.text(
+                'touch-ast-text',
+                xdom.createArray( 'touch-ast-text', arguments, 1 ),
+                html
+        )
     }
 
     var ast = {};
 
-    ast.Node = (function() {
-                this.dom = slate.util.newElement( 'div', 'touch-ast' );
+    ast.Node = XElement.curry( 'touch-ast', {
+                    click: function() {
+                        if ( ! this.isSelected() ) {
+                            this.getView().setCurrent( this );
 
-                this.up = null;
-
-                this.view = null;
-
-                this.onClick = new Events( this );
-                var self = this;
-
-                slate.util.click( this.dom, function(ev) {
-                    if ( self.isSelected() ) {
-                        self.onClick.run();
-                    } else {
-                        self.getView().setCurrent( self );
+                            return false;
+                        }
                     }
-
-                    ev.stopPropagation();
-                } );
+            }).
+            sub(function() {
+                this.up   = null;
+                this.view = null;
 
                 this.setupDeleteButton();
             }).
@@ -319,20 +303,16 @@ window.slate.TouchBar = (function() {
 
             extend({
                 onTransitionEnd: function( tEnd ) {
-                    slate.util.transitionEnd( this.getDom(), tEnd );
+                    xdom.once( this.getDom(), 'transitionend', tEnd );
                 },
 
                 setupDeleteButton: function() {
-                    var self = this;
-
-                    var deleteNode = slate.util.newElement( 'a', 'touch-ast-delete' );
-                    slate.util.click( deleteNode, function(ev) {
-                        ev.stopPropagation();
-
-                        self.replace( new ast.Empty() )
-                    } )
-
-                    this.dom.appendChild( deleteNode );
+                    this.dom.appendChild(
+                            xdom.a( 'touch-ast-delete', { click: function(ev) {
+                                    ev.stopPropagation();
+                                    self.replace( new ast.Empty() )
+                            }} )
+                    )
                 },
 
                 setError: function() {
@@ -647,7 +627,7 @@ window.slate.TouchBar = (function() {
  * when on the iPad.
  */
 /*
-                var emptyInput = slate.util.newElement( 'input' );
+                var emptyInput = xdom.input();
                 emptyInput.setAttribute( 'type', 'text' );
 
                 this.input = emptyInput;
@@ -1411,17 +1391,16 @@ window.slate.TouchBar = (function() {
     var textWidth = (function() {
         var isMeasureSet = false;
 
-        var div = document.createElement( 'div' );
-        div.className = 'touch-input-measure-div';
-
-        var inputTextWrap = document.createElement( 'div' );
-        inputTextWrap.className = 'touch-input-measure';
-        inputTextWrap.appendChild( div );
+        var div = xdom( 'touch-input-measure-div' );
 
         return function( text ) {
             if ( ! isMeasureSet ) {
                 isMeasureSet = true;
-                document.getElementsByTagName('body')[0].appendChild( inputTextWrap );
+
+                xdom.append( 'body', {
+                        className: 'touch-input-measure',
+                        html: div
+                } )
             }
 
             div.textContent = text;
@@ -1444,45 +1423,40 @@ window.slate.TouchBar = (function() {
     ast.Input =
             (function( type, cssKlass, defaultVal, emptyAllowed ) {
                 ast.Node.call( this );
+                var self = this;
 
-                var inputDom = document.createElement( 'input' );
-                inputDom.setAttribute( 'type', type );
+                this.
+                        addClass( 'touch-ast-input' ).
+                        addClass( cssKlass );
 
-                inputDom.setAttribute( 'autocapitalize', "off" );
-                inputDom.setAttribute( 'autocorrect'   , "off" );
-
-                if ( defaultVal !== undefined ) {
-                    inputDom.value = defaultVal;
-                }
-
-                var dom = this.getDom();
-                dom.classList.add( 'touch-ast-input' );
-                dom.classList.add( cssKlass );
-
-                this.input = inputDom;
                 this.emptyAllowed = emptyAllowed;
                 this.timeout = null;
-
-                this.add( this.input );
-
                 this.lastInput = '';
-
                 this.onInput = new Events( this );
 
-                var self = this;
-                this.input.addEventListener( 'keyup', function(ev) {
-                    // enter key
-                    if ( ev.which === 13 ) {
-                        self.input.blur();
-                        self.getView().execute();
-                    }
-                } );
-                this.input.addEventListener( 'input', function(ev) {
-                    self.resizeInput();
-                    self.onInput.run();
+                this.add( xdom.input( {
+                        type: type,
 
-                    self.getView().hideError();
-                } );
+                        autocapitalize: 'off',
+                        autocorrect   : 'off',
+
+                        value: defaultVal,
+
+                        keyup: function(ev) {
+                            // enter key
+                            if ( ev.which === 13 ) {
+                                self.input.blur();
+                                self.getView().execute();
+                            }
+                        },
+
+                        input: function(ev) {
+                            self.resizeInput();
+                            self.onInput.run();
+
+                            self.getView().hideError();
+                        }
+                }) )
 
                 this.resizeInput();
 
@@ -1495,6 +1469,7 @@ window.slate.TouchBar = (function() {
                     validate: function( onError ) {
                         if ( !this.emptyAllowed && this.input.value === '' ) {
                             onError( this, "this is missing a value" );
+                            
                             return false;
                         } else {
                             return true;
@@ -1772,9 +1747,7 @@ window.slate.TouchBar = (function() {
                 name = name || '';
                 
                 if ( display !== undefined ) {
-                    var div = document.createElement( 'div' );
-                    div.innerHTML = display;
-                    display = div.textContent;
+                    display = xdom.util.htmlToText( display );
                 } else {
                     display = name;
                 }
@@ -2190,16 +2163,14 @@ window.slate.TouchBar = (function() {
      * that can be hidden and shown.
      */
     var TouchRow = function( upperDom, isDouble ) {
-        this.dom    = slate.util.newElement( 'div', 'touch-bar-row-inner' );
-
-        this.scroll = slate.util.newElement( 'div', 'touch-bar-row-inner-scroll' );
-        this.dom.appendChild( this.scroll );
+        this.scroll = xdom( 'touch-bar-row-inner-scroll' )
+        this.dom    = xdom( 'touch-bar-row-inner', this.scroll )
 
         if ( isDouble ) {
             this.isDouble = true;
         }
 
-        upperDom.appendChild( this.dom );
+        upperDom.appendChild( this.dom )
     }
 
     TouchRow.prototype.getDom = function() {
@@ -2207,13 +2178,13 @@ window.slate.TouchBar = (function() {
     }
 
     TouchRow.prototype.show = function() {
-        this.dom.classList.add( 'show' );
+        this.dom.classList.add( 'show' )
 
         return this;
     }
 
     TouchRow.prototype.hide = function() {
-        this.dom.classList.remove( 'show' );
+        this.dom.classList.remove( 'show' )
 
         return this;
     }
@@ -2221,22 +2192,12 @@ window.slate.TouchBar = (function() {
     var newTouchRowButton = function( item, callback ) {
         assert( item !== undefined, "'item' is undefined" );
 
-        var dom = slate.util.newElement( 'a', 'touch-bar-button' )
-
-        if ( window.slate.util.isString(item) ) {
-            dom.innerHTML = item
-        } else {
-            dom.appendChild( item )
-        }
-
-        slate.util.click( dom, callback )
-
-        return dom;
+        return xdom.a( 'touch-bar-button', { html: item, click: callback } );
     }
 
     TouchRow.prototype.appendSeperator = function() {
         this.scroll.appendChild(
-                slate.util.newElement( 'div', 'touch-bar-button-seperator' )
+                xdom('touch-bar-button-seperator')
         )
         
         return this;
@@ -2246,7 +2207,7 @@ window.slate.TouchBar = (function() {
         var dom;
 
         if ( arguments.length > 2 ) {
-            dom = slate.util.newElement( 'div', 'touch-bar-button-column' );
+            dom = xdom( 'touch-bar-button-column' );
 
             for ( var i = 0; i < arguments.length; i++ ) {
                 var item = arguments[i],
@@ -2276,20 +2237,20 @@ window.slate.TouchBar = (function() {
      * The area that displays the AST.
      */
     var TouchView = function( touchBar ) {
-        var bar = slate.util.newElement( 'div', 'touch-bar-view-ast-bar' );
+        var bar = xdom( 'touch-bar-view-ast-bar' );
         this.bar = bar;
 
-        var viewArea = slate.util.newElement( 'div', 'touch-bar-view' )
+        var viewArea = xdom( 'touch-bar-view' )
         viewArea.appendChild( bar );
         this.dom = viewArea
 
-        this.errorDomContent = slate.util.newElement( 'div', 'touch-bar-view-error-content' );
+        this.errorDomContent = xdom( 'touch-bar-view-error-content' );
 
-        var errInnerDom = slate.util.newElement( 'div', 'touch-bar-view-error-inner' );
+        var errInnerDom = xdom( 'touch-bar-view-error-inner' );
         errInnerDom.appendChild( this.errorDomContent );
-        errInnerDom.appendChild( slate.util.newElement('div', 'touch-bar-view-error-tail' ) );
+        errInnerDom.appendChild( xdom( 'touch-bar-view-error-tail' ) );
 
-        this.errorDom = slate.util.newElement( 'div', 'touch-bar-view-error' );
+        this.errorDom = xdom( 'touch-bar-view-error' );
         this.errorDom.appendChild( errInnerDom );
 
         viewArea.appendChild( this.errorDom );
@@ -2501,15 +2462,13 @@ window.slate.TouchBar = (function() {
      * @param obj The object describing the many buttons to create.
      */
     var newButtons = function( cssKlass, obj ) {
-        var dom = document.createElement( 'div' );
-        dom.className = cssKlass;
+        var dom = xdom.div( cssKlass );
 
         for ( var k in obj ) {
             if ( obj.hasOwnProperty(k) ) {
-                var button = slate.util.newElement( 'a', k );
-
-                slate.util.click( button, obj[k] );
-                dom.appendChild( button );
+                dom.appendChild( xdom.a( k, {
+                        click: obj[k]
+                }) )
             }
         }
 
@@ -2517,8 +2476,6 @@ window.slate.TouchBar = (function() {
     }
 
     var newShiftButton = function( fun, key ) {
-        var dom  = slate.util.newElement( 'a', 'touch-shift-button' );
-
         var onDownFun = function() {
             dom.classList.toggle( 'highlight' )
             fun( dom.classList.contains('highlight') )
@@ -2543,38 +2500,33 @@ window.slate.TouchBar = (function() {
             }
         })
 
-        slate.util.press( dom,
-                function() {
-                    if ( ! isDown ) {
+        return xdom.a( 'touch-shift-button', {
+                press: function( ev, isPress ) {
+                    if ( isPress && !isDown ) {
                         isDown = true;
                         onDownFun();
-                    }
-                },
-                function() {
-                    if ( isDown ) {
+                    } else if ( !isPress && isDown ) {
                         isDown = false;
                         onDownFun();
                     }
                 }
-        );
-
-        return dom;
+        } )
     }
 
     var ShiftButtons = function() {
         var self = this;
 
-        var left = newShiftButton(function(isDown) {
-            self.hasLeft = isDown;
-        }, 81)
-        var right = newShiftButton(function(isDown) {
-            self.hasRight = isDown;
-        }, 87)
-
         this.hasLeft  = false;
         this.hasRight = false;
 
-        this.dom = slate.util.newElement( 'div', 'touch-shift', left, right );
+        var left = newShiftButton( function(isDown) {
+                    self.hasLeft = isDown;
+                }, 81)
+        var right = newShiftButton( function(isDown) {
+                    self.hasRight = isDown;
+                }, 87)
+
+        this.dom = xdom( 'touch-shift', left, right );
     }
 
     ShiftButtons.prototype = {
@@ -2599,25 +2551,23 @@ window.slate.TouchBar = (function() {
     var TouchBar = function( parentDom, execute, commands ) {
         this.executeFun = execute;
 
-        var upper  = slate.util.newElement( 'div', 'touch-bar-row upper' );
-        var lower  = slate.util.newElement( 'div', 'touch-bar-row lower' );
+        this.upper  = xdom( 'touch-bar-row upper' );
+        this.lower  = xdom( 'touch-bar-row lower' );
+
         this.buttons = new ShiftButtons();
 
-        var barDom = slate.util.newElement( 'div', 'touch-bar',
-                upper,
-                lower,
+        var barDom = xdom( 'touch-bar',
+                this.upper,
+                this.lower,
                 this.buttons.getDom()
         )
-
-        this.lower = lower;
-        this.upper = upper;
 
         this.bar   = barDom;
         this.row   = null;
         this.view  = null;
 
         parentDom.appendChild(
-                slate.util.newElement( 'div', 'touch-bar-wrap',
+                xdom( 'touch-bar-wrap',
                         barDom,
                         this.newControls()
                 )

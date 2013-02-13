@@ -140,19 +140,16 @@
                     refresh( clearAndAppend );
                 }
 
-                var button = document.createElement('a');
+                var button = xdom( 'a', 'slate-content-item-refresh-button', {
+                        text: DEFAULT_REFRESH_BUTTON_TEXT,
+                        click: function(ev) {
+                            refreshFun();
 
-                button.setAttribute( 'href', '#' );
-                button.className = 'slate-content-item-refresh-button';
-                button.innerText = DEFAULT_REFRESH_BUTTON_TEXT;
-                button.addEventListener( 'click', function(ev) {
-                    refreshFun();
+                            ev.stopPropagation();
+                            ev.preventDefault();
+                        } })
 
-                    ev.stopPropagation();
-                    ev.preventDefault();
-                })
-
-                var buttonOuter = slate.util.newElement( 'div', 'slate-content-item-refresh', button );
+                var buttonOuter = xdom( 'slate-content-item-refresh', button );
 
                 wrap.appendChild( buttonOuter );
 

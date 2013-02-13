@@ -50,21 +50,16 @@
         if ( ! outerDom ) throw new Error( 'undefined dom object given'     );
         if ( ! execute  ) throw new Error( 'undefined execute object given' );
 
-        var dom  = slate.util.newElement( 'textarea', {
-                'class' : 'slate-bar-input',
-                'wrap'  : 'off'
-        });
-        var buttonDom = slate.util.newElement( 'a', {
-                'class' : 'slate-bar-type'
-        });
+        var dom  = xdom.textarea( 'slate-bar-input', { wrap : 'off' } )
+        var buttonDom = xdom.a( 'slate-bar-type' )
 
         outerDom.appendChild(
-                slate.util.newElement( 'div', 'slate-bar', [
+                xdom( 'slate-bar',
                         buttonDom,
                         dom,
-                        slate.util.newElement( 'div', 'slate-bar-input-mark' )
-                ] )
-        );
+                        xdom( 'slate-bar-input-mark' )
+                )
+        )
         
         var langs = [],
             langI = 0;
