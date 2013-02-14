@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- *      xdom
+ *      ss.js (sweet-spot)
  *
  * @author Joseph Lenton
  * 
@@ -14,7 +14,7 @@
  * is returned, or alter a given dom element.
  */
 
-window['xdom'] = (function() {
+window['ss'] = (function() {
     /**
      * When the type of an element is not declared,
      * it will be of this type by default.
@@ -238,27 +238,27 @@ window['xdom'] = (function() {
             'DOMSubtreeModified'
     )
 
-    var newXDom = function( args ) {
+    var newSweetSpot = function( args ) {
         /**
          * Runs 'createArray' with the values given,
          * and then returns the result.
          * 
          * This is shorthand for creating new DOM elements.
          */
-        var xdom = function() {
+        var ss = function() {
             if (
                     this !== undefined && 
                     this !== null && 
                     this.__hasConstructed !== true &&
-                    this instanceof xdom
+                    this instanceof ss
             ) {
-                return newXDom( arguments );
+                return newSweetSpot( arguments );
             } else {
-                return xdom.createArray( arguments[0], arguments, 1 );
+                return ss.createArray( arguments[0], arguments, 1 );
             }
         }
 
-        xdom.__hasConstructor = true;
+        ss.__hasConstructor = true;
 
         /**
          * Generates a register method.
@@ -311,11 +311,11 @@ window['xdom'] = (function() {
         }
 
         /**
-         * Deals with the global setup of xdom.
+         * Deals with the global setup of ss.
          *
          * For example adding more default elements.
          */
-        xdom.setup = {
+        ss.setup = {
                 data: {
                         classPrefix: '',
 
@@ -393,7 +393,7 @@ window['xdom'] = (function() {
                 }
         }
 
-        xdom.setup.
+        ss.setup.
                 element( 'a', function() {
                     var anchor = document.createElement('a');
                     anchor.setAttribute( 'href', '#' );
@@ -432,7 +432,7 @@ window['xdom'] = (function() {
                         }
                 );
 
-        xdom.util = (function() {
+        ss.util = (function() {
                 var element = document.createElement( 'div' );
 
                 return {
@@ -449,7 +449,7 @@ window['xdom'] = (function() {
         })();
 
         /**
-         * Helper Methods, before, xdom it's self!
+         * Helper Methods, before, ss it's self!
          */
 
         var setOnObject = function( events, dom, obj, useCapture ) {
@@ -508,7 +508,7 @@ window['xdom'] = (function() {
          *      on( dom, { click: fun, mousedown: fun } , true       )
          *      on( dom, { click: fun, mousedown: fun }              )
          */
-        xdom.on = function( dom, name, fun, useCapture ) {
+        ss.on = function( dom, name, fun, useCapture ) {
             var argsLen = arguments.length;
 
             if ( argsLen === 4 ) {
@@ -530,36 +530,42 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.once = function( dom, name, fun, useCapture ) {
-            // todo
+        ss.once = function( dom, name, fun, useCapture ) {
+            var self = this;
+
+            var funWrap = function() {
+                self.unregister( dom, name, funWrap );
+                return fun.apply( this, arguments );
+            }
+
+            return this.on( don, name, funWrap, useCapture );
         }
 
-
         /**
-         *      xdom.create( html-element,
+         *      ss.create( html-element,
          *              info1,
          *              info2,
          *              info3,
          *              info4 ...
          *      )
          */
-        xdom.create = function() {
+        ss.create = function() {
             return this.createArray( arguments[0], arguments, 1 );
         }
 
-        xdom.createArray = function( obj, args, i ) {
+        ss.createArray = function( obj, args, i ) {
             if ( i === undefined ) {
                 i = 0
             }
 
-            return xdom.applyArray(
-                    xdom.createOne( obj ),
+            return ss.applyArray(
+                    ss.createOne( obj ),
                     args,
                     i
             )
         }
 
-        xdom.apply = function( dom ) {
+        ss.apply = function( dom ) {
             return applyArray( this,
                     this.get( dom ),
                     arguments,
@@ -567,7 +573,7 @@ window['xdom'] = (function() {
             )
         }
 
-        xdom.applyArray = function( dom, args, startI ) {
+        ss.applyArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0
             }
@@ -579,7 +585,7 @@ window['xdom'] = (function() {
             )
         }
 
-        var applyArray = function( xdom, dom, args, startI ) {
+        var applyArray = function( ss, dom, args, startI ) {
             var argsLen = args.length;
 
             for ( var i = startI; i < argsLen; i++ ) {
@@ -589,8 +595,8 @@ window['xdom'] = (function() {
                     applyArray( this, dom, arg, 0 );
                 } else if ( arg instanceof HTMLElement ) {
                     dom.appendChild( arg );
-                } else if ( arg && arg.getDom !== undefined ) {
-                    dom.appendChild( arg.getDom() );
+                } else if ( arg instanceof SweetSpot ) {
+                    dom.appendChild( arg.dom() );
                 /*
                  * - html
                  * - class names
@@ -599,10 +605,10 @@ window['xdom'] = (function() {
                     if ( arg.trim().charAt(0) === '<' ) {
                         dom.insertAdjacentHTML( 'beforeend', arg );
                     } else {
-                        xdom.addClassOne( dom, arg );
+                        ss.addClassOne( dom, arg );
                     }
                 } else if ( typeof arg === 'object' ) {
-                    xdom.attr( dom, arg );
+                    ss.attr( dom, arg );
                 } else {
                     error( arg, "unknown argument given" );
                 }
@@ -622,7 +628,7 @@ window['xdom'] = (function() {
          * @param obj A JavaScript object literal describing an object to create.
          * @return A HTMLElement based on the object given.
          */
-        xdom.createOne = function( obj ) {
+        ss.createOne = function( obj ) {
             /*
              * A String ...
              *  <html element="description"></html>
@@ -631,19 +637,19 @@ window['xdom'] = (function() {
              *  '' (defaults to a div)
              */
             if ( (typeof obj === 'string') || (obj instanceof String) ) {
-                return xdom.createString( obj );
+                return ss.createString( obj );
                 
             /*
              * An array of classes.
              */
             } else if ( obj instanceof Array ) {
-                return xdom.createString( '.' + obj.join(' ') );
+                return ss.createString( '.' + obj.join(' ') );
             } else {
-                return xdom.createObj( obj );
+                return ss.createObj( obj );
             }
         }
 
-        xdom.createObj = function( obj ) {
+        ss.createObj = function( obj ) {
             assertObj( obj );
 
             return this.attr(
@@ -654,7 +660,7 @@ window['xdom'] = (function() {
             )
         }
 
-        xdom.createString = function( obj ) {
+        ss.createString = function( obj ) {
             obj = obj.trim();
 
             /*
@@ -685,7 +691,7 @@ window['xdom'] = (function() {
          * @param name The name of the component to create.
          * @return A HTMLElement for the name given.
          */
-        xdom.createElement = function( name ) {
+        ss.createElement = function( name ) {
             if ( arguments.length === 0 ) {
                 name = DEFAULT_ELEMENT;
             } else {
@@ -707,11 +713,11 @@ window['xdom'] = (function() {
             }
         }
 
-        xdom.hasClass = function( dom, klass ) {
+        ss.hasClass = function( dom, klass ) {
             return dom.classList.contains( klass );
         } 
 
-        xdom.removeClass = function( dom, klass ) {
+        ss.removeClass = function( dom, klass ) {
             if ( dom.classList.contains(klass) ) {
                 dom.classList.remove( klass );
 
@@ -727,11 +733,11 @@ window['xdom'] = (function() {
          * @param onAddition Optional, a function called if the class gets added.
          * @param onRemoval Optional, a function called if the class gets removed.
          */
-        xdom.toggle = function() {
-            return xdom.toggleArray( arguments );
+        ss.toggle = function() {
+            return this.toggleArray( arguments );
         },
 
-        xdom.toggleArray = function( args ) {
+        ss.toggleArray = function( args ) {
             var argsLen   = args.length;
 
             var dom        = this.get( args[0] ),
@@ -758,7 +764,7 @@ window['xdom'] = (function() {
             return dom;
         },
 
-        xdom.addClass = function( dom ) {
+        ss.addClass = function( dom ) {
             if ( arguments.length === 2 ) {
                 return this.addClassOne( dom, arguments[1] );
             } else {
@@ -766,7 +772,7 @@ window['xdom'] = (function() {
             }
         }
 
-        xdom.addClassArray = function( dom, args, i ) {
+        ss.addClassArray = function( dom, args, i ) {
             assertArray( args );
 
             var classes = parseClassArray( args, i );
@@ -787,7 +793,7 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.addClassOne = function( dom, klass ) {
+        ss.addClassOne = function( dom, klass ) {
             if ( klass.indexOf(' ') === -1 ) {
                 dom.classList.add( klass );
             } else {
@@ -805,7 +811,7 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.setClass = function( dom ) {
+        ss.setClass = function( dom ) {
             if ( arguments.length === 2 ) {
                 dom.className = arguments[1];
                 return dom;
@@ -814,7 +820,7 @@ window['xdom'] = (function() {
             }
         }
 
-        xdom.setClassArray = function( dom, args, i ) {
+        ss.setClassArray = function( dom, args, i ) {
             assertArray( args );
 
             dom.className = parseClassArray(args, i);
@@ -822,7 +828,7 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.style = function( dom, k, val ) {
+        ss.style = function( dom, k, val ) {
             if ( arguments.length === 2 ) {
                 if ( (typeof k === 'string') || (k instanceof String) ) {
                     return dom.style[k];
@@ -852,32 +858,32 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.get = function( dom ) {
+        ss.get = function( dom ) {
             if ( (typeof dom === "string") || (dom instanceof String) ) {
                 return document.querySelector( dom ) || null;
             } else if ( dom instanceof HTMLElement ) {
                 return dom;
             } else if ( typeof dom === 'object' ) {
-                return xdom.createObj(dom);
+                return this.createObj( dom );
             } else {
                 logError( "unknown object given", dom );
             }
         }
 
-        var appendOne = function( dom, arg ) {
+        var appendOne = function( ss, dom, arg ) {
             if ( dom !== null ) {
                 if ( arg instanceof Array ) {
                     for ( var i = 0; i < arg.length; i++ ) {
-                        appendOne( dom, arg[i] );
+                        appendOne( ss, dom, arg[i] );
                     }
                 } else if ( arg instanceof HTMLElement ) {
                     dom.appendChild( arg );
-                } else if ( arg && arg.getDom !== undefined ) {
-                    dom.appendChild( arg.getDom() );
+                } else if ( arg instanceof SweetSpot ) {
+                    dom.appendChild( arg.dom() );
                 } else if ( (typeof arg === 'string') || (arg instanceof String) ) {
                     dom.insertAdjacentHTML( 'beforeend', arg );
                 } else if ( typeof arg === 'object' ) {
-                    dom.appendChild( xdom.createObj(arg) );
+                    dom.appendChild( ss.createObj(arg) );
                 } else {
                     logError( "unknown argument given", arg );
                 }
@@ -889,51 +895,49 @@ window['xdom'] = (function() {
         var appendArray = function( dom, args, startI ) {
             if ( dom !== null ) {
                 for ( var i = startI; i < args.length; i++ ) {
-                    appendOne( dom, args[i] );
+                    appendOne( ss, dom, args[i] );
                 }
             }
 
             return dom;
         }
 
-        xdom.append = function( dom ) {
+        ss.append = function( dom ) {
             if ( arguments.length === 2 ) {
-                return appendOne( xdom.get(dom), arguments[1] );
+                return appendOne( ss, ss.get(dom), arguments[1] );
             } else {
                 return this.appendArray( dom, arguments, 1 );
             }
         }
 
-        xdom.appendArray = function( dom, args, startI ) {
+        ss.appendArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0;
             }
 
-            return appendArray( xdom.get(dom), args, startI );
+            return appendArray( this.get(dom), args, startI );
         }
 
         /**
          * Sets the HTML content within this element.
          */
-        xdom.html = function( dom ) {
+        ss.html = function( dom ) {
             return this.htmlArray( dom, arguments, 1 );
         }
 
-        xdom.htmlOne = function( dom, el ) {
+        ss.htmlOne = function( dom, el ) {
             assert( el, "given element is not valid" );
 
             if ( (typeof el === 'string') || (el instanceof String) ) {
                 dom.innerHTML = el;
             } else if ( el instanceof HTMLElement ) {
                 dom.appendChild( el );
-            } else if ( el.getDom !== undefined ) {
-                dom.appendChild( el.getDom() );
+            } else if ( el instanceof SweetSpot ) {
+                dom.appendChild( el.dom() )
             } else if ( el instanceof Array ) {
-                this.htmlArray( dom, el, 0 );
+                this.htmlArray( dom, el, 0 )
             } else if ( isObject(el) ) {
-                dom.appendChild(
-                        this.describe(el)
-                );
+                dom.appendChild( this.describe(el) )
             } else {
                 logError( "Unknown html value given", el );
             }
@@ -941,7 +945,7 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.htmlArray = function( dom, htmls, i ) {
+        ss.htmlArray = function( dom, htmls, i ) {
             assertArray( htmls, "non-array object was given" );
 
             if ( i === undefined ) {
@@ -969,8 +973,8 @@ window['xdom'] = (function() {
 
                     if ( el instanceof HTMLElement ) {
                         dom.appendChild( el );
-                    } else if ( el instanceof XElement ) {
-                        dom.appendChild( el.getDom() );
+                    } else if ( el instanceof SweetSpot ) {
+                        dom.appendChild( el.dom() );
                     } else if ( isObject(el) ) {
                         dom.appendChild(
                                 this.describe(el)
@@ -990,11 +994,11 @@ window['xdom'] = (function() {
          * Sets the text content within this dom,
          * to the text values given.
          */
-        xdom.text = function( dom ) {
+        ss.text = function( dom ) {
             return this.textArray( dom, arguments, 1 );
         }
 
-        xdom.textOne = function( dom, text ) {
+        ss.textOne = function( dom, text ) {
             if ( text instanceof Array ) {
                 this.textArray( dom, text, 0 );
             } else if ( typeof text === 'string' || (text instanceof String) ) {
@@ -1006,7 +1010,7 @@ window['xdom'] = (function() {
             return dom;
         }
 
-        xdom.textArray = function( dom, args, startI ) {
+        ss.textArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0;
             }
@@ -1028,7 +1032,7 @@ window['xdom'] = (function() {
          *  - html
          *  - text
          */
-        xdom.attr = function( dom, obj, val ) {
+        ss.attr = function( dom, obj, val ) {
             if ( arguments.length === 1 ) {
                 if ( (typeof obj === 'string') || (obj instanceof String) ) {
                     if ( obj === 'className' || obj === 'class' ) {
@@ -1104,16 +1108,16 @@ window['xdom'] = (function() {
 
         for ( var k in HTML_ELEMENTS ) {
             if ( HTML_ELEMENTS.hasOwnProperty(k) ) {
-                if ( xdom.hasOwnProperty(k) ) {
-                    console.log( 'xdom function clash: ' + k );
+                if ( ss.hasOwnProperty(k) ) {
+                    console.log( 'sweet-spot function clash: ' + k );
                 } else {
-                    xdom[k] = new Function( "return this.createArray('" + k + "', arguments, 0);" );
+                    ss[k] = new Function( "return this.createArray('" + k + "', arguments, 0);" );
                 }
             }
         }
 
-        return xdom;
+        return ss;
     }
 
-    return newXDom();
+    return newSweetSpot();
 })();

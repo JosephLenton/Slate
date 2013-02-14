@@ -140,7 +140,7 @@
                     refresh( clearAndAppend );
                 }
 
-                var button = xdom( 'a', 'slate-content-item-refresh-button', {
+                var button = ss( 'a', 'slate-content-item-refresh-button', {
                         text: DEFAULT_REFRESH_BUTTON_TEXT,
                         click: function(ev) {
                             refreshFun();
@@ -149,7 +149,7 @@
                             ev.preventDefault();
                         } })
 
-                var buttonOuter = xdom( 'slate-content-item-refresh', button );
+                var buttonOuter = ss( 'slate-content-item-refresh', button );
 
                 wrap.appendChild( buttonOuter );
 

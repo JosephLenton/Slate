@@ -185,23 +185,23 @@ window.slate.TouchBar = (function() {
     }
 
     var astHTML = function( html ) {
-        return xdom.html(
-                xdom.createArray( 'touch-ast-text', arguments, 1 ),
+        return ss.html(
+                ss.createArray( 'touch-ast-text', arguments, 1 ),
                 html
         )
     }
 
     var astText = function( text ) {
-        return xdom.text(
+        return ss.text(
                 'touch-ast-text',
-                xdom.createArray( 'touch-ast-text', arguments, 1 ),
+                ss.createArray( 'touch-ast-text', arguments, 1 ),
                 html
         )
     }
 
     var ast = {};
 
-    ast.Node = XElement.curry( 'touch-ast', {
+    ast.Node = SweetSpot.curry( 'touch-ast', {
                     click: function() {
                         if ( ! this.isSelected() ) {
                             this.getView().setCurrent( this );
@@ -303,12 +303,12 @@ window.slate.TouchBar = (function() {
 
             extend({
                 onTransitionEnd: function( tEnd ) {
-                    xdom.once( this.getDom(), 'transitionend', tEnd );
+                    ss.once( this.getDom(), 'transitionend', tEnd );
                 },
 
                 setupDeleteButton: function() {
                     this.dom.appendChild(
-                            xdom.a( 'touch-ast-delete', { click: function(ev) {
+                            ss.a( 'touch-ast-delete', { click: function(ev) {
                                     ev.stopPropagation();
                                     self.replace( new ast.Empty() )
                             }} )
@@ -627,7 +627,7 @@ window.slate.TouchBar = (function() {
  * when on the iPad.
  */
 /*
-                var emptyInput = xdom.input();
+                var emptyInput = ss.input();
                 emptyInput.setAttribute( 'type', 'text' );
 
                 this.input = emptyInput;
@@ -1391,13 +1391,13 @@ window.slate.TouchBar = (function() {
     var textWidth = (function() {
         var isMeasureSet = false;
 
-        var div = xdom( 'touch-input-measure-div' );
+        var div = ss( 'touch-input-measure-div' );
 
         return function( text ) {
             if ( ! isMeasureSet ) {
                 isMeasureSet = true;
 
-                xdom.append( 'body', {
+                ss.append( 'body', {
                         className: 'touch-input-measure',
                         html: div
                 } )
@@ -1434,7 +1434,7 @@ window.slate.TouchBar = (function() {
                 this.lastInput = '';
                 this.onInput = new Events( this );
 
-                this.add( xdom.input( {
+                this.add( ss.input( {
                         type: type,
 
                         autocapitalize: 'off',
@@ -1747,7 +1747,7 @@ window.slate.TouchBar = (function() {
                 name = name || '';
                 
                 if ( display !== undefined ) {
-                    display = xdom.util.htmlToText( display );
+                    display = ss.util.htmlToText( display );
                 } else {
                     display = name;
                 }
@@ -2163,8 +2163,8 @@ window.slate.TouchBar = (function() {
      * that can be hidden and shown.
      */
     var TouchRow = function( upperDom, isDouble ) {
-        this.scroll = xdom( 'touch-bar-row-inner-scroll' )
-        this.dom    = xdom( 'touch-bar-row-inner', this.scroll )
+        this.scroll = ss( 'touch-bar-row-inner-scroll' )
+        this.dom    = ss( 'touch-bar-row-inner', this.scroll )
 
         if ( isDouble ) {
             this.isDouble = true;
@@ -2192,12 +2192,12 @@ window.slate.TouchBar = (function() {
     var newTouchRowButton = function( item, callback ) {
         assert( item !== undefined, "'item' is undefined" );
 
-        return xdom.a( 'touch-bar-button', { html: item, click: callback } );
+        return ss.a( 'touch-bar-button', { html: item, click: callback } );
     }
 
     TouchRow.prototype.appendSeperator = function() {
         this.scroll.appendChild(
-                xdom('touch-bar-button-seperator')
+                ss('touch-bar-button-seperator')
         )
         
         return this;
@@ -2207,7 +2207,7 @@ window.slate.TouchBar = (function() {
         var dom;
 
         if ( arguments.length > 2 ) {
-            dom = xdom( 'touch-bar-button-column' );
+            dom = ss( 'touch-bar-button-column' );
 
             for ( var i = 0; i < arguments.length; i++ ) {
                 var item = arguments[i],
@@ -2237,20 +2237,20 @@ window.slate.TouchBar = (function() {
      * The area that displays the AST.
      */
     var TouchView = function( touchBar ) {
-        var bar = xdom( 'touch-bar-view-ast-bar' );
+        var bar = ss( 'touch-bar-view-ast-bar' );
         this.bar = bar;
 
-        var viewArea = xdom( 'touch-bar-view' )
+        var viewArea = ss( 'touch-bar-view' )
         viewArea.appendChild( bar );
         this.dom = viewArea
 
-        this.errorDomContent = xdom( 'touch-bar-view-error-content' );
+        this.errorDomContent = ss( 'touch-bar-view-error-content' );
 
-        var errInnerDom = xdom( 'touch-bar-view-error-inner' );
+        var errInnerDom = ss( 'touch-bar-view-error-inner' );
         errInnerDom.appendChild( this.errorDomContent );
-        errInnerDom.appendChild( xdom( 'touch-bar-view-error-tail' ) );
+        errInnerDom.appendChild( ss( 'touch-bar-view-error-tail' ) );
 
-        this.errorDom = xdom( 'touch-bar-view-error' );
+        this.errorDom = ss( 'touch-bar-view-error' );
         this.errorDom.appendChild( errInnerDom );
 
         viewArea.appendChild( this.errorDom );
@@ -2462,11 +2462,11 @@ window.slate.TouchBar = (function() {
      * @param obj The object describing the many buttons to create.
      */
     var newButtons = function( cssKlass, obj ) {
-        var dom = xdom.div( cssKlass );
+        var dom = ss.div( cssKlass );
 
         for ( var k in obj ) {
             if ( obj.hasOwnProperty(k) ) {
-                dom.appendChild( xdom.a( k, {
+                dom.appendChild( ss.a( k, {
                         click: obj[k]
                 }) )
             }
@@ -2500,7 +2500,7 @@ window.slate.TouchBar = (function() {
             }
         })
 
-        return xdom.a( 'touch-shift-button', {
+        return ss.a( 'touch-shift-button', {
                 press: function( ev, isPress ) {
                     if ( isPress && !isDown ) {
                         isDown = true;
@@ -2526,7 +2526,7 @@ window.slate.TouchBar = (function() {
                     self.hasRight = isDown;
                 }, 87)
 
-        this.dom = xdom( 'touch-shift', left, right );
+        this.dom = ss( 'touch-shift', left, right );
     }
 
     ShiftButtons.prototype = {
@@ -2551,12 +2551,12 @@ window.slate.TouchBar = (function() {
     var TouchBar = function( parentDom, execute, commands ) {
         this.executeFun = execute;
 
-        this.upper  = xdom( 'touch-bar-row upper' );
-        this.lower  = xdom( 'touch-bar-row lower' );
+        this.upper  = ss( 'touch-bar-row upper' );
+        this.lower  = ss( 'touch-bar-row lower' );
 
         this.buttons = new ShiftButtons();
 
-        var barDom = xdom( 'touch-bar',
+        var barDom = ss( 'touch-bar',
                 this.upper,
                 this.lower,
                 this.buttons.getDom()
@@ -2567,7 +2567,7 @@ window.slate.TouchBar = (function() {
         this.view  = null;
 
         parentDom.appendChild(
-                xdom( 'touch-bar-wrap',
+                ss( 'touch-bar-wrap',
                         barDom,
                         this.newControls()
                 )

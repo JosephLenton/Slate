@@ -50,14 +50,14 @@
         if ( ! outerDom ) throw new Error( 'undefined dom object given'     );
         if ( ! execute  ) throw new Error( 'undefined execute object given' );
 
-        var dom  = xdom.textarea( 'slate-bar-input', { wrap : 'off' } )
-        var buttonDom = xdom.a( 'slate-bar-type' )
+        var dom  = ss.textarea( 'slate-bar-input', { wrap : 'off' } )
+        var buttonDom = ss.a( 'slate-bar-type' )
 
         outerDom.appendChild(
-                xdom( 'slate-bar',
+                ss( 'slate-bar',
                         buttonDom,
                         dom,
-                        xdom( 'slate-bar-input-mark' )
+                        ss( 'slate-bar-input-mark' )
                 )
         )
         
