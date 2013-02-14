@@ -168,6 +168,44 @@
     }
 
     /**
+     * This is very similar to 'bind'.
+     *
+     * It creates a new function, for which you can add on,
+     * extra parameters.
+     *
+     * Where it differes, is that if those parameters are functions,
+     * they will be executed in turn.
+     */
+    Function.lazy = function( target ) {
+        var args = arguments;
+        var self = this;
+
+        return (function() {
+                    /*
+                     * The use of -1 and +1,
+                     * with the 'args' array,
+                     * is to skip out the 'target' parameter.
+                     */
+                    var allArgs = new Array( (arguments.length + args.length)-1 )
+                    var argsLen = args.length-1;
+
+                    for ( var i = 0; i < argsLen; i++ ) {
+                        if ( slate.util.isFunction(args[i]) ) {
+                            allArgs[i] = args[i+1]();
+                        } else {
+                            allArgs[i] = args[i+1];
+                        }
+                    }
+
+                    for ( var i = 0; i < arguments.length; i++ ) {
+                        allArgs[ argsLen + i ] = arguments[i];
+                    }
+
+                    return self.apply( target, allArgs );
+                }).proto( this );
+    }
+
+    /**
      * The equivalent to calling 'new Fun()'.
      *
      * The reason this exists, is because by oferring it as a function,
