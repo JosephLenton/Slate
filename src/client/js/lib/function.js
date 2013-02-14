@@ -167,6 +167,49 @@
         return fun;
     }
 
+    /**
+     * The equivalent to calling 'new Fun()'.
+     *
+     * The reason this exists, is because by oferring it as a function,
+     * you can then bind and pass it around.
+     */
+    Function.create = function() {
+        var argsLen = arguments.length;
+
+        if ( argsLen === 0 ) {
+            return new this();
+        } else if ( argsLen === 1 ) {
+            return new this( arguments[0] );
+        } else if ( argsLen === 2 ) {
+            return new this( arguments[0], arguments[1] );
+        } else if ( argsLen === 3 ) {
+            return new this( arguments[0], arguments[1], arguments[2] );
+        } else if ( argsLen === 4 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3] );
+        } else if ( argsLen === 5 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4] );
+        } else if ( argsLen === 6 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5] );
+        } else if ( argsLen === 7 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6] );
+        } else if ( argsLen === 8 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7] );
+        } else if ( argsLen === 9 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8] );
+        } else if ( argsLen === 10 ) {
+            return new this( arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5], arguments[6], arguments[7], arguments[8], arguments[9] );
+        } else {
+            var obj  = Object.create( this.prototype );
+            var obj2 = this.apply( obj, arguments );
+
+            if ( Object(obj2) === obj2 ) {
+                return obj2;
+            } else {
+                return obj;
+            }
+        }
+    }
+
     Function.prototype.eventFields = function( field ) {
         for ( var i = 0; i < arguments.length; i++ ) {
             var field = arguments[i];
@@ -383,16 +426,59 @@
     /**
      * Copies this function, and returns a new one,
      * with the parameters given tacked on.
+     *
+     * Note you can also use 'bind' as an alterantive,
+     * to also change the target as well.
      */ 
-    Function.prototype.curry = function() {
-        return curryAndRice( this, arguments, true );
+    Function.prototype.partial = function() {
+        return prePostPartial( this, arguments, false );
     }
 
-    Function.prototype.rice = function() {
-        return curryAndRice( this, arguments, false );
+    /**
+     * postPartial is the same as 'partial',
+     * only the arguments are appended to the end,
+     * instead of at the front.
+     *
+     * With partial ...
+     *
+     *      var f2 = f.partial( 1, 2, 3 )
+     *
+     * Here f2 becomes:
+     *
+     *      function f2( 1, 2, 3, ... ) { }
+     *
+     * With 'prePartial', it is the other way around.
+     * For example:
+     *
+     *     var f2 = f.postPartial( 1, 2, 3 ) { }
+     *
+     * Here f2 becomes:
+     *
+     *     function f2( ..., 1, 2, 3 )
+     *
+     * Another example, given the code:
+     *
+     *      var f = function( a1, a2, a3, a4 ) {
+     *          // do nothing
+     *      }
+     *
+     *      var fRice = f.rice( 1, 2 )
+     *      fRice( "a", "b" );
+     *      
+     * Variables inside f will be ...
+     *
+     *      a1 -> "a"
+     *      a2 -> "b"
+     *      a3 ->  1
+     *      a4 ->  2
+     */
+    Function.prototype.postPartial = function() {
+        return prePostPartial( this, arguments, false );
     }
 
-    var curryAndRice = function( self, args, prePend ) {
+    var prePostPartial = function( self, args, prePend ) {
+        var initArgs = arguments;
+
         return (function() {
                     /*
                      * Concat the old and new arguments together,
@@ -401,36 +487,43 @@
                      * The first check allows us to skip this process,
                      * if arguments were not supplied for the second call.
                      */
-                    var fullArgs;
+                    var combinedArgs;
                     if ( arguments.length === 0 ) {
-                        fullArgs = args;
+                        combinedArgs = initArgs;
                     } else {
-                        if ( prePend ) {
-                            var argsLen = args.length;
-                            fullArgs = new Array( argsLen + arguments.length );
+                        var argsLen     = arguments.length;
+                        var initArgsLen =  initArgs.length;
 
-                            for ( var i = 0; i < argsLen; i++ ) {
-                                fullArgs[i] = args[i];
+                        if ( prePend ) {
+                            /*
+                             * combinedArgs = initArgs + arguments
+                             */
+                            combinedArgs = new Array( initArgsLen + argsLen );
+
+                            for ( var i = 0; i < initArgsLen; i++ ) {
+                                combinedArgs[i] = initArgs[i];
                             }
 
-                            for ( var i = 0; i < arguments.length; i++ ) {
-                                fullArgs[i + argsLen] = arguments[i];
+                            for ( var i = 0; i < argsLen; i++ ) {
+                                combinedArgs[i + initArgsLen] = arguments[i];
                             }
                         } else {
-                            var argsLen = arguments.length;
-                            fullArgs = new Array( args.length + argsLen );
+                            /*
+                             * combinedArgs = arguments + initArgs
+                             */
+                            combinedArgs = new Array( initArgsLen + argsLen );
 
                             for ( var i = 0; i < argsLen; i++ ) {
-                                fullArgs[i] = arguments[i];
+                                combinedArgs[i] = arguments[i];
                             }
 
-                            for ( var i = 0; i < arguments.length; i++ ) {
-                                fullArgs[i + argsLen] = args[i];
+                            for ( var i = 0; i < initArgsLen; i++ ) {
+                                combinedArgs[i + argsLen] = initArgs[i];
                             }
                         }
                     }
 
-                    return self.apply( this, fullArgs );
+                    return self.apply( this, combinedArgs );
                 }).
                 proto( self );
     }
