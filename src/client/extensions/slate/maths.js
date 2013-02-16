@@ -10,7 +10,7 @@
             'sqrt',
             function( val, onDisplay ) {
                 var n;
-                if ( slate.util.isArray(n) ) {
+                if ( isArray(n) ) {
                     n = val[0];
                 } else {
                     n = val;
@@ -20,7 +20,7 @@
                     throw new Error("no value given for square root");
                 }
 
-                if ( slate.util.isArray(n) ) {
+                if ( isArray(n) ) {
                     var rs = new Array( n.length );
 
                     for ( var i = 0; i < rs.length; i++ ) {
@@ -58,7 +58,7 @@
                     power = 2;
                 }
 
-                if ( slate.util.isArray(n) ) {
+                if ( isArray(n) ) {
                     var rs = new Array( n.length );
 
                     for ( var i = 0; i < rs.length; i++ ) {

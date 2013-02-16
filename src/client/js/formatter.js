@@ -8,7 +8,7 @@
             var handler = handlers[i];
             var type = handler.type;
 
-            if ( slate.util.isArray(type) ) {
+            if ( isArray(type) ) {
                 for ( var j = 0; j < type.length; j++ ) {
                     if ( r instanceof type[j] ) {
                         return handler;
@@ -144,7 +144,7 @@
                 return span( 'slate-number', r )
             } else if ( r instanceof Error ) {
                 return formatError( r, isDev );
-            } else if ( slate.util.isFunction(r) ) {
+            } else if ( isFunction(r) ) {
                 return formatFunction( r, isDev );
             } else if ( !ignoreHandler && typeof r === 'object' ) {
                 var handler = getHandler( handlers, r );
@@ -230,9 +230,9 @@
     }
 
     var generateCommandHtml = function( cmd, isError, reRun ) {
-        if ( slate.util.isFunction(cmd.getDom) ) {
+        if ( isFunction(cmd.getDom) ) {
             return cmd.getDom();
-        } else if ( slate.util.isString(cmd) ) {
+        } else if ( isString(cmd) ) {
             var input = document.createElement( 'div' );
 
             input.className = 'slate-cmd' +

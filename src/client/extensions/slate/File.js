@@ -7,7 +7,7 @@
     var toPath = function( obj ) {
         if ( ! obj ) {
             return '.';
-        } else if ( slate.util.isString(obj) ) {
+        } else if ( isString(obj) ) {
             return obj;
         } else {
             return obj.toString();
@@ -48,7 +48,7 @@
         }
 
         // list directories
-        if ( slate.util.isString(path) ) {
+        if ( isString(path) ) {
             console.log( state.fs.root );
             state.fs.list( path, onDisplay );
         } else if ( path ) {

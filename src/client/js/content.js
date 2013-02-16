@@ -6,7 +6,7 @@
 (function(window) {
     var newDisplay = function( dom, keyDown ) {
         assert( dom, "undefined dom object given" );
-        assertFun( keyDown, "'keyDown' must be a function" );
+        assertFunction( keyDown, "'keyDown' must be a function" );
 
         /* a unicode refresh symbol */
         var DEFAULT_REFRESH_BUTTON_TEXT = "\u2022";
@@ -84,7 +84,7 @@
              * @return A function which allows you to clear, and append, new data.
              */
             var append = function(html) {
-                if ( slate.util.isArray(html) ) {
+                if ( isArray(html) ) {
                     var count = 0;
 
                     for ( var i = 0; i < html.length; i++ ) {
@@ -93,7 +93,7 @@
 
                     return count;
                 } else {
-                    if ( slate.util.isString(html) ) {
+                    if ( isString(html) ) {
                         if ( html.trim() !== '' ) {
                             div.innerHTML = html;
 
@@ -140,7 +140,7 @@
                     refresh( clearAndAppend );
                 }
 
-                var button = ss( 'a', 'slate-content-item-refresh-button', {
+                var button = bb( 'a', 'slate-content-item-refresh-button', {
                         text: DEFAULT_REFRESH_BUTTON_TEXT,
                         click: function(ev) {
                             refreshFun();
@@ -149,7 +149,7 @@
                             ev.preventDefault();
                         } })
 
-                var buttonOuter = ss( 'slate-content-item-refresh', button );
+                var buttonOuter = bb( 'slate-content-item-refresh', button );
 
                 wrap.appendChild( buttonOuter );
 

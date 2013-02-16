@@ -31,7 +31,7 @@
 
             sleep: function( timeout, display ) {
                 if ( timeout ) {
-                    if ( slate.util.isNumeric(timeout) ) {
+                    if ( isNumeric(timeout) ) {
                         timeout = parseInt( timeout );
                     } else {
                         throw new Error( "numeric timeout expected for sleep" );
@@ -75,7 +75,7 @@
 
             for ( var k in item ) {
                 var isProto = item.hasOwnProperty( k );
-                var isFun   = slate.util.isFunction( item[k] );
+                var isFun   = isFunction( item[k] );
 
                 var type =
                         isProto &&  isFun ? 'slate-prototype-function' :
@@ -108,7 +108,7 @@
 
         for ( var k in commands ) {
             if ( params !== undefined ) {
-                if ( slate.util.isString(params) ) {
+                if ( isString(params) ) {
                     if ( k.indexOf(params) !== 0 ) {
                         continue;
                     }
@@ -130,7 +130,7 @@
     } );
 
     slate.command( 'first', function(arr, display) {
-        if ( slate.util.isArray(arr) ) {
+        if ( isArray(arr) ) {
             if ( arr.length > 0 ) {
                 var first = arr[0];
 
@@ -144,7 +144,7 @@
     } );
 
     slate.command( 'last', function(arr, display) {
-        if ( slate.util.isArray(arr) ) {
+        if ( isArray(arr) ) {
             if ( arr.length > 0 ) {
                 var last = arr[arr.length-1];
 

@@ -161,8 +161,8 @@
     var buildCommand = function( js, cmd, scriptId, onDisplay ) {
         assert(
                 cmd === undefined ||
-                slate.util.isString(cmd) ||
-                slate.util.isFunction(cmd.getDom),
+                isString(cmd) ||
+                isFunction(cmd.getDom),
 
                 "invalid command given; must be undefined, a string, or have the method 'getDom' for conversion to HTML"
         )
@@ -594,7 +594,7 @@
 
         if ( lang ) {
             try {
-                assertFun( lang, "language callback for '" + type + "' is not a function" );
+                assertFunction( lang, "language callback for '" + type + "' is not a function" );
 
                 lang( cmd, function(js) {
                     if ( js instanceof Error ) {
@@ -617,7 +617,7 @@
     var executeInner = function( head, languages, type, cmd, post, onDisplay ) {
         if (
                 cmd &&
-                ! ( slate.util.isString(cmd) && cmd.trim() === '' )
+                ! ( isString(cmd) && cmd.trim() === '' )
         ) {
             compileCode( languages, type, cmd, function(ex, js) {
                 if ( ex ) {
@@ -709,8 +709,8 @@
 
             return function( type, cmd, post ) {
                 assertString( type, "non-string given for language; should be 'js' or 'coffee' or whatever" );
-                assert( slate.util.isString(cmd) || slate.util.isFunction(cmd.getDom), "non-string and non-dom-producing command given" );
-                assertFun( post, "non-function given for post execution" );
+                assert( isString(cmd) || isFunction(cmd.getDom), "non-string and non-dom-producing command given" );
+                assertFunction( post, "non-function given for post execution" );
                 assert( languages[type], "language not found: " + type );
 
                 executeInner( head, languages, type, cmd, post, function(cmd, r) {

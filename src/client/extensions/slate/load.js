@@ -160,7 +160,7 @@
             path = file.path;
         }
 
-        if ( slate.util.isString(path) ) {
+        if ( isString(path) ) {
             if ( path.search(/^http(s?):\/\//) !== -1 ) {
                 // don't know the mime type, so we do a head request, and guess
                 head( path, function( request ) {

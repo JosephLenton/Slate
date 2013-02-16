@@ -88,7 +88,7 @@ window.slate.TouchBar = (function() {
         } else {
             var fun = obj[ name ];
 
-            if ( ! slate.util.isFunction(fun) ) {
+            if ( ! isFunction(fun) ) {
                 throw new Error( desc + " is not a " + desc + ", " + name );
             } else {
                 return fun.apply( obj, params );
@@ -185,23 +185,23 @@ window.slate.TouchBar = (function() {
     }
 
     var astHTML = function( html ) {
-        return ss.html(
-                ss.createArray( 'touch-ast-text', arguments, 1 ),
+        return bb.html(
+                bb.createArray( 'touch-ast-text', arguments, 1 ),
                 html
         )
     }
 
     var astText = function( text ) {
-        return ss.text(
+        return bb.text(
                 'touch-ast-text',
-                ss.createArray( 'touch-ast-text', arguments, 1 ),
+                bb.createArray( 'touch-ast-text', arguments, 1 ),
                 html
         )
     }
 
     var ast = {};
 
-    ast.Node = SweetSpot.curry( 'touch-ast', {
+    ast.Node = BBGun.curry( 'touch-ast', {
                     click: function() {
                         if ( ! this.isSelected() ) {
                             this.getView().setCurrent( this );
@@ -215,6 +215,33 @@ window.slate.TouchBar = (function() {
                 this.view = null;
 
                 this.setupDeleteButton();
+
+                this.replace( function(newNode) {
+                    var view = this.getView();
+
+                    if ( view ) {
+                        if ( this.isSelected() ) {
+                            view.setCurrent( newNode );
+                        }
+
+                        view.hideError();
+                    }
+
+                    /*
+                     * If being replaced with an empty,
+                     * animate out.
+                     */
+                    if ( newNode.isEmpty() ) {
+                        newNode.add( this.addClass('pre-remove') )
+
+                        (function() {
+                            this.removeClass( 'pre-remove' ).
+                                 addClass( 'remove' );
+
+                            this.once( 'transitionend', this.remove.bind(this) )
+                        }).later( this );
+                    }
+                } )
             }).
 
             /*
@@ -236,8 +263,8 @@ window.slate.TouchBar = (function() {
                  * By default this just raises an error,
                  * and should be overridden to add validation behaviour.
                  *
-                 * The return value is used to quit validation, early,
                  * and to denote if it was successful or not.
+                 * The return value is used to quit validation, early,
                  *
                  * @param onError A callback for reporting errors.
                  * @return True if validation was successful and should continue, false if not.
@@ -257,6 +284,14 @@ window.slate.TouchBar = (function() {
              * to have them return different values.
              */
             extend({
+                parentAST: function( f ) {
+                    if ( arguments.length === 1 ) {
+                        return this.parent( '.touch-ast', f );
+                    } else {
+                        return this.parent( '.touch-ast' );
+                    }
+                },
+
                 allowsEmpties: function() {
                     return false;
                 },
@@ -302,14 +337,11 @@ window.slate.TouchBar = (function() {
             }).
 
             extend({
-                onTransitionEnd: function( tEnd ) {
-                    ss.once( this.getDom(), 'transitionend', tEnd );
-                },
-
                 setupDeleteButton: function() {
-                    this.dom.appendChild(
-                            ss.a( 'touch-ast-delete', { click: function(ev) {
-                                    ev.stopPropagation();
+                    var self = this;
+
+                    this.add(
+                            bb.a( 'touch-ast-delete', { click: function(ev) {
                                     self.replace( new ast.Empty() )
                             }} )
                     )
@@ -328,38 +360,6 @@ window.slate.TouchBar = (function() {
                     return this;
                 },
                 
-                addClass: function( klass ) {
-                    this.dom.classList.add( klass );
-
-                    return this;
-                },
-                
-                removeClass: function( klass ) {
-                    this.dom.classList.remove( klass );
-
-                    return this;
-                },
-
-                hasParent: function() {
-                    return ( this.up !== null );
-                },
-
-                getParent: function() {
-                    return this.up;
-                },
-
-                /**
-                 * Private. This should never be called from
-                 * outside of this class!
-                 */
-                setParent: function( newParent ) {
-                    assert( newParent, "falsy parent given" );
-
-                    this.up = newParent;
-
-                    return this;
-                },
-
                 /**
                  * Returns the view area, which this AST node is
                  * present within.
@@ -372,12 +372,11 @@ window.slate.TouchBar = (function() {
                  */
                 getView: function() {
                     if ( this.view === null ) {
-                        if ( this.hasParent() ) {
-                            this.view = this.getParent().getView();
-                            return this.view;
-                        } else {
-                            throw new Error("getView called when node is not within a view");
-                        }
+                        return this.parentAST( function(p) {
+                                    this.view = p.getView();
+                                    return this.view;
+                                }) ||
+                                logError("getView called when node is not within a view")
                     } else {
                         return this.view;
                     }
@@ -389,12 +388,10 @@ window.slate.TouchBar = (function() {
                     return this;
                 },
 
-                isSelected: function() {
-                    return this.dom.classList.contains( 'select' );
-                },
+                isSelected: BBGun.prototype.hasClass.curry( 'select' ),
 
                 onSelect: function() {
-                    this.dom.classList.add( 'select' );
+                    this.addClass( 'select' );
 
                     this.selectMore();
                 },
@@ -409,125 +406,19 @@ window.slate.TouchBar = (function() {
                 },
 
                 selectMore: function() {
-                    this.withParent( 'touch-ast', function(node) {
-                        node.getDom().classList.add( 'select-parent' );
+                    this.parentAST( function(p) {
+                        parent.addClass( 'select-parent' );
                     } );
                 },
 
                 onUnselect: function() {
-                    this.dom.classList.remove( 'select' );
-
-                    this.withParent( 'select-parent', function(node) {
-                        node.getDom().classList.remove( 'select-parent' );
+                    this.parentAST( function(p) {
+                        parent.removeClass( 'select-parent' );
                     } );
-                },
-
-                /**
-                 * Finds the first parent node with the class given set to it.
-                 * If found, 'fun' is then called with that parent node passed
-                 * in.
-                 *
-                 * Iteration then stops, unless 'fun' returns true.
-                 */
-                withParent: function( klass, fun ) {
-                    var p = this.getParent();
-
-                    for ( var p = this.getParent(); p !== null; p = p.getParent() ) {
-                        if ( p.getDom().classList.contains(klass) ) {
-                            if ( fun(p) !== true ) {
-                                return this;
-                            }
-                        }
-                    }
-
-                    return this;
-                },
-
-                getDom: function() {
-                    return this.dom;
-                },
-
-                setDom: function( dom ) {
-                    var old = this.dom;
-                    this.dom = dom;
-
-                    // swap the old and new nodes
-                    var upDom = old.parentNode;
-                    if ( upDom ) {
-                        upDom.replaceChild( dom, old );
-                    }
-
-                    return this;
                 },
 
                 replaceChild: function( old, newChild ) {
                     // do nothing
-                },
-
-                /**
-                 * Replaces this AST node with the one given.
-                 * This happens with both it's AST structure,
-                 * and within the DOM.
-                 */
-                /*
-                 * This is built in a way so that it can call it's self
-                 * recursively, by always checking before it makes a change.
-                 *
-                 * It also has a lock, to ignore recursive calls.
-                 */
-                replace: function( ast ) {
-                    if ( this.replaceLock ) {
-                        return this;
-                    } else {
-                        this.replaceLock = true;
-
-                        var parentNode = this.dom.parentNode;
-                        if ( parentNode !== null ) {
-                            this.dom.parentNode.replaceChild( ast.getDom(), this.dom );
-                        }
-
-                        var parentAst = this.getParent();
-                        if ( parentAst !== null ) {
-                            parentAst.replaceChild( this, ast );
-                            ast.setParent( parentAst );
-                        }
-
-                        var view = this.getView();
-                        if ( view ) {
-                            if ( this.isSelected() ) {
-                                view.setCurrent( ast );
-                            }
-
-                            view.hideError();
-                        }
-
-                        /*
-                         * If being replaced with an empty,
-                         * animate out.
-                         */
-                        if ( ast.isEmpty() ) {
-                            ast.add( this );
-                            this.addClass( 'pre-remove' );
-
-                            (function() {
-                                this.removeClass( 'pre-remove' );
-                                this.addClass( 'remove' );
-
-                                this.onTransitionEnd( (function() {
-                                    var dom = this.getDom();
-                                    var parentDom = dom.parentNode;
-
-                                    if ( parentDom ) {
-                                        parentDom.removeChild( dom );
-                                    }
-                                }).bind(this) )
-                            }).later( this );
-                        }
-                        
-                        this.replaceLock = false;
-
-                        return this;
-                    }
                 },
 
                 evaluateCallback: function( onSuccess ) {
@@ -574,47 +465,10 @@ window.slate.TouchBar = (function() {
                  * @param value. An optional value to pass on to this nodes 'getEmpty'.
                  */
                 findEmpty: function( value ) {
-                    var empty = this.getEmpty( value );
-
-                    if ( empty ) {
-                        return empty;
-                    } else if ( this.hasParent() ) {
-                        return this.getParent().findEmpty();
-                    }
-                },
-
-                insertBefore: function( newEl, current ) {
-                    if ( current.getDom !== undefined ) {
-                        current = current.getDom();
-                    }
-
-                    if ( newEl.setParent !== undefined ) {
-                        newEl.setParent( this );
-                    }
-
-                    if ( newEl.getDom !== undefined ) {
-                        newEl = newEl.getDom();
-                    }
-
-                    this.getDom().insertBefore( newEl, current );
-                },
-
-                add: function() {
-                    for ( var i = 0; i < arguments.length; i++ ) {
-                        var arg = arguments[i];
-
-                        if ( arg instanceof HTMLElement ) {
-                            this.dom.appendChild( arg );
-                        } else if ( arg.getDom !== undefined ) {
-                            this.dom.appendChild( arg.getDom() );
-
-                            if ( arg.setParent !== undefined ) {
-                                arg.setParent( this );
-                            }
-                        } else {
-                            throw new Error( "unknown argument given" );
-                        }
-                    }
+                    return this.getEmpty( value ) ||
+                           this.parentAST( function(p) {
+                               return p.findEmpty();
+                           } );
                 }
             })
 
@@ -627,7 +481,7 @@ window.slate.TouchBar = (function() {
  * when on the iPad.
  */
 /*
-                var emptyInput = ss.input();
+                var emptyInput = bb.input();
                 emptyInput.setAttribute( 'type', 'text' );
 
                 this.input = emptyInput;
@@ -669,13 +523,9 @@ window.slate.TouchBar = (function() {
                     },
 
                     validate: function( onError ) {
-                        if ( this.hasParent() && this.getParent().allowsEmpties() ) {
-                            return true;
-                        } else {
-                            onError( this, "node is empty" );
-
-                            return false;
-                        }
+                        return this.parentAST( function(p) {
+                                    return p.allowsEmpties()
+                                }) || onError( this, "node is empty" )
                     },
 
                     getEmpty: function() {
@@ -822,10 +672,10 @@ window.slate.TouchBar = (function() {
                 }
 
                 //this.text = new TransientMenu( menuItems, metaIndex );
-                //this.text.getDom().classList.add( 'touch-ast-text' );
+                //this.text.dom().classList.add( 'touch-ast-text' );
                 
-                this.preText = astText( '', 'touch-ast-op-text' );
-                this.text = astText( '', 'touch-ast-op-text' );
+                this.preText  = astText( '', 'touch-ast-op-text' );
+                this.text     = astText( '', 'touch-ast-op-text' );
                 this.postText = astText( '', 'touch-ast-op-text' );
                 this.add(
                         astText('(', 'touch-ast-left-paren'),
@@ -840,11 +690,18 @@ window.slate.TouchBar = (function() {
                 this.meta = null;
                 this.setMeta( meta );
 
-                this.onClick( function() {
+                this.click( function() {
                     if ( this.meta.altMeta ) {
                         this.setMeta( this.meta.altMeta );
                     }
                 });
+
+                this.replace( function( other ) {
+                    if ( other instanceof ast.DoubleOp ) {
+                        other.replaceLeft( this.left );
+                        other.replaceRight( this.right );
+                    }
+                } )
             }).
             extend( ast.Node ).
             override({
@@ -865,7 +722,7 @@ window.slate.TouchBar = (function() {
 
                 isAssignable: function() {
                     if ( this.meta.isAssignable !== undefined ) {
-                        if ( slate.util.isFunction(this.meta.isAssignable) ) {
+                        if ( isFunction(this.meta.isAssignable) ) {
                             return this.meta.isAssignable( this.left, this.right );
                         } else {
                             return this.meta.isAssignable;
@@ -877,7 +734,7 @@ window.slate.TouchBar = (function() {
 
                 isCommandable: function() {
                     if ( this.meta.isCommandable !== undefined ) {
-                        if ( slate.util.isFunction(this.meta.isCommandable) ) {
+                        if ( isFunction(this.meta.isCommandable) ) {
                             return this.meta.isCommandable( this.left, this.right );
                         } else {
                             return this.meta.isCommandable;
@@ -911,42 +768,20 @@ window.slate.TouchBar = (function() {
                     // do nothing
                 },
 
-                /**
-                 * Replaces this double operator, i.e. a plus,
-                 * with the node given.
-                 *
-                 * However if the node given is also a double operator,
-                 * i.e. replacing a plus with a subtract,
-                 * then the left and right values are kept.
-                 *
-                 * @param other The other node to swap with.
-                 * @param swapMeta Optional, and defaults to true. When true, this will only swap the 'descriptors', when given an ast.DoubleOp.
-                 */
-                replace: function( other, swapMeta ) {
-                    if ( ! this.replaceLock ) {
-                        if (
-                                swapMeta !== false &&
-                                other instanceof ast.DoubleOp
-                        ) {
-                            this.setMeta( other.getMeta() );
-                        } else {
-                            ast.Node.prototype.replace.call( this, other );
-                        }
-                    }
-                },
-
                 replaceChild: function( old, newChild ) {
                     if ( this.left === old ) {
                         this.left = newChild;
                         this.validateLeft();
+
+                        return old;
                     } else if ( this.right === old ) {
                         this.right = newChild;
                         this.validateRight();
+
+                        return old;
                     } else {
                         throw new Error( "old child given, but it is not a child of this AST node" );
                     }
-
-                    newChild.setParent( this );
                 },
 
                 /**
@@ -994,11 +829,17 @@ window.slate.TouchBar = (function() {
             }).
             extend({
                 replaceLeft: function( node ) {
+                    var old = this.left;
                     this.left.replace( node );
+
+                    return old;
                 },
 
                 replaceRight: function( node ) {
+                    var old = this.left;
                     this.right.replace( node );
+
+                    return old;
                 }
             }).
             extend({
@@ -1058,7 +899,7 @@ window.slate.TouchBar = (function() {
                 setMeta: function( meta ) {
                     if ( this.meta !== null ) {
                         if ( this.meta.css ) {
-                            this.dom.classList.remove( this.meta.css );
+                            this.removeClass( this.meta.css );
                         }
                     }
 
@@ -1067,7 +908,9 @@ window.slate.TouchBar = (function() {
                     this.postText.innerHTML = meta.postHtml || '' ;
 
                     if ( meta.css ) {
-                        this.dom.classList.add.callLater( meta.css );
+                        (function() {
+                            this.addClass( meta.css );
+                        }).later( this );
                     }
                     
                     this.meta = meta;
@@ -1345,24 +1188,24 @@ window.slate.TouchBar = (function() {
             );
 
             assertString( desc.html, "html display is missing" );
-            assertFun( desc.evaluate, "evaluation function is missing" );
+            assertFunction( desc.evaluate, "evaluation function is missing" );
             assert(
-                    (desc.isPipeReceiver === true) === slate.util.isFunction(desc.evaluatePipeReceive),
+                    (desc.isPipeReceiver === true) === isFunction(desc.evaluatePipeReceive),
                     "descriptor '" + desc.name + "' is a pipe receiver, but does not have an 'evaluatePipeReceive' method."
             );
             assert(
-                    (desc.isPipeReceiver === true) === slate.util.isFunction(desc.toJSPipeReceive),
+                    (desc.isPipeReceiver === true) === isFunction(desc.toJSPipeReceive),
                     "descriptor '" + desc.name + "' is a pipe receiver, but does not have an 'toJSPipeReceive' method."
             );
 
             assert(
-                    !!( desc.isAssignable === true || slate.util.isFunction(desc.isAssignable) ) ===
-                            slate.util.isFunction( desc.evaluateAssignment ),
+                    !!( desc.isAssignable === true || isFunction(desc.isAssignable) ) ===
+                            isFunction( desc.evaluateAssignment ),
                     "descriptor '" + desc.name + "' is assignable, but does not have an 'evaluateAssignment' method."
             );
             assert(
-                    !!( desc.isAssignable === true || slate.util.isFunction(desc.isAssignable) ) ===
-                            slate.util.isFunction( desc.toJSAssignment ),
+                    !!( desc.isAssignable === true || isFunction(desc.isAssignable) ) ===
+                            isFunction( desc.toJSAssignment ),
                     "descriptor '" + desc.name + "' is assignable, but does not have an 'toJSAssignment' method."
             );
 
@@ -1391,13 +1234,13 @@ window.slate.TouchBar = (function() {
     var textWidth = (function() {
         var isMeasureSet = false;
 
-        var div = ss( 'touch-input-measure-div' );
+        var div = bb( 'touch-input-measure-div' );
 
         return function( text ) {
             if ( ! isMeasureSet ) {
                 isMeasureSet = true;
 
-                ss.append( 'body', {
+                bb.append( 'body', {
                         className: 'touch-input-measure',
                         html: div
                 } )
@@ -1434,7 +1277,7 @@ window.slate.TouchBar = (function() {
                 this.lastInput = '';
                 this.onInput = new Events( this );
 
-                this.add( ss.input( {
+                this.add( bb.input( {
                         type: type,
 
                         autocapitalize: 'off',
@@ -1463,6 +1306,11 @@ window.slate.TouchBar = (function() {
                 this.onClick(function() {
                     self.input.focus();
                 });
+                this.replace( function(other) {
+                    if ( other.setInputValue !== undefined ) {
+                        other.setInputValue( this.getInputValue() );
+                    }
+                } )
             }).
             extend( ast.Node ).
             override({
@@ -1500,15 +1348,6 @@ window.slate.TouchBar = (function() {
                      */
                     findEmpty: function() {
                         return this;
-                    },
-
-                    replace: function( other ) {
-                        ast.Node.prototype.replace.call( this, other );
-
-                        // copy this value across
-                        if ( other.setInputValue !== undefined ) {
-                            other.setInputValue( this.getInputValue() );
-                        }
                     }
             }).
             after({
@@ -1590,10 +1429,9 @@ window.slate.TouchBar = (function() {
                 /*
                  * Wrap the RegExp with //'s on either side.
                  */
-                var dom = this.getDom();
-
-                dom.insertBefore( astText('/'), this.getInputDom() );
-                dom.appendChild( astText('/') );
+                this.
+                        beforeChild( this.getInputDom(), astText('/') ).
+                        add( astText('/') )
             }).
             override({
                     validate: function() {
@@ -1630,10 +1468,8 @@ window.slate.TouchBar = (function() {
                  * so we can inject two extra text nodes,
                  * around the input element.
                  */
-                var dom = this.getDom();
-
-                dom.insertBefore( astText('"'), this.getInputDom() );
-                dom.appendChild( astText('"') );
+                this.beforeChild( this.getInputDom(), astText('"') ).
+                        add( astText('"') )
             }).
             override( ast.Input, {
                     validate: function() {
@@ -1747,7 +1583,7 @@ window.slate.TouchBar = (function() {
                 name = name || '';
                 
                 if ( display !== undefined ) {
-                    display = ss.util.htmlToText( display );
+                    display = bb.util.htmlToText( display );
                 } else {
                     display = name;
                 }
@@ -1768,15 +1604,29 @@ window.slate.TouchBar = (function() {
                         removeClass( 'touch-ast-variable' ).
                         addClass( 'touch-ast-command' );
 
-                this.insertBefore(
-                        astText( '(', 'touch-ast-left-paren' ),
-                        this.getInputDom()
+                this.before(
+                        this.getInputDom(),
+                        astText( '(', 'touch-ast-left-paren' )
                 )
 
                 this.rightParen = astText(')', 'touch-ast-right-paren'),
                 this.add( this.rightParen )
 
                 this.insertNewEmpty();
+
+                this.replace( function( newCommand ) {
+                    if ( newCommand instanceof ast.Command ) {
+                        this.setInputValue( newCommand.getInputValue() );
+
+                        // todo, animate out old text, animate in new text
+
+                        (function() {
+                            this.getView().setCurrent( this.getEmpty() )
+                        }).later( this );
+
+                        return false;
+                    }
+                })
             }).
             override({
                     getInputValue: function() {
@@ -2003,13 +1853,10 @@ window.slate.TouchBar = (function() {
                     if ( this.getInputValue() === '' ) {
                         return this;
                     } else {
-                        var empty = this.getEmpty();
-
-                        if ( empty !== null ) {
-                            return empty;
-                        } else if ( this.hasParent() ) {
-                            return this.getParent().findEmpty();
-                        }
+                        return this.getEmpty( value ) ||
+                               this.parentAST( function(p) {
+                                   return p.findEmpty();
+                               } );
                     }
                 },
 
@@ -2049,20 +1896,6 @@ window.slate.TouchBar = (function() {
                 }
             }).
             override({
-                replace: function( newCommand ) {
-                    if ( newCommand instanceof ast.Command ) {
-                        this.setInputValue( newCommand.getInputValue() );
-
-                        // todo, animate out old text, animate in new text
-
-                        (function() {
-                            this.getView().setCurrent( this.getEmpty() )
-                        }).later( this );
-                    } else {
-                        ast.Node.prototype.replace.call( this, newCommand )
-                    }
-                },
-
                 replaceChild: function( old, newAst ) {
                     var params = this.params;
                     var replaceNode = true;
@@ -2086,9 +1919,8 @@ window.slate.TouchBar = (function() {
                             param = params[i] = newAst;
                             newAstI = i;
 
-                            old.replace( newAst );
-                            newAst.setParent( this );
-
+                            //old.replace( newAst ); // todo, is this line needed?
+                            
                             replaceNode = false;
                         }
                         
@@ -2107,7 +1939,7 @@ window.slate.TouchBar = (function() {
                     var lastEmpty = lastNonEmpty + 1;
                     if ( lastEmpty < params.length-1 ) {
                         for ( var i = lastEmpty; i < params.length-1; i++ ) {
-                            this.getDom().removeChild( params[i].getDom() );
+                            this.remove( param[i] );
                         }
 
                         /*
@@ -2149,7 +1981,7 @@ window.slate.TouchBar = (function() {
                     var empty = new ast.Empty();
 
                     this.params.push( empty );
-                    this.insertBefore( empty, this.rightParen );
+                    this.before( this.rightParen, empty );
                 },
 
                 getFunction: function() {
@@ -2162,293 +1994,273 @@ window.slate.TouchBar = (function() {
      * It's essentially a row of buttons,
      * that can be hidden and shown.
      */
-    var TouchRow = function( upperDom, isDouble ) {
-        this.scroll = ss( 'touch-bar-row-inner-scroll' )
-        this.dom    = ss( 'touch-bar-row-inner', this.scroll )
+    var TouchRow = 
+            (function( isDouble ) {
+                this.scroll = bb( 'touch-bar-row-inner-scroll' )
 
-        if ( isDouble ) {
-            this.isDouble = true;
-        }
+                BBGun.call( this, 'touch-bar-row-inner', this.scroll )
 
-        upperDom.appendChild( this.dom )
-    }
+                if ( isDouble ) {
+                    this.isDouble = true;
+                }
+            }).extend( BBGun, {
+                show: function() {
+                    this.dom().classList.add( 'show' )
 
-    TouchRow.prototype.getDom = function() {
-        return this.dom;
-    }
+                    return this;
+                },
 
-    TouchRow.prototype.show = function() {
-        this.dom.classList.add( 'show' )
+                hide: function() {
+                    this.dom().classList.remove( 'show' )
 
-        return this;
-    }
+                    return this;
+                },
 
-    TouchRow.prototype.hide = function() {
-        this.dom.classList.remove( 'show' )
+                appendSeperator: function() {
+                    this.scroll.appendChild(
+                            bb('touch-bar-button-seperator')
+                    )
+                    
+                    return this;
+                },
 
-        return this;
-    }
+                append: function( item, callback ) {
+                    var dom;
 
-    var newTouchRowButton = function( item, callback ) {
+                    if ( arguments.length > 2 ) {
+                        dom = bb( 'touch-bar-button-column' );
+
+                        for ( var i = 0; i < arguments.length; i++ ) {
+                            var item = arguments[i],
+                                callback;
+
+                            if ( item === null ) {
+                                item = '&nbsp;';
+                                callback = function(ev) { /* do nothing */ };
+                            } else {
+                                callback = arguments[i+1]
+
+                                i++;
+                            }
+
+                            dom.appendChild( TouchRow.newTouchRowButton(item, callback) );
+                        }
+                    } else {
+                        dom = TouchRow.newTouchRowButton( item, callback );
+                    }
+
+                    this.scroll.appendChild( dom );
+
+                    return this;
+                }
+            })
+    
+    TouchRow.newTouchRowButton = function( item, callback ) {
         assert( item !== undefined, "'item' is undefined" );
 
-        return ss.a( 'touch-bar-button', { html: item, click: callback } );
+        return bb.a( 'touch-bar-button', { html: item, click: callback } );
     }
 
-    TouchRow.prototype.appendSeperator = function() {
-        this.scroll.appendChild(
-                ss('touch-bar-button-seperator')
-        )
-        
-        return this;
-    }
-
-    TouchRow.prototype.append = function( item, callback ) {
-        var dom;
-
-        if ( arguments.length > 2 ) {
-            dom = ss( 'touch-bar-button-column' );
-
-            for ( var i = 0; i < arguments.length; i++ ) {
-                var item = arguments[i],
-                    callback;
-
-                if ( item === null ) {
-                    item = '&nbsp;';
-                    callback = function(ev) { /* do nothing */ };
-                } else {
-                    callback = arguments[i+1]
-
-                    i++;
-                }
-
-                dom.appendChild( newTouchRowButton(item, callback) );
-            }
-        } else {
-            dom = newTouchRowButton( item, callback );
-        }
-
-        this.scroll.appendChild( dom );
-
-        return this;
-    }
-    
     /**
      * The area that displays the AST.
      */
-    var TouchView = function( touchBar ) {
-        var bar = ss( 'touch-bar-view-ast-bar' );
-        this.bar = bar;
+    var TouchView = BBGun.
+            curry( 'touch-bar-view' ).
+            sub(function( touchBar ) {
+                this.touchBar    = touchBar;
+                this.current     = null;
+                this.selectLater = null;
 
-        var viewArea = ss( 'touch-bar-view' )
-        viewArea.appendChild( bar );
-        this.dom = viewArea
+                /* the bar where the AST nodes are shown */
+                this.bar = new BBGun( 'touch-bar-view-ast-bar' );
 
-        this.errorDomContent = ss( 'touch-bar-view-error-content' );
+                /* the error overlay component */
+                this.errorDomContent = bb( 'touch-bar-view-error-content' );
 
-        var errInnerDom = ss( 'touch-bar-view-error-inner' );
-        errInnerDom.appendChild( this.errorDomContent );
-        errInnerDom.appendChild( ss( 'touch-bar-view-error-tail' ) );
+                var errInnerDom = bb( 'touch-bar-view-error-inner' );
+                errInnerDom.appendChild( this.errorDomContent );
+                errInnerDom.appendChild( bb( 'touch-bar-view-error-tail' ) );
 
-        this.errorDom = ss( 'touch-bar-view-error' );
-        this.errorDom.appendChild( errInnerDom );
+                this.errorDom = bb( 'touch-bar-view-error' );
+                this.errorDom.appendChild( errInnerDom );
 
-        viewArea.appendChild( this.errorDom );
+                /* finally, setup! */
+                this.add( this.bar, this.errorDom ).
+                     setAST( new ast.Empty() )
+            }).
+            extend({
+                    execute: function() {
+                        if ( this.touchBar ) {
+                            this.touchBar.execute();
+                        }
+                    },
 
-        this.current = null
+                    touchBar: function( touchBar ) {
+                        if ( arguments.length === 0 ) {
+                            return this.touchBar;
+                        } else {
+                            this.touchBar = touchBar;
+                        }
+                    },
 
-        this.selectLater = null;
+                    showError: function( node, msg ) {
+                        if ( ! this.errorDom.classList.contains('show') ) {
+                            slate.util.getDomLocation(
+                                    node.dom(),
+                                    this.dom(),
 
-        this.setAST( new ast.Empty() )
+                                    (function(left, top) {
+                                        var bottom = this.dom().clientHeight - top;
+                                        left += node.dom().clientWidth/2;
 
-        this.touchBar = touchBar;
-    }
+                                        this.errorDom.style.left   = left   + 'px';
+                                        this.errorDom.style.bottom = bottom + 'px';
+                                    }).bind(this)
+                            );
 
-    TouchView.prototype = {
-            execute: function() {
-                if ( this.touchBar ) {
-                    this.touchBar.execute();
-                }
-            },
+                            this.errorDomContent.textContent = msg;
+                            this.errorDom.classList.add( 'show' );
+                        }
+                    },
+                    hideError: function() {
+                        this.errorDom.classList.remove( 'show' );
+                    },
 
-            touchBar: function( touchBar ) {
-                if ( arguments.length === 0 ) {
-                    return this.touchBar;
-                } else {
-                    this.touchBar = touchBar;
-                }
-            },
+                    clear: function() {
+                        this.setAST( new ast.Empty() );
+                    },
 
-            getDom: function() {
-                return this.dom;
-            },
+                    validate: function( callback ) {
+                        var self = this;
+                        var success = this.getRootAST().validate(function(node, errMsg) {
+                            self.showError( node, errMsg );
 
-            showError: function( node, msg ) {
-                if ( ! this.errorDom.classList.contains('show') ) {
-                    slate.util.getDomLocation(
-                            node.getDom(),
-                            this.dom,
+                            // todo, display the error
+                            
+                            return false
+                        } );
 
-                            (function(left, top) {
-                                var bottom = this.dom.clientHeight - top;
-                                left += node.getDom().clientWidth/2;
+                        console.log( success );
 
-                                this.errorDom.style.left   = left   + 'px';
-                                this.errorDom.style.bottom = bottom + 'px';
-                            }).bind(this)
-                    );
+                        if ( success ) {
+                            callback.later();
+                        }
+                    },
 
-                    this.errorDomContent.textContent = msg;
-                    this.errorDom.classList.add( 'show' );
-                }
-            },
-            hideError: function() {
-                this.errorDom.classList.remove( 'show' );
-            },
+                    toJS: function() {
+                        return this.getRootAST().toJS();
+                    },
 
-            clear: function() {
-                this.setAST( new ast.Empty() );
-            },
+                    evaluate: function( callback ) {
+                        this.getRootAST().evaluateCallback( callback );
+                    },
 
-            validate: function( callback ) {
-                var self = this;
-                var success = this.getRootAST().validate(function(node, errMsg) {
-                    self.showError( node, errMsg );
+                    getCurrent: function() {
+                        return this.current;
+                    },
 
-                    // todo, display the error
-                    
-                    return false
-                } );
+                    setCurrent: function( ast ) {
+                        if ( this.current !== ast ) {
+                            if ( this.current !== null ) {
+                                this.current.onUnselect();
+                            }
 
-                console.log( success );
+                            this.current = ast;
+                            this.current.setView( this );
 
-                if ( success ) {
-                    callback.later();
-                }
-            },
+                            this.current.onSelect();
+                        }
 
-            toJS: function() {
-                return this.getRootAST().toJS();
-            },
+                        if ( this.selectLater !== null ) {
+                            clearTimeout( this.selectLater );
+                        }
 
-            evaluate: function( callback ) {
-                this.getRootAST().evaluateCallback( callback );
-            },
+                        this.current.onEverySelect()
 
-            getCurrent: function() {
-                return this.current;
-            },
+                        return this;
+                    },
 
-            setCurrent: function( ast ) {
-                if ( this.current !== ast ) {
-                    if ( this.current !== null ) {
-                        this.current.onUnselect();
-                    }
+                    getRootAST: function() {
+                        assert( this.current !== null, "current should never be set to null" );
+                        return this.bar.child( 'touch-ast' );
+                    },
 
-                    this.current = ast;
-                    this.current.setView( this );
-
-                    this.current.onSelect();
-                }
-
-                if ( this.selectLater !== null ) {
-                    clearTimeout( this.selectLater );
-                }
-
-                this.current.onEverySelect()
-
-                return this;
-            },
-
-            getRootAST: function() {
-                var root = null;
-                for (
-                        var current = this.current;
-                        current !== null;
-                        current = current.getParent()
-                ) {
-                    root = current;
-                }
-
-                return root;
-            },
-
-            /**
-             * Replaces the entire AST in the view,
-             * with the ast node given.
-             */
-            setAST: function( ast ) {
-                if ( this.current ) {
-                    this.bar.removeChild( this.getRootAST().getDom() );
-                    this.current = null;
-                }
-
-                this.bar.appendChild( ast.getDom() );
-                this.setCurrent( ast );
-            },
-
-            /**
-             * insertLeft and insertRight are identical,
-             * except for a single line.
-             *
-             * So the implementations are here,
-             * with a boolean flag used to differentiate
-             * between them.
-             */
-            insertLeftRight: function( node, isLeft ) {
-                var current = this.getCurrent();
-
-                if ( current.isEmpty() && current.hasParent() ) {
-                    current = current.getParent();
-                }
-
-                current.replace( node, false );
-                node.setView( this );
-                
-                if ( !current.isEmpty() && node.replaceRight !== undefined ) {
-                    /*
-                     * Yes I know, these are the wrong way round.
-                     *
-                     *   isLeft -> replaceRight
-                     *  !isLeft -> replaceLeft
+                    /**
+                     * Replaces the entire AST in the view,
+                     * with the ast node given.
                      */
-                    if ( isLeft ) {
-                        node.replaceRight( current );
-                    } else {
-                        node.replaceLeft( current );
+                    setAST: function( ast ) {
+                        if ( this.current ) {
+                            this.bar.remove( this.getRootAST() );
+                            this.current = null;
+                        }
+
+                        this.bar.add( ast );
+                        this.setCurrent( ast );
+                    },
+
+                    /**
+                     * insertLeft and insertRight are identical,
+                     * except for a single line.
+                     *
+                     * So the implementations are here,
+                     * with a boolean flag used to differentiate
+                     * between them.
+                     */
+                    insertLeftRight: function( node, isLeft ) {
+                        var current = this.getCurrent();
+
+                        current.isEmpty() && current.parentAST( function(p) {
+                            current = p
+                        } )
+
+                        current.replace( node );
+                        node.setView( this );
+                        
+                        if ( !current.isEmpty() && node.replaceRight !== undefined ) {
+                            /*
+                             * Yes I know, these are the wrong way round.
+                             *
+                             *   isLeft -> replaceRight
+                             *  !isLeft -> replaceLeft
+                             */
+                            if ( isLeft ) {
+                                current.replaceLeft ( node.replaceRight(current) )
+                            } else {
+                                current.replaceRight( node.replaceLeft (current) )
+                            }
+                        }
+
+                        /*
+                         * isLeft param here is to say we
+                         * favour the one on the left,
+                         * when it searches for an empty node.
+                         */
+                        this.selectEmpty( node, isLeft );
+                    },
+
+                    insertLeft: function( node ) {
+                        return this.insertLeftRight( node, true );
+                    },
+
+                    insertRight: function( node ) {
+                        return this.insertLeftRight( node, false );
+                    },
+
+                    /**
+                     * Inserts a node into the currently empty space.
+                     */
+                    insert: function( node ) {
+                        this.current.replace( node );
+                        this.current.setView( this );
+                        this.selectEmpty( this.current );
+                    },
+
+                    selectEmpty: function( node, findEmptyVal ) {
+                        node = ( node || this.current );
+                        this.setCurrent( node.findEmpty(findEmptyVal) || node );
                     }
-                }
-
-                /*
-                 * isLeft param here is to say we
-                 * favour the one on the left,
-                 * when it searches for an empty node.
-                 */
-                this.selectEmpty( node, isLeft );
-            },
-
-            insertLeft: function( node ) {
-                return this.insertLeftRight( node, true );
-            },
-
-            insertRight: function( node ) {
-                return this.insertLeftRight( node, false );
-            },
-
-            /**
-             * Inserts a node into the currently empty space.
-             */
-            insert: function( node ) {
-                this.current.replace( node );
-                this.current.setView( this );
-                this.selectEmpty( this.current );
-            },
-
-            selectEmpty: function( node, findEmptyVal ) {
-                node = ( node || this.current );
-                this.setCurrent( node.findEmpty(findEmptyVal) || node );
-            }
-    }
+            } )
 
     /**
      * Creates a new Div, and fills it with the buttons
@@ -2462,11 +2274,11 @@ window.slate.TouchBar = (function() {
      * @param obj The object describing the many buttons to create.
      */
     var newButtons = function( cssKlass, obj ) {
-        var dom = ss.div( cssKlass );
+        var dom = bb.div( cssKlass );
 
         for ( var k in obj ) {
             if ( obj.hasOwnProperty(k) ) {
-                dom.appendChild( ss.a( k, {
+                dom.appendChild( bb.a( k, {
                         click: obj[k]
                 }) )
             }
@@ -2500,7 +2312,7 @@ window.slate.TouchBar = (function() {
             }
         })
 
-        return ss.a( 'touch-shift-button', {
+        return bb.a( 'touch-shift-button', {
                 press: function( ev, isPress ) {
                     if ( isPress && !isDown ) {
                         isDown = true;
@@ -2513,35 +2325,31 @@ window.slate.TouchBar = (function() {
         } )
     }
 
-    var ShiftButtons = function() {
-        var self = this;
+    var ShiftButtons =
+            (function() {
+                var self = this;
 
-        this.hasLeft  = false;
-        this.hasRight = false;
+                this.hasLeft  = false;
+                this.hasRight = false;
 
-        var left = newShiftButton( function(isDown) {
-                    self.hasLeft = isDown;
-                }, 81)
-        var right = newShiftButton( function(isDown) {
-                    self.hasRight = isDown;
-                }, 87)
+                BBGun.call( 'touch-shift',
+                        newShiftButton( function(isDown) {
+                                    self.hasLeft = isDown;
+                                }, 81),
+                        newShiftButton( function(isDown) {
+                                    self.hasRight = isDown;
+                                }, 87)
+                )
+            }).
+            extend( BBGun, {
+                isLeft: function() {
+                    return this.hasLeft;
+                },
 
-        this.dom = ss( 'touch-shift', left, right );
-    }
-
-    ShiftButtons.prototype = {
-            isLeft: function() {
-                return this.hasLeft;
-            },
-
-            isRight: function() {
-                return this.hasRight;
-            },
-
-            getDom: function() {
-                return this.dom;
-            }
-    }
+                isRight: function() {
+                    return this.hasRight;
+                }
+            } )
 
     /**
      * The actual bar it's self.
@@ -2551,15 +2359,15 @@ window.slate.TouchBar = (function() {
     var TouchBar = function( parentDom, execute, commands ) {
         this.executeFun = execute;
 
-        this.upper  = ss( 'touch-bar-row upper' );
-        this.lower  = ss( 'touch-bar-row lower' );
+        this.upper  = bb( 'touch-bar-row upper' );
+        this.lower  = bb( 'touch-bar-row lower' );
 
         this.buttons = new ShiftButtons();
 
-        var barDom = ss( 'touch-bar',
+        var barDom = bb( 'touch-bar',
                 this.upper,
                 this.lower,
-                this.buttons.getDom()
+                this.buttons
         )
 
         this.bar   = barDom;
@@ -2567,7 +2375,7 @@ window.slate.TouchBar = (function() {
         this.view  = null;
 
         parentDom.appendChild(
-                ss( 'touch-bar-wrap',
+                bb( 'touch-bar-wrap',
                         barDom,
                         this.newControls()
                 )
@@ -2581,7 +2389,7 @@ window.slate.TouchBar = (function() {
 
         var insert = this.insert.bind( this );
 
-        var commandsRow = new TouchRow( this.upper, true );
+        var commandsRow = new TouchRow( true );
         commandsRow.append(
                 SMALL_EMPTY,
                 function() {
@@ -2630,7 +2438,7 @@ window.slate.TouchBar = (function() {
          * Add the values and literals
          */
 
-        var valuesRow = new TouchRow( this.upper, true );
+        var valuesRow = new TouchRow( true );
 
         valuesRow.append(
                 'var', function() {
@@ -2704,7 +2512,7 @@ window.slate.TouchBar = (function() {
          * Structural commands, like operators.
          */
 
-        var opsRow = new TouchRow( this.upper, true );
+        var opsRow = new TouchRow( true );
 
         var descriptorHTML = function( d ) {
             assert( d.html, "descriptor is missing HTML display value, " + d.name );
@@ -2778,6 +2586,8 @@ window.slate.TouchBar = (function() {
         appendDescriptor( 'bitwise and'         , 'bitwise or'      );
         appendDescriptor( 'left shift'          , 'right shift'     );
 
+        bb.add( this.upper, commandsRow, valuesRow, opsRow )
+
         /*
          * Lower Row
          */
@@ -2793,21 +2603,22 @@ window.slate.TouchBar = (function() {
             button.classList.add( 'select' );
         }
 
-        var sectionButtons = new TouchRow( this.lower ).
+        var sectionButtons = new TouchRow().
                 append( 'command', function() {
                     touchBar.showRow( commandsRow );
-                    selectButton( sectionButtons.getDom(), this );
+                    selectButton( sectionButtons.dom(), this );
                 } ).
                 append( 'values', function() {
                     touchBar.showRow( valuesRow );
-                    selectButton( sectionButtons.getDom(), this );
+                    selectButton( sectionButtons.dom(), this );
                 } ).
                 append( 'operators', function() {
                     touchBar.showRow( opsRow );
-                    selectButton( sectionButtons.getDom(), this );
+                    selectButton( sectionButtons.dom(), this );
                 } ).
                 show();
 
+        bb.add( this.lower, sectionButtons );
         this.showRow( commandsRow );
     }
 
@@ -2863,14 +2674,14 @@ window.slate.TouchBar = (function() {
 
             newTouchView: function() {
                 if ( this.view !== null ) {
-                    if ( this.view.getDom().parentNode === this.bar ) {
-                        this.removeChild( this.view.getDom() );
+                    if ( this.view.dom().parentNode === this.bar ) {
+                        this.removeChild( this.view.dom() );
                         this.view.touchBar( null );
                     }
                 }
 
                 this.view = new TouchView( this );
-                this.bar.appendChild( this.view.getDom() );
+                this.bar.appendChild( this.view.dom() );
             },
 
             showRow: function( row ) {

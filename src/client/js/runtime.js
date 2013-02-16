@@ -9,7 +9,7 @@
                 params.push( args[i] );
             }
 
-            if ( slate.util.isFunction(fun) ) {
+            if ( isFunction(fun) ) {
                 return fun.apply( null, params );
             } else {
                 throw new Error( "Function not found " + name );
@@ -22,7 +22,7 @@
             }
 
             var fun = obj[name];
-            if ( slate.util.isFunction(fun) ) {
+            if ( isFunction(fun) ) {
                 return fun.apply( obj, params );
             } else {
                 throw new Error( "Function not found " + name );

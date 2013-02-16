@@ -78,7 +78,7 @@
      */
     slate.language = function( name, callback ) {
         assertString( name, "name must be a string" );
-        assertFun( callback, "callbac must be a function" );
+        assertFunction( callback, "callbac must be a function" );
 
         slate.data.languages[ name ] = callback;
 
@@ -91,7 +91,7 @@
         var str = '';
 
         if ( arguments.length === 1 ) {
-            if ( slate.util.isString(name) ) {
+            if ( isString(name) ) {
                 str = name;
             } else {
                 for ( var k in props ) {
@@ -105,7 +105,7 @@
                                 var val = rule[k2];
                                 str += k2 + ': ' + val;
 
-                                if ( slate.util.isNumber(val) ) {
+                                if ( isNumber(val) ) {
                                     str += 'px';
                                 }
 
@@ -120,7 +120,7 @@
         } else if ( arguments.length === 2 ) {
             assert( props, "No properties provided" );
 
-            if ( slate.util.isString(name) ) {
+            if ( isString(name) ) {
                 str = name + " {\n";
 
                 for ( var k in props ) {
@@ -129,7 +129,7 @@
 
                         str += k + ': ' + val;
 
-                        if ( slate.util.isNumber(val) ) {
+                        if ( isNumber(val) ) {
                             str += 'px';
                         }
 
@@ -229,7 +229,7 @@
         if ( arguments.length > 1 ) {
             if (
                     arguments.length === 2 &&
-                    slate.util.isFunction(arguments[1])
+                    isFunction(arguments[1])
             ) {
                 slate.html({
                     type: arguments[0],
@@ -238,7 +238,7 @@
             } else {
                 slate.html( arguments );
             }
-        } else if ( slate.util.isArrayArguments(handler) ) {
+        } else if ( isArrayArguments(handler) ) {
             for ( var i = 0; i < handler.length; i++ ) {
                 slate.html( handler[i] );
             }
@@ -246,19 +246,19 @@
             assert( handler.type, "missing 'type' on format handler" );
             assert( handler.fun , "missing 'fun' on format handler"  );
 
-            if ( slate.util.isArray(handler.type) ) {
+            if ( isArray(handler.type) ) {
                 var arr = handler.type;
 
                 assert( arr.length > 0, "No types supplied for format handler (it's an empty array)" );
 
                 for ( var i = 0; i < arr.length; i++ ) {
-                    assertFun( arr[i], "type property given in 'type' array, is not a constructor" );
+                    assertFunction( arr[i], "type property given in 'type' array, is not a constructor" );
                 }
             } else {
-                assertFun( handler.type, "'type' property given, is not a constructor" );
+                assertFunction( handler.type, "'type' property given, is not a constructor" );
             }
 
-            assertFun( handler.fun, "'fun' property given, is not a function"  );
+            assertFunction( handler.fun, "'fun' property given, is not a function"  );
 
             slate.data.formatHandlers.push( handler );
         }
@@ -312,13 +312,13 @@
      *  slate.loader( ['jpg', 'jpeg'], function(path, read) { } );
      */
     slate.loader = function( type, action ) {
-        if ( slate.util.isArray(type) && slate.util.isFunction(action) ) {
+        if ( isArray(type) && isFunction(action) ) {
             for ( var i = 0; i < type.length; i++ ) {
                 slate.loader( type[i], action );
             } 
         } else {
             assertString( type, "invalid type given, must be a string" );
-            assertFun( action , "invalid action given, must be a function" );
+            assertFunction( action , "invalid action given, must be a function" );
 
             slate.data.loaders[ type ] = action;
         }

@@ -150,10 +150,10 @@
 
     Array.prototype.inject = function( sum, fun ) {
         if ( arguments.length === 1 ) {
-            assertFun( sum, "no inject function provided" );
+            assertFunction( sum, "no inject function provided" );
             return this.reduce( sum );
         } else {
-            assertFun( fun, "no inject function provided" );
+            assertFunction( fun, "no inject function provided" );
             return this.reduce( fun, sum );
         }
     }

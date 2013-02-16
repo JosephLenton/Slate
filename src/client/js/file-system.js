@@ -147,8 +147,8 @@
             var callback = arguments[1];
 
             if (
-                    slate.util.isFunction(callback) &&
-                    slate.util.isString(type) &&
+                    isFunction(callback) &&
+                    isString(type) &&
                     extension === type
             ) {
                 callback( this );

@@ -229,7 +229,7 @@
 
         var onKeyDowns = [];
         var addKeyDown = function(f) {
-            assertFun( f, "Function expected for onKeyDown" );
+            assertFunction( f, "Function expected for onKeyDown" );
             onKeyDowns.push( f );
         }
 

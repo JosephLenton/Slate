@@ -3,10 +3,6 @@
 (function(window) {
     var changer = document.createElement('div');
 
-    var argsConstructor = (function() {
-        return arguments.constructor;
-    })();
-
     var anchor = document.createElement( 'a' );
 
     var IS_TOUCH = !! ('ontouchstart' in window)  // works on most browsers 
@@ -275,77 +271,6 @@
             }
         },
 
-        addToDom: function( dom, el ) {
-            if ( slate.util.isArray(el) ) {
-                for ( var i = 0; i < el.length; i++ ) {
-                    slate.util.addToDom( dom, el[i] );
-                }
-            } else if ( slate.util.isString(el) ) {
-                dom.insertAdjacentHTML( 'beforeend', el );
-            } else {
-                dom.appendChild( el );
-            }
-
-            return dom;
-        },
-
-        extend: function() {
-            var obj = {};
-
-            for ( var i = 0; i < arguments.length; i++ ) {
-                var srcObj = arguments[i];
-
-                if ( slate.util.isFunction(srcObj) ) {
-                    srcObj = srcObj.prototype;
-                }
-
-                for ( var k in srcObj ) {
-                    if ( srcObj.hasOwnProperty(k) ) {
-                        obj[k] = srcObj[k];
-                    }
-                }
-            }
-
-            return obj;
-        },
-
-        isNumber: function( n ) {
-            return typeof n === 'number' || ( n instanceof Number );
-        },
-
-        isFunction: function( r ) {
-            return typeof r === 'function' || ( r instanceof Function );
-        },
-
-        /**
-         * Returns true if the value is like a number.
-         * This is either an actual number, or a string which represents one.
-         */
-        isNumeric: function( str ) {
-            return ( typeof str === 'number' ) ||
-                   ( str instanceof Number   ) ||
-                   ( String(str).search( /^\s*(\+|-)?((\d+(\.\d+)?)|(\.\d+))\s*$/ ) !== -1 )
-        },
-
-        isString: function( str ) {
-            return typeof str === 'string' || ( str instanceof String );
-        },
-
-        isArrayArguments: function( arr ) {
-            return  ( typeof arr === 'array' ) ||
-                    ( arr instanceof Array   ) ||
-                    (
-                            arr !== undefined &&
-                            arr !== null &&
-                            arr.constructor === argsConstructor &&
-                            arr.length !== undefined
-                    )
-        },
-
-        isArray: function( arr ) {
-            return typeof arr === 'array' || ( arr instanceof Array );
-        },
-
         absoluteUrl: function( url ) {
             anchor.href = url;
 
@@ -405,7 +330,7 @@
 
                 if ( type === 'POST' ) {
                     if ( data ) {
-                        if ( ! slate.util.isString(data) ) {
+                        if ( ! isString(data) ) {
                             data = JSON.stringify(data);
                         }
                     } else {

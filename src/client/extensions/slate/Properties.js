@@ -8,7 +8,7 @@
         this.value   = obj[ name ];
 
         this.isProto = obj.hasOwnProperty( name );
-        this.isFun   = slate.util.isFunction( obj[name] );
+        this.isFun   = isFunction( obj[name] );
     }
 
     Property.prototype.toString = function() {

@@ -123,7 +123,7 @@
                 for ( var i = 0; i < argsLength; i++ ) {
                     var fun = args[i];
 
-                    assertFun( fun, "none function given" );
+                    assertFunction( fun, "none function given" );
 
                     arr[i] = fun;
                 }
@@ -131,7 +131,7 @@
                 for ( var i = 0; i < argsLength; i++ ) {
                     var fun = args[i];
 
-                    assertFun( fun, "none function given" );
+                    assertFunction( fun, "none function given" );
 
                     arr.push( fun );
                 }
@@ -442,7 +442,7 @@
      * This is used as a sanity check.
      */
     Function.prototype.extend = newFunctionExtend(
-            "Extending methods exist, ",
+            "Extending methods already exist, ",
             function(dest, k, val) {
                 return ( dest[k] === undefined )
             }
@@ -468,27 +468,27 @@
      * Note you can also use 'bind' as an alterantive,
      * to also change the target as well.
      */ 
-    Function.prototype.partial = function() {
-        return prePostPartial( this, arguments, false );
+    Function.prototype.curry = function() {
+        return prePostCurry( this, arguments, false );
     }
 
     /**
-     * postPartial is the same as 'partial',
+     * postCurry is the same as 'curry',
      * only the arguments are appended to the end,
      * instead of at the front.
      *
-     * With partial ...
+     * With curry ...
      *
-     *      var f2 = f.partial( 1, 2, 3 )
+     *      var f2 = f.curry( 1, 2, 3 )
      *
      * Here f2 becomes:
      *
      *      function f2( 1, 2, 3, ... ) { }
      *
-     * With 'prePartial', it is the other way around.
+     * With 'postCurry', it is the other way around.
      * For example:
      *
-     *     var f2 = f.postPartial( 1, 2, 3 ) { }
+     *     var f2 = f.postCurry( 1, 2, 3 ) { }
      *
      * Here f2 becomes:
      *
@@ -510,13 +510,11 @@
      *      a3 ->  1
      *      a4 ->  2
      */
-    Function.prototype.postPartial = function() {
-        return prePostPartial( this, arguments, false );
+    Function.prototype.postCurry = function() {
+        return prePostCurry( this, arguments, false );
     }
 
-    var prePostPartial = function( self, args, prePend ) {
-        var initArgs = arguments;
-
+    var prePostCurry = function( self, initArgs, prePend ) {
         return (function() {
                     /*
                      * Concat the old and new arguments together,
@@ -603,7 +601,7 @@
      * @param wrap The variable to wrap functionality with.
      */
     Function.prototype.wrap = function( wrap ) {
-        assertFun( wrap, "function not provided for wrap parameter" );
+        assertFunction( wrap, "function not provided for wrap parameter" );
 
         var self = this;
         return (function() {

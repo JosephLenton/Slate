@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- *      ss.js (sweet-spot)
+ *      bb.js
  *
  * @author Joseph Lenton
  * 
@@ -14,7 +14,7 @@
  * is returned, or alter a given dom element.
  */
 
-window['ss'] = (function() {
+window['bb'] = (function() {
     /**
      * When the type of an element is not declared,
      * it will be of this type by default.
@@ -238,27 +238,33 @@ window['ss'] = (function() {
             'DOMSubtreeModified'
     )
 
-    var newSweetSpot = function( args ) {
+    var ensureParent = function( dom ) {
+        var parentNode = dom.parentNode;
+        assert( parentNode !== null, "dom is not in the document; it doesn't have a parentNode" );
+        return parentNode;
+    }
+
+    var newBB = function( args ) {
         /**
          * Runs 'createArray' with the values given,
          * and then returns the result.
          * 
          * This is shorthand for creating new DOM elements.
          */
-        var ss = function() {
+        var bb = function() {
             if (
                     this !== undefined && 
                     this !== null && 
                     this.__hasConstructed !== true &&
-                    this instanceof ss
+                    this instanceof bb
             ) {
-                return newSweetSpot( arguments );
+                return newBB( arguments );
             } else {
-                return ss.createArray( arguments[0], arguments, 1 );
+                return bb.createArray( arguments[0], arguments, 1 );
             }
         }
 
-        ss.__hasConstructor = true;
+        bb.__hasConstructor = true;
 
         /**
          * Generates a register method.
@@ -274,7 +280,7 @@ window['ss'] = (function() {
                             '    var argsLen = arguments.length;',
                             '    ',
                             '    if ( argsLen === 1 ) {',
-                            '        assertObj( name, "non-object given for registering" );',
+                            '        assertObject( name, "non-object given for registering" );',
                             '        ',
                             '        for ( var k in name ) {',
                             '            if ( name.hasOwnProperty(k) ) {',
@@ -288,7 +294,7 @@ window['ss'] = (function() {
                             '            }',
                             '        } else {',
                             '            assertString( name, "non-string given for name" );',
-                            '            assertFun( fun, "non-function given for function" );',
+                            '            assertFunction( fun, "non-function given for function" );',
                             '            ',
                             '            this.' + methodNameOne + '( name, fun );',
                             '        }',
@@ -311,11 +317,11 @@ window['ss'] = (function() {
         }
 
         /**
-         * Deals with the global setup of ss.
+         * Deals with the global setup of bb.
          *
          * For example adding more default elements.
          */
-        ss.setup = {
+        bb.setup = {
                 data: {
                         classPrefix: '',
 
@@ -393,7 +399,7 @@ window['ss'] = (function() {
                 }
         }
 
-        ss.setup.
+        bb.setup.
                 element( 'a', function() {
                     var anchor = document.createElement('a');
                     anchor.setAttribute( 'href', '#' );
@@ -432,24 +438,24 @@ window['ss'] = (function() {
                         }
                 );
 
-        ss.util = (function() {
+        bb.util = (function() {
                 var element = document.createElement( 'div' );
 
                 return {
-                    htmlToElement : function( str ) {
-                        element.innerHTML = str;
-                        return element.childNodes[0];
-                    },
+                        htmlToElement : function( str ) {
+                            element.innerHTML = str;
+                            return element.childNodes[0];
+                        },
 
-                    htmlToText: function( html ) {
-                        element.innerHTML = str;
-                        return element.textContent;
-                    }
+                        htmlToText: function( html ) {
+                            element.innerHTML = str;
+                            return element.textContent;
+                        }
                 }
         })();
 
         /**
-         * Helper Methods, before, ss it's self!
+         * Helper Methods, before, bb it's self!
          */
 
         var setOnObject = function( events, dom, obj, useCapture ) {
@@ -482,7 +488,7 @@ window['ss'] = (function() {
             for ( var i = startI; i < arr.length; i++ ) {
                 var c = arr[i];
 
-                if ( (typeof c === 'string') || (c instanceof String) ) {
+                if ( isString(c) ) {
                     klass += ' ' + c;
                 } else if ( c instanceof Array ) {
                     klass += parseClassArray( c, 0 );
@@ -508,7 +514,7 @@ window['ss'] = (function() {
          *      on( dom, { click: fun, mousedown: fun } , true       )
          *      on( dom, { click: fun, mousedown: fun }              )
          */
-        ss.on = function( dom, name, fun, useCapture ) {
+        bb.on = function( dom, name, fun, useCapture ) {
             var argsLen = arguments.length;
 
             if ( argsLen === 4 ) {
@@ -530,7 +536,7 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.once = function( dom, name, fun, useCapture ) {
+        bb.once = function( dom, name, fun, useCapture ) {
             var self = this;
 
             var funWrap = function() {
@@ -542,30 +548,30 @@ window['ss'] = (function() {
         }
 
         /**
-         *      ss.create( html-element,
+         *      bb.create( html-element,
          *              info1,
          *              info2,
          *              info3,
          *              info4 ...
          *      )
          */
-        ss.create = function() {
+        bb.create = function() {
             return this.createArray( arguments[0], arguments, 1 );
         }
 
-        ss.createArray = function( obj, args, i ) {
+        bb.createArray = function( obj, args, i ) {
             if ( i === undefined ) {
                 i = 0
             }
 
-            return ss.applyArray(
-                    ss.createOne( obj ),
+            return bb.applyArray(
+                    bb.createOne( obj ),
                     args,
                     i
             )
         }
 
-        ss.apply = function( dom ) {
+        bb.apply = function( dom ) {
             return applyArray( this,
                     this.get( dom ),
                     arguments,
@@ -573,7 +579,7 @@ window['ss'] = (function() {
             )
         }
 
-        ss.applyArray = function( dom, args, startI ) {
+        bb.applyArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0
             }
@@ -585,7 +591,7 @@ window['ss'] = (function() {
             )
         }
 
-        var applyArray = function( ss, dom, args, startI ) {
+        var applyArray = function( bb, dom, args, startI ) {
             var argsLen = args.length;
 
             for ( var i = startI; i < argsLen; i++ ) {
@@ -595,20 +601,22 @@ window['ss'] = (function() {
                     applyArray( this, dom, arg, 0 );
                 } else if ( arg instanceof HTMLElement ) {
                     dom.appendChild( arg );
-                } else if ( arg instanceof SweetSpot ) {
+                } else if ( arg.__isBBGun ) {
                     dom.appendChild( arg.dom() );
                 /*
                  * - html
                  * - class names
                  */
-                } else if ( (typeof arg === 'string') || (arg instanceof String) ) {
-                    if ( arg.trim().charAt(0) === '<' ) {
+                } else if ( isString(arg) ) {
+                    var c = arg.trim().charAt( 0 );
+
+                    if ( c === '<' ) {
                         dom.insertAdjacentHTML( 'beforeend', arg );
                     } else {
-                        ss.addClassOne( dom, arg );
+                        bb.addClassOne( dom, arg );
                     }
-                } else if ( typeof arg === 'object' ) {
-                    ss.attr( dom, arg );
+                } else if ( isObject(arg) ) {
+                    bb.attr( dom, arg );
                 } else {
                     error( arg, "unknown argument given" );
                 }
@@ -628,7 +636,7 @@ window['ss'] = (function() {
          * @param obj A JavaScript object literal describing an object to create.
          * @return A HTMLElement based on the object given.
          */
-        ss.createOne = function( obj ) {
+        bb.createOne = function( obj ) {
             /*
              * A String ...
              *  <html element="description"></html>
@@ -636,31 +644,50 @@ window['ss'] = (function() {
              *  element-name
              *  '' (defaults to a div)
              */
-            if ( (typeof obj === 'string') || (obj instanceof String) ) {
-                return ss.createString( obj );
+            if ( isString(obj) ) {
+                return bb.createString( obj );
                 
             /*
              * An array of classes.
              */
             } else if ( obj instanceof Array ) {
-                return ss.createString( '.' + obj.join(' ') );
+                if ( obj.length > 0 ) {
+                    if ( obj[0].charAt(0) === '.' ) {
+                        return bb.createString( obj.join(' ') );
+                    } else {
+                        return bb.createString( '.' + obj.join(' ') );
+                    }
+                } else {
+                    return bb.createElement();
+                }
+            } else if ( obj instanceof Element ) {
+                return obj;
+            } else if ( obj.__isBBGun ) {
+                return obj;
+            } else if ( isObject(obj) ) {
+                return bb.createObj( obj );
             } else {
-                return ss.createObj( obj );
+                logError( "unknown parameter given", obj );
             }
         }
 
-        ss.createObj = function( obj ) {
-            assertObj( obj );
+        bb.createObj = function( obj ) {
+            assertObject( obj );
 
-            return this.attr(
-                    ( obj.hasOwnProperty(TYPE_NAME_PROPERTY) ?
-                                    this.createOne( obj[TYPE_NAME_PROPERTY] ) :
-                                    this.createElement() ),
-                    obj
-            )
+            var dom = obj.hasOwnProperty(TYPE_NAME_PROPERTY)      ?
+                    this.createElement( obj[TYPE_NAME_PROPERTY] ) :
+                    this.createElement()                          ;
+
+            for ( var k in obj ) {
+                if ( obj.hasOwnProperty(k) ) {
+                    attrOne( this, dom, k, obj[k] );
+                }
+            }
+
+            return dom;
         }
 
-        ss.createString = function( obj ) {
+        bb.createString = function( obj ) {
             obj = obj.trim();
 
             /*
@@ -674,6 +701,10 @@ window['ss'] = (function() {
                 } else {
                     return dom;
                 }
+            } else if ( obj.charAt(0) === '.' ) {
+                var dom = this.createElement();
+                dom.className = obj.substring(1)
+                return dom;
             } else if ( obj === '' ) {
                 return this.createElement();
             } else {
@@ -691,11 +722,11 @@ window['ss'] = (function() {
          * @param name The name of the component to create.
          * @return A HTMLElement for the name given.
          */
-        ss.createElement = function( name ) {
+        bb.createElement = function( name ) {
             if ( arguments.length === 0 ) {
                 name = DEFAULT_ELEMENT;
             } else {
-                assertString( name, "non-string name provided" );
+                assertString( name, "non-string name provided for nodeName", name );
                 assert( name !== '', "empty name provided" );
             }
 
@@ -713,11 +744,11 @@ window['ss'] = (function() {
             }
         }
 
-        ss.hasClass = function( dom, klass ) {
+        bb.hasClass = function( dom, klass ) {
             return dom.classList.contains( klass );
         } 
 
-        ss.removeClass = function( dom, klass ) {
+        bb.removeClass = function( dom, klass ) {
             if ( dom.classList.contains(klass) ) {
                 dom.classList.remove( klass );
 
@@ -733,11 +764,11 @@ window['ss'] = (function() {
          * @param onAddition Optional, a function called if the class gets added.
          * @param onRemoval Optional, a function called if the class gets removed.
          */
-        ss.toggle = function() {
+        bb.toggle = function() {
             return this.toggleArray( arguments );
         },
 
-        ss.toggleArray = function( args ) {
+        bb.toggleArray = function( args ) {
             var argsLen   = args.length;
 
             var dom        = this.get( args[0] ),
@@ -764,7 +795,7 @@ window['ss'] = (function() {
             return dom;
         },
 
-        ss.addClass = function( dom ) {
+        bb.addClass = function( dom ) {
             if ( arguments.length === 2 ) {
                 return this.addClassOne( dom, arguments[1] );
             } else {
@@ -772,7 +803,7 @@ window['ss'] = (function() {
             }
         }
 
-        ss.addClassArray = function( dom, args, i ) {
+        bb.addClassArray = function( dom, args, i ) {
             assertArray( args );
 
             var classes = parseClassArray( args, i );
@@ -793,7 +824,7 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.addClassOne = function( dom, klass ) {
+        bb.addClassOne = function( dom, klass ) {
             if ( klass.indexOf(' ') === -1 ) {
                 dom.classList.add( klass );
             } else {
@@ -811,7 +842,7 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.setClass = function( dom ) {
+        bb.setClass = function( dom ) {
             if ( arguments.length === 2 ) {
                 dom.className = arguments[1];
                 return dom;
@@ -820,7 +851,7 @@ window['ss'] = (function() {
             }
         }
 
-        ss.setClassArray = function( dom, args, i ) {
+        bb.setClassArray = function( dom, args, i ) {
             assertArray( args );
 
             dom.className = parseClassArray(args, i);
@@ -828,15 +859,15 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.style = function( dom, k, val ) {
+        bb.style = function( dom, k, val ) {
             if ( arguments.length === 2 ) {
-                if ( (typeof k === 'string') || (k instanceof String) ) {
+                if ( isString(k) ) {
                     return dom.style[k];
                 } else if ( k instanceof Array ) {
                     for ( var i = 0; i < k.length; i++ ) {
                         this.style( dom, k[i] );
                     }
-                } else if ( typeof k === 'object' ) {
+                } else if ( isObject(k) ) {
                     for ( var i in k ) {
                         if ( k.hasOwnProperty(i) ) {
                             this.style( dom, i, k[i] );
@@ -844,7 +875,7 @@ window['ss'] = (function() {
                     }
                 }
             } else if ( arguments.length === 3 ) {
-                if ( (typeof k === 'string') || (k instanceof String) ) {
+                if ( isString(k) ) {
                     dom.style[k] = val;
                 } else if ( k instanceof Array ) {
                     for ( var i = 0; i < k.length; i++ ) {
@@ -858,32 +889,32 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.get = function( dom ) {
+        bb.get = function( dom ) {
             if ( (typeof dom === "string") || (dom instanceof String) ) {
                 return document.querySelector( dom ) || null;
             } else if ( dom instanceof HTMLElement ) {
                 return dom;
-            } else if ( typeof dom === 'object' ) {
+            } else if ( isObject(dom) ) {
                 return this.createObj( dom );
             } else {
                 logError( "unknown object given", dom );
             }
         }
 
-        var appendOne = function( ss, dom, arg ) {
+        var beforeOne = function( bb, parentDom, dom, arg ) {
             if ( dom !== null ) {
                 if ( arg instanceof Array ) {
                     for ( var i = 0; i < arg.length; i++ ) {
-                        appendOne( ss, dom, arg[i] );
+                        beforeOne( bb, parentDom, dom, arg[i] );
                     }
                 } else if ( arg instanceof HTMLElement ) {
-                    dom.appendChild( arg );
-                } else if ( arg instanceof SweetSpot ) {
-                    dom.appendChild( arg.dom() );
-                } else if ( (typeof arg === 'string') || (arg instanceof String) ) {
-                    dom.insertAdjacentHTML( 'beforeend', arg );
-                } else if ( typeof arg === 'object' ) {
-                    dom.appendChild( ss.createObj(arg) );
+                    parentDom.insertBefore( arg, dom );
+                } else if ( arg.__isBBGun ) {
+                    parentDom.insertBefore( arg.dom(), dom );
+                } else if ( isString(arg) ) {
+                    dom.insertAdjacentHTML( 'beforebegin', arg );
+                } else if ( isObject(arg) ) {
+                    parentDom.insertBefore( bb.createObj(arg), dom );
                 } else {
                     logError( "unknown argument given", arg );
                 }
@@ -892,47 +923,143 @@ window['ss'] = (function() {
             return dom;
         }
 
-        var appendArray = function( dom, args, startI ) {
+        var afterOne = function( bb, parentDom, dom, arg ) {
             if ( dom !== null ) {
-                for ( var i = startI; i < args.length; i++ ) {
-                    appendOne( ss, dom, args[i] );
+                if ( arg instanceof Array ) {
+                    for ( var i = 0; i < arg.length; i++ ) {
+                        afterOne( bb, parentDom, dom, arg[i] );
+                    }
+                } else if ( arg instanceof HTMLElement ) {
+                    parentDom.insertAfter( arg, dom );
+                } else if ( arg.__isBBGun ) {
+                    parentDom.insertAfter( arg.dom(), dom );
+                } else if ( isString(arg) ) {
+                    dom.insertAdjacentHTML( 'afterend', arg );
+                } else if ( isObject(arg) ) {
+                    parentDom.insertAfter( bb.createObj(arg), dom );
+                } else {
+                    logError( "unknown argument given", arg );
                 }
             }
 
             return dom;
         }
 
-        ss.append = function( dom ) {
+        bb.beforeOne = function( dom, node ) {
+            var dom = bb.get( dom );
+            var parentDom = ensureParent( dom );
+
+            return beforeOne( this, parentDom, dom, node );
+        }
+
+        bb.afterOne = function( dom, node ) {
+            var dom = bb.get( dom );
+            var parentDom = ensureParent( dom );
+
+            return afterOne( this, parentDom, dom, node );
+        }
+
+        bb.beforeArray = function( dom, args, i ) {
+            if ( i === undefined ) {
+                i = 0;
+            }
+
+            var dom = bb.get( dom );
+            var parentDom = ensureParent( dom );
+
+            for ( ; i < args.length; i++ ) {
+                beforeOne( this, parentDom, dom, node );
+            }
+
+            return dom;
+        }
+
+        bb.afterArray = function( dom, args, i ) {
+            if ( i === undefined ) {
+                i = 0;
+            }
+
+            var dom = bb.get( dom );
+            var parentDom = ensureParent( dom );
+
+            for ( ; i < args.length; i++ ) {
+                afterOne( this, parentDom, dom, node );
+            }
+
+            return dom;
+        }
+
+        bb.before = function( dom ) {
+            return this.beforeArray( dom, arguments, 1 );
+        }
+
+        bb.after = function( dom ) {
+            return this.afterArray( dom, arguments, 1 );
+        }
+
+        var addOne = function( bb, dom, arg ) {
+            if ( dom !== null ) {
+                if ( arg instanceof Array ) {
+                    for ( var i = 0; i < arg.length; i++ ) {
+                        addOne( bb, dom, arg[i] );
+                    }
+                } else if ( arg instanceof HTMLElement ) {
+                    dom.appendChild( arg );
+                } else if ( arg.__isBBGun ) {
+                    dom.appendChild( arg.dom() );
+                } else if ( isString(arg) ) {
+                    dom.insertAdjacentHTML( 'beforeend', arg );
+                } else if ( isObject(arg) ) {
+                    dom.appendChild( bb.createObj(arg) );
+                } else {
+                    logError( "unknown argument given", arg );
+                }
+            }
+
+            return dom;
+        }
+
+        var addArray = function( bb, dom, args, startI ) {
+            if ( dom !== null ) {
+                for ( var i = startI; i < args.length; i++ ) {
+                    addOne( bb, dom, args[i] );
+                }
+            }
+
+            return dom;
+        }
+
+        bb.add = function( dom ) {
             if ( arguments.length === 2 ) {
-                return appendOne( ss, ss.get(dom), arguments[1] );
+                return addOne( this, this.get(dom), arguments[1] );
             } else {
-                return this.appendArray( dom, arguments, 1 );
+                return this.addArray( dom, arguments, 1 );
             }
         }
 
-        ss.appendArray = function( dom, args, startI ) {
+        bb.addArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0;
             }
 
-            return appendArray( this.get(dom), args, startI );
+            return addArray( bb, this.get(dom), args, startI );
         }
 
         /**
          * Sets the HTML content within this element.
          */
-        ss.html = function( dom ) {
+        bb.html = function( dom ) {
             return this.htmlArray( dom, arguments, 1 );
         }
 
-        ss.htmlOne = function( dom, el ) {
+        bb.htmlOne = function( dom, el ) {
             assert( el, "given element is not valid" );
 
-            if ( (typeof el === 'string') || (el instanceof String) ) {
+            if ( isString(el) ) {
                 dom.innerHTML = el;
             } else if ( el instanceof HTMLElement ) {
                 dom.appendChild( el );
-            } else if ( el instanceof SweetSpot ) {
+            } else if ( el.__isBBGun ) {
                 dom.appendChild( el.dom() )
             } else if ( el instanceof Array ) {
                 this.htmlArray( dom, el, 0 )
@@ -945,7 +1072,7 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.htmlArray = function( dom, htmls, i ) {
+        bb.htmlArray = function( dom, htmls, i ) {
             assertArray( htmls, "non-array object was given" );
 
             if ( i === undefined ) {
@@ -961,7 +1088,7 @@ window['ss'] = (function() {
             for ( ; i < htmls.length; i++ ) {
                 var el = htmls[i];
 
-                if ( typeof el === 'string' || (el instanceof String) ) {
+                if ( isString(el) ) {
                     content += el;
                 } else if ( el instanceof Array ) {
                     this.htmlArray( dom, el, 0 );
@@ -973,7 +1100,7 @@ window['ss'] = (function() {
 
                     if ( el instanceof HTMLElement ) {
                         dom.appendChild( el );
-                    } else if ( el instanceof SweetSpot ) {
+                    } else if ( el.__isBBGun ) {
                         dom.appendChild( el.dom() );
                     } else if ( isObject(el) ) {
                         dom.appendChild(
@@ -994,14 +1121,14 @@ window['ss'] = (function() {
          * Sets the text content within this dom,
          * to the text values given.
          */
-        ss.text = function( dom ) {
+        bb.text = function( dom ) {
             return this.textArray( dom, arguments, 1 );
         }
 
-        ss.textOne = function( dom, text ) {
+        bb.textOne = function( dom, text ) {
             if ( text instanceof Array ) {
                 this.textArray( dom, text, 0 );
-            } else if ( typeof text === 'string' || (text instanceof String) ) {
+            } else if ( isString(text) ) {
                 dom.textContent = text;
             } else {
                 logError( "none string given for text content", text );
@@ -1010,7 +1137,7 @@ window['ss'] = (function() {
             return dom;
         }
 
-        ss.textArray = function( dom, args, startI ) {
+        bb.textArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0;
             }
@@ -1020,6 +1147,60 @@ window['ss'] = (function() {
             }
 
             return dom;
+        }
+
+        var attrOne = function( bb, dom, k, val, classesAreElements ) {
+            if ( classesAreElements && k.charAt(0) === '.' ) {
+                var descDom;
+
+                if ( val instanceof HTMLElement ) {
+                    descDom = bb.addClassOne( val, k )
+                } else if ( val.__isBBGun ) {
+                    descDom = bb.addClassOne( val.dom(), k )
+                } else if ( isObject(val) ) {
+                    descDom = bb.addClassOne( bb(val), k )
+                } else {
+                    descDom = bb.createElement( 'div' );
+                    descDom.className = k.substring( 1 );
+
+                    if ( isString(val) ) {
+                        descDom.innerHTML = val;
+                    } else if ( val instanceof Array ) {
+                        descDom = bb.applyArray( descDom, val, 1 );
+                    } else {
+                        logError( "invalid item given as objects contents, for " + k, val );
+                    }
+                }
+
+                dom.appendChild( descDom );
+            } else if ( k === TYPE_NAME_PROPERTY ) {
+                /* do nothing */
+            } else if ( k === 'className' ) {
+                bb.setClass( dom, val );
+            } else if ( k === 'stop' ) {
+                bb.stop( dom, val );
+            } else if ( k === 'on' ) {
+                bb.on( dom, val );
+            } else if ( k === 'once' ) {
+                bb.once( dom, val );
+            } else if ( k === 'id' ) {
+                dom.id = val
+            } else if ( k === 'style' ) {
+                bb.style( dom, val );
+            } else if ( k === 'text' ) {
+                bb.textOne( dom. val );
+            } else if ( k === 'html' ) {
+                bb.htmlOne( dom, val );
+            } else if ( k === 'value' ) {
+                dom.value = val
+            } else if ( bb.setup.data.events.hasOwnProperty(k) ) {
+                var eventFun = bb.setup.data.events[k];
+                eventFun( dom, val );
+            } else if ( HTML_EVENTS.hasOwnProperty(k) ) {
+                setOn( bb.setup.data.events, dom, k, val, false );
+            } else {
+                dom.setAttribute( k, val );
+            }
         }
 
         /**
@@ -1032,9 +1213,9 @@ window['ss'] = (function() {
          *  - html
          *  - text
          */
-        ss.attr = function( dom, obj, val ) {
-            if ( arguments.length === 1 ) {
-                if ( (typeof obj === 'string') || (obj instanceof String) ) {
+        bb.attr = function( dom, obj, val ) {
+            if ( arguments.length === 2 ) {
+                if ( isString(obj) ) {
                     if ( obj === 'className' || obj === 'class' ) {
                         return dom.className;
                     } else if ( obj === 'value' ) {
@@ -1052,55 +1233,34 @@ window['ss'] = (function() {
                     } else {
                         return dom.getAttribute( obj );
                     }
-                }
-            } else if ( arguments.length === 2 ) {
-                var events = this.setup.data.events;
-                var textHtml = false;
+                } else if ( isObject(obj) ) {
+                    var hasHTMLText = false;
 
-                for ( var k in obj ) {
-                    if ( obj.hasOwnProperty(k) ) {
-                        if ( k === TYPE_NAME_PROPERTY ) {
-                            /* do nothing */
-                        } else if ( k === 'className' ) {
-                            this.setClass( dom, obj.className );
-                        } else if ( k === 'stop' ) {
-                            this.stop( dom, obj.stop );
-                        } else if ( k === 'on' ) {
-                            this.on( dom, obj.on );
-                        } else if ( k === 'once' ) {
-                            this.once( dom, obj.once );
-                        } else if ( k === 'id' ) {
-                            dom.id = obj.id;
-                        } else if ( k === 'style' ) {
-                            this.style( dom, obj.style );
-                        } else if ( k === 'text' ) {
-                            this.textOne( dom. obj.text );
-
-                            if ( textHtml ) {
-                                logError( "cannot use text and html at the same time", obj );
+                    for ( var k in obj ) {
+                        if ( obj.hasOwnProperty(k) ) {
+                            if ( k === 'text' || k === 'html' ) {
+                                if ( hasHTMLText ) {
+                                    logError( "cannot use text and html at the same time", obj );
+                                } else {
+                                    hasHTMLText = true;
+                                }
                             }
-                            textHtml = true;
-                        } else if ( k === 'html' ) {
-                            this.htmlOne( dom, obj.html );
 
-                            if ( textHtml ) {
-                                logError( "cannot use text and html at the same time", obj );
-                            }
-                            textHtml = true;
-                        } else if ( k === 'value' ) {
-                            dom.value = obj
-                        } else if ( events.hasOwnProperty(k) ) {
-                            var eventFun = events[k];
-                            eventFun( dom, obj[k] );
-                        } else if ( HTML_EVENTS.hasOwnProperty(k) ) {
-                            setOn( events, dom, k, obj[k], false )
-                        } else {
-                            dom.setAttribute( k, obj[k] );
+                            attrOne( this, dom, k, obj[k], false );
                         }
                     }
+                } else {
+                    logError( "invalid parameter given", obj );
                 }
+            } else if ( arguments.length === 3 ) {
+                assertString( obj, "non-string given as key for attr", obj );
+                attrOne( this, dom, obj, val, false );
             } else {
-                dom[obj] = val;
+                if ( arguments.length < 2 ) {
+                    throw new Error( "not enough parameters given" );
+                } else {
+                    throw new Error( "too many parameters given" );
+                }
             }
 
             return dom;
@@ -1108,16 +1268,16 @@ window['ss'] = (function() {
 
         for ( var k in HTML_ELEMENTS ) {
             if ( HTML_ELEMENTS.hasOwnProperty(k) ) {
-                if ( ss.hasOwnProperty(k) ) {
-                    console.log( 'sweet-spot function clash: ' + k );
+                if ( bb.hasOwnProperty(k) ) {
+                    console.log( 'BB-Gun function clash: ' + k );
                 } else {
-                    ss[k] = new Function( "return this.createArray('" + k + "', arguments, 0);" );
+                    bb[k] = new Function( "return this.createArray('" + k + "', arguments, 0);" );
                 }
             }
         }
 
-        return ss;
+        return bb;
     }
 
-    return newSweetSpot();
+    return newBB();
 })();

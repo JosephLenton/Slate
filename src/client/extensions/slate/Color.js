@@ -68,13 +68,13 @@
 
     var colorInternal = function( col, onDisplay ) {
         if ( col !== undefined ) {
-            if ( slate.util.isArray(col) ) {
+            if ( isArray(col) ) {
                 if (
                         col.length === 4 &&
-                        slate.util.isNumeric(col[0]) &&
-                        slate.util.isNumeric(col[1]) &&
-                        slate.util.isNumeric(col[2]) &&
-                        slate.util.isNumeric(col[3])
+                        isNumeric(col[0]) &&
+                        isNumeric(col[1]) &&
+                        isNumeric(col[2]) &&
+                        isNumeric(col[3])
                 ) {
                     var c = new Color( col[0], col[1], col[2], col[3] );
 
@@ -82,9 +82,9 @@
                     return c;
                 } else if (
                         col.length === 3 &&
-                        slate.util.isNumeric(col[0]) &&
-                        slate.util.isNumeric(col[1]) &&
-                        slate.util.isNumeric(col[2])
+                        isNumeric(col[0]) &&
+                        isNumeric(col[1]) &&
+                        isNumeric(col[2])
                 ) {
                     var c = new Color( col[0], col[1], col[2] );
 
@@ -103,7 +103,7 @@
                 } else {
                     return colorInternal( col[0], onDisplay );
                 }
-            } else if ( slate.util.isString(col) ) {
+            } else if ( isString(col) ) {
                 return colorInternal( colorHexToArray(col), onDisplay );
             }
 

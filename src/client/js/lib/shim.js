@@ -8,6 +8,75 @@
  */
 
 /**
+ *      Element.matchesSelector()
+ *
+ * A new W3C selection tester, for testing if a node
+ * matches a selection. Very new, so it's either browser
+ * specific, or needs a shim.
+ *
+ * @author termi https://gist.github.com/termi
+ * @see https://gist.github.com/termi/2369850/f4022295bf19332ff17e79350ec06c5114d7fbc9
+ */
+(function() {
+    if(!Element.prototype.matchesSelector) {
+      Element.prototype.matchesSelector =
+        Element.prototype.matches ||
+        Element.prototype.webkitMatchesSelector ||
+        Element.prototype.mozMatchesSelector ||
+        Element.prototype.msMatchesSelector ||
+        Element.prototype.oMatchesSelector || function(selector) {
+          if(!selector)return false;
+          if(selector === "*")return true;
+          if(this === document.documentElement && selector === ":root")return true;
+          if(this === document.body && selector === "body")return true;
+
+          var thisObj = this,
+            parent,
+            i,
+            str,
+            tmp,
+            match = false;
+
+          if(/^[\w#\.][\w-]*$/.test(selector) || /^(\.[\w-]*)+$/.test(selector)) {
+            switch (selector.charAt(0)) {
+              case '#':
+                return thisObj.id === selector.slice(1);
+              break;
+              case '.':
+                match = true;
+                i = -1;
+                tmp = selector.slice(1).split(".");
+                str = " " + thisObj.className + " ";
+                while(tmp[++i] && match) {
+                  match = !!~str.indexOf(" " + tmp[i] + " ");
+                }
+                return match;
+              break;
+              default:
+                return thisObj.tagName && thisObj.tagName.toUpperCase() === selector.toUpperCase();
+            }
+          }
+          parent = thisObj.parentNode;
+          
+          if(parent && parent.querySelector) {
+            match = parent.querySelector(selector) === thisObj;
+          }
+
+          if(!match && (parent = thisObj.ownerDocument)) {
+            tmp = parent.querySelectorAll(selector);
+              for (i in tmp ) if(_hasOwnProperty(tmp, i)) {
+                  match = tmp[i] === thisObj;
+                  if(match)return true;
+              }
+          }
+            return match;
+        }
+    }
+
+    if(!Element.prototype.matches)Element.prototype.matches = Element.prototype.matchesSelector;
+})()
+
+/**
  * Object.create
  *
  * @see https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Object/create

@@ -20,7 +20,7 @@
         addValues: function( command, fun ) {
             if ( arguments.length === 2 ) {
                 slate.command( command, function( arr, display, state ) {
-                    if ( slate.util.isArray(arr) ) {
+                    if ( isArray(arr) ) {
                         var r;
                         var iterated = false;
 
@@ -66,7 +66,7 @@
         addEach: function( command, fun ) {
             if ( arguments.length === 2 ) {
                 slate.command( command, function( arr, display, state ) {
-                    if ( slate.util.isArray(arr) ) {
+                    if ( isArray(arr) ) {
                         var r;
 
                         for ( var i = 0; i < arr.length; i++ ) {
@@ -122,7 +122,7 @@
                     }
                 }
             } else if ( arguments.length === 2 ) {
-                if ( slate.util.isArray(command) ) {
+                if ( isArray(command) ) {
                     assert( arguments.length === 2, "Incorrect number of arguments given for commands.add" )
 
                     for ( var i = 0; i < command.length; i++ ) {
@@ -130,7 +130,7 @@
                     }
                 } else {
                     assertString( command, "Name must be a string" );
-                    assertFun( fun, "Command function is not a function" );
+                    assertFunction( fun, "Command function is not a function" );
 
                     slate.commands.commands[command] = fun;
                 }
@@ -181,7 +181,7 @@
                      * First parameter is never a callback!
                      */
                     for ( var i = arguments.length-1; i >= 0; i-- ) {
-                        if ( slate.util.isFunction(arguments[i]) ) {
+                        if ( isFunction(arguments[i]) ) {
                             callback = arguments[i];
                             paramsLen = i;
 
