@@ -311,7 +311,7 @@ window['bb'] = (function() {
                             '        this.' + methodName + '( names, fun );',
                             '    }',
                             '    ',
-                            '    return this;',
+                            '    return this;'
                     ].join("\n")
             )
         }

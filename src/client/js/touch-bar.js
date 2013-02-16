@@ -1356,7 +1356,7 @@ window.slate.TouchBar = (function() {
             after({
                     onUnselect: function() {
                         this.input.classList.remove( 'multi-change' );
-                    },
+                    }
             }).
             extend({
                     resizeInput: function() {
@@ -2295,7 +2295,6 @@ window.slate.TouchBar = (function() {
             if ( ev.which === key ) {
                 if ( ! isDown ) {
                     onDownFun();
-                    isDown = true;
                 }
             }
         })
@@ -2304,7 +2303,6 @@ window.slate.TouchBar = (function() {
             if ( ev.which === key ) {
                 if ( isDown ) {
                     onDownFun();
-                    isDown = false;
                 }
             }
         })
