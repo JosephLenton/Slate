@@ -157,6 +157,22 @@ function assert( foo, msg ) {
     }
 }
 
+/**
+ * Throws an assertion error, if what is given if truthy.
+ *
+ * Note that 0 and empty strings, will cause failure.
+ */
+function assertNot( foo, msg ) {
+    if (
+            foo !== false &&
+            foo !== undefined && 
+            foo !== null &&
+            foo !== undefined
+    ) {
+        throw new AssertionError( msg, foo );
+    }
+}
+
 function assertUnreachable( msg ) {
     assert( false, msg || "this section of code should never be reached" );
 }

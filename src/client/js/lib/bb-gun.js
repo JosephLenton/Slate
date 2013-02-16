@@ -124,9 +124,9 @@ window['BBGun'] = (function() {
 
             var nodeDom = node.dom();
             nodeDom.parentNode.removeChild( nodeDom );
-        } else if ( node instanceof HTMLElement ) {
+        } else if ( node instanceof Element ) {
             if ( node.parentNode !== selfDom ) {
-                logError( "removing HTMLElement which is not a child of this node", node );
+                logError( "removing Element which is not a child of this node", node );
             } else {
                 delete node.__xe;
                 node.parentNode.removeChild( nodeDom );
@@ -136,15 +136,18 @@ window['BBGun'] = (function() {
         }
     }
 
-    var beforeAfterChild = function( current, args, isAfter ) {
+    var beforeAfterChild = function( bbGun, current, args, isAfter ) {
         if ( args.length >= 2 ) {
             assert( current, "falsy parameter given" );
-            assert( current.parent() === this, "inserting using a child which is not within this" );
+            assert( bbGun.child(current) !== null, "child given, is not a child of this node" );
 
             for ( var i = 1; i < args.length; i++ ) {
                 var arg = args[i];
+
                 assert( arg, "falsy parameter given" );
-                assert( arg.parent() === null, "inserting node alredy has a parent" );
+
+                assertNot( (arg instanceof Element) && (arg.parentNode !== null), "HTML Element given already has a parent" );
+                assertNot( (arg.__isBBGun) && (arg.parent() !== null), "BBGun element given already has a parent" );
             }
 
             if ( isAfter ) {
@@ -160,9 +163,30 @@ window['BBGun'] = (function() {
     var BBGun = function( domType ) {
         this.__xeEvents = null;
         this.__isBBGun  = true;
-        this.__xeDom    = ( arguments.length !== 0 ) ?
-                bb.createBBGun( this, domType, arguments, 1 ) :
-                bb.div() ;
+        this.__xeDom    = null;
+
+        this.dom(
+                ( arguments.length !== 0 ) ?
+                        bb.createBBGun( this, domType, arguments, 1 ) :
+                        bb.div()
+        )
+    }
+
+    var registerEvent = function( bbGun, es, f, doOnce ) {
+        assertString( es, "no event name(s) provided" );
+        assertFunction( f, "no function provided" );
+
+        if ( bbGun.__xeEvents === null ) {
+            bbGun.__xeEvents = new EventsManager( bbGun );
+        }
+
+        if ( doOnce ) {
+            bbGun.__xeEvents.once( es, f );
+        } else {
+            bbGun.__xeEvents.register( es, f );
+        }
+
+        return bbGun;
     }
 
     var duplicateEventList = function( oldList, newEvents ) {
@@ -422,12 +446,21 @@ window['BBGun'] = (function() {
                  * they are returned if found.
                  */
                 } else if ( obj.__isBBGun ) {
-                    // todo
+                    if ( obj.parent() === this ) {
+                        return obj;
+                    }
                 } else if ( obj instanceof Element ) {
-                    // todo
+                    var children = this.dom().childNodes;
+                    for ( var i = 0; i < children.length; i++ ) {
+                        if ( children[i] === obj ) {
+                            return obj;
+                        }
+                    }
                 } else {
                     logError( "invalid parameter given as selector", obj );
                 }
+
+                return null;
             } else if ( arguments.length === 2 ) {
                 var child = this.child( obj );
 
@@ -449,7 +482,7 @@ window['BBGun'] = (function() {
         /**
          * Inserts the nodes given before *this* element.
          */
-        before: function() {
+        beforeThis: function() {
             bb.beforeArray( this, arguments, 0 )
             return this;
         },
@@ -457,18 +490,18 @@ window['BBGun'] = (function() {
         /**
          * Inserts the nodes given after *this* element.
          */
-        after: function() {
+        afterThis: function() {
             bb.beforeArray( this, arguments, 0 )
             return this;
         },
 
-        beforeChild: function( current ) {
-            beforeAfterChild( current, arguments, false );
+        before: function( child ) {
+            beforeAfterChild( this, child, arguments, false );
             return this;
         },
 
-        afterChild: function( current ) {
-            beforeAfterChild( current, arguments, true );
+        after: function( child ) {
+            beforeAfterChild( this, child, arguments, true );
             return this;
         },
 
@@ -523,7 +556,7 @@ window['BBGun'] = (function() {
                     var parentDom = this.__xeDom.parentNode;
                     var newDom;
 
-                    if ( newNode instanceof HTMLElement ) {
+                    if ( newNode instanceof Element ) {
                         newNode = bb( newNode );
                     } else if ( ! newNode.__isBBGun ) {
                         newNode = bb( newNode );
@@ -535,6 +568,7 @@ window['BBGun'] = (function() {
                     assert( newDom.parentNode === null, "replacing with node which already has a parent" );
 
                     if ( this.fire('replace', newNode, newDom) ) {
+                        console.log( newDom.parentNode, this.__xeDom.parentNode );
                         parentDom.replaceChild( newDom, this.__xeDom );
                     }
                 }
@@ -543,7 +577,7 @@ window['BBGun'] = (function() {
                 assert( newNode, "falsy newNode given" );
 
                 var oldDom, newDom;
-                if ( oldNode instanceof HTMLElement ) {
+                if ( oldNode instanceof Element ) {
                     oldDom = oldNode;
                 } else if ( oldNode.__isBBGun ) {
                     oldDom = oldNode.dom();
@@ -626,16 +660,11 @@ window['BBGun'] = (function() {
          * 
          */
         on: function( es, f ) {
-            assertString( es, "no event name(s) provided" );
-            assertFunction( f, "no function provided" );
+            return registerEvent( this, es, f, false )
+        },
 
-            if ( this.__xeEvents === null ) {
-                this.__xeEvents = new EventsManager( this );
-            }
-
-            this.__xeEvents.register( es, f );
-
-            return this;
+        once: function( es, f ) {
+            return registerEvent( this, es, f, true )
         },
 
         dom: function( newDom ) {
@@ -643,7 +672,11 @@ window['BBGun'] = (function() {
                 return this.__xeDom;
             } else {
                 if ( this.__xeDom !== newDom ) {
-                    delete this.__xeDom.__xe;
+                    assert( newDom.__xe === undefined, "setting dom, which already has a BBGun parent" );
+
+                    if ( this.__xeDom !== null ) {
+                        delete this.__xeDom.__xe;
+                    }
 
                     this.__xeDom = bb.createArray( arguments[0], arguments, 1 );
                     this.__xeDom.__xe = this;

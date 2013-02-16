@@ -194,7 +194,7 @@ window.slate.TouchBar = (function() {
     var astText = function( text ) {
         return bb.text(
                 bb.createArray( 'touch-ast-text', arguments, 1 ),
-                html
+                text
         )
     }
 
@@ -231,13 +231,13 @@ window.slate.TouchBar = (function() {
                      * animate out.
                      */
                     if ( newNode.isEmpty() ) {
-                        newNode.add( this.addClass('pre-remove') )
+                        newNode.add( this.addClass('pre-remove') );
 
                         (function() {
                             this.removeClass( 'pre-remove' ).
                                  addClass( 'remove' );
 
-                            this.once( 'transitionend', this.remove.bind(this) )
+                            this.once( 'transitionend', this.remove.bind(this) );
                         }).later( this );
                     }
                 } )
@@ -354,7 +354,7 @@ window.slate.TouchBar = (function() {
                 },
 
                 removeError: function() {
-                    this.removeClass.callLater( this, 'error' );
+                    return this.removeClass.callLater( this, 'error' );
 
                     return this;
                 },
@@ -406,13 +406,13 @@ window.slate.TouchBar = (function() {
 
                 selectMore: function() {
                     this.parentAST( function(p) {
-                        parent.addClass( 'select-parent' );
+                        p.addClass( 'select-parent' );
                     } );
                 },
 
                 onUnselect: function() {
                     this.parentAST( function(p) {
-                        parent.removeClass( 'select-parent' );
+                        p.removeClass( 'select-parent' );
                     } );
                 },
 
@@ -1239,7 +1239,7 @@ window.slate.TouchBar = (function() {
             if ( ! isMeasureSet ) {
                 isMeasureSet = true;
 
-                bb.append( 'body', {
+                bb.add( 'body', {
                         className: 'touch-input-measure',
                         html: div
                 } )
@@ -1276,7 +1276,7 @@ window.slate.TouchBar = (function() {
                 this.lastInput = '';
                 this.onInput = new Events( this );
 
-                this.add( bb.input( {
+                this.input = bb.input( {
                         type: type,
 
                         autocapitalize: 'off',
@@ -1298,7 +1298,9 @@ window.slate.TouchBar = (function() {
 
                             self.getView().hideError();
                         }
-                }) )
+                }) 
+
+                this.add( this.input )
 
                 this.resizeInput();
 
@@ -1429,7 +1431,7 @@ window.slate.TouchBar = (function() {
                  * Wrap the RegExp with //'s on either side.
                  */
                 this.
-                        beforeChild( this.getInputDom(), astText('/') ).
+                        before( this.getInputDom(), astText('/') ).
                         add( astText('/') )
             }).
             override({
@@ -1467,7 +1469,7 @@ window.slate.TouchBar = (function() {
                  * so we can inject two extra text nodes,
                  * around the input element.
                  */
-                this.beforeChild( this.getInputDom(), astText('"') ).
+                this.before( this.getInputDom(), astText('"') ).
                         add( astText('"') )
             }).
             override( ast.Input, {
@@ -1852,7 +1854,7 @@ window.slate.TouchBar = (function() {
                     if ( this.getInputValue() === '' ) {
                         return this;
                     } else {
-                        return this.getEmpty( value ) ||
+                        return this.getEmpty() ||
                                this.parentAST( function(p) {
                                    return p.findEmpty();
                                } );

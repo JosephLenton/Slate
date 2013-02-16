@@ -326,7 +326,7 @@ window['bb'] = (function() {
                         classPrefix: '',
 
                         /**
-                         *  Map< Element-Name, (Name) -> HTMLElement >
+                         *  Map< Element-Name, (Name) -> Element >
                          *
                          * These contain alternative names for custom elements.
                          * At the time of writing, it's just shorthand for input
@@ -336,7 +336,7 @@ window['bb'] = (function() {
                         elements: {},
 
                         /**
-                         *  Map< Event-Name, (HTMLElement, Name, Callback) -> void >
+                         *  Map< Event-Name, (Element, Name, Callback) -> void >
                          *
                          * Holds mappings of event names, to the functions that
                          * define them.
@@ -472,7 +472,7 @@ window['bb'] = (function() {
                     setOn( events, dom, name, fun, useCapture );
                 }
             } else {
-                if ( dom instanceof HTMLElement ) {
+                if ( dom instanceof Element ) {
                     dom.addEventListener( name, fun, useCapture )
                 } else if ( dom instanceof Array ) {
                     for ( var i = 0; i < dom.length; i++ ) {
@@ -493,7 +493,9 @@ window['bb'] = (function() {
                         var klasses = arg.split( ' ' );
 
                         for ( var j = 0; j < klasses.length; j++ ) {
-                            fun( arg );
+                            if ( fun(arg) === false ) {
+                                break;
+                            }
                         }
                     } else {
                         fun( arg );
@@ -643,7 +645,7 @@ window['bb'] = (function() {
 
                 if ( arg instanceof Array ) {
                     applyArray( this, bbGun, dom, arg, 0 );
-                } else if ( arg instanceof HTMLElement ) {
+                } else if ( arg instanceof Element ) {
                     dom.appendChild( arg );
                 } else if ( arg.__isBBGun ) {
                     dom.appendChild( arg.dom() );
@@ -678,7 +680,7 @@ window['bb'] = (function() {
          * arguments-add-class stuff.
          * 
          * @param obj A JavaScript object literal describing an object to create.
-         * @return A HTMLElement based on the object given.
+         * @return A Element based on the object given.
          */
         bb.createOne = function( obj ) {
             /*
@@ -764,7 +766,7 @@ window['bb'] = (function() {
          * the input with type button.
          * 
          * @param name The name of the component to create.
-         * @return A HTMLElement for the name given.
+         * @return A Element for the name given.
          */
         bb.createElement = function( name ) {
             if ( arguments.length === 0 ) {
@@ -792,14 +794,36 @@ window['bb'] = (function() {
             return dom.classList.contains( klass );
         } 
 
-        bb.removeClass = function( dom, klass ) {
-            if ( dom.classList.contains(klass) ) {
-                dom.classList.remove( klass );
-
-                return true;
-            } else {
-                return false;
+        bb.hasClassArray = function( dom, klasses, i ) {
+            if ( i === undefined ) {
+                i = 0;
             }
+
+            var isRemoved = false;
+            iterateClasses( klasses, i, function(klass) {
+                if ( ! isRemoved && dom.classList.contains(klass) ) {
+                    isRemoved = true;
+                    return false;
+                }
+            } )
+
+            return isRemoved;
+        }
+
+        bb.removeClass = function( dom ) {
+            return bb.removeClassArray( dom, arguments, 1 );
+        }
+
+        bb.removeClassArray = function( dom, klasses, i ) {
+            if ( i === undefined ) {
+                i = 0;
+            }
+
+            iterateClasses( klasses, i, function(klass) {
+                dom.classList.remove( klass );
+            } )
+
+            return dom;
         }
 
         /**
@@ -938,10 +962,12 @@ window['bb'] = (function() {
         bb.get = function( dom ) {
             if ( (typeof dom === "string") || (dom instanceof String) ) {
                 return document.querySelector( dom ) || null;
-            } else if ( dom instanceof HTMLElement ) {
+            } else if ( dom instanceof Element ) {
                 return dom;
             } else if ( isObject(dom) ) {
                 return this.createObj( dom );
+            } else if ( dom && dom.__isBBGun ) {
+                return dom.dom()
             } else {
                 logError( "unknown object given", dom );
             }
@@ -953,7 +979,7 @@ window['bb'] = (function() {
                     for ( var i = 0; i < arg.length; i++ ) {
                         beforeOne( bb, parentDom, dom, arg[i] );
                     }
-                } else if ( arg instanceof HTMLElement ) {
+                } else if ( arg instanceof Element ) {
                     parentDom.insertBefore( arg, dom );
                 } else if ( arg.__isBBGun ) {
                     parentDom.insertBefore( arg.dom(), dom );
@@ -975,7 +1001,7 @@ window['bb'] = (function() {
                     for ( var i = 0; i < arg.length; i++ ) {
                         afterOne( bb, parentDom, dom, arg[i] );
                     }
-                } else if ( arg instanceof HTMLElement ) {
+                } else if ( arg instanceof Element ) {
                     parentDom.insertAfter( arg, dom );
                 } else if ( arg.__isBBGun ) {
                     parentDom.insertAfter( arg.dom(), dom );
@@ -1014,7 +1040,7 @@ window['bb'] = (function() {
             var parentDom = ensureParent( dom );
 
             for ( ; i < args.length; i++ ) {
-                beforeOne( this, parentDom, dom, node );
+                beforeOne( this, parentDom, dom, args[i] );
             }
 
             return dom;
@@ -1049,7 +1075,7 @@ window['bb'] = (function() {
                     for ( var i = 0; i < arg.length; i++ ) {
                         addOne( bb, dom, arg[i] );
                     }
-                } else if ( arg instanceof HTMLElement ) {
+                } else if ( arg instanceof Element ) {
                     dom.appendChild( arg );
                 } else if ( arg.__isBBGun ) {
                     dom.appendChild( arg.dom() );
@@ -1103,7 +1129,7 @@ window['bb'] = (function() {
 
             if ( isString(el) ) {
                 dom.innerHTML = el;
-            } else if ( el instanceof HTMLElement ) {
+            } else if ( el instanceof Element ) {
                 dom.appendChild( el );
             } else if ( el.__isBBGun ) {
                 dom.appendChild( el.dom() )
@@ -1144,7 +1170,7 @@ window['bb'] = (function() {
                         content = '';
                     }
 
-                    if ( el instanceof HTMLElement ) {
+                    if ( el instanceof Element ) {
                         dom.appendChild( el );
                     } else if ( el.__isBBGun ) {
                         dom.appendChild( el.dom() );
@@ -1199,7 +1225,7 @@ window['bb'] = (function() {
             if ( classesAreElements && k.charAt(0) === '.' ) {
                 var descDom;
 
-                if ( val instanceof HTMLElement ) {
+                if ( val instanceof Element ) {
                     descDom = bb.addClassOne( val, k )
                 } else if ( val.__isBBGun ) {
                     descDom = bb.addClassOne( val.dom(), k )
