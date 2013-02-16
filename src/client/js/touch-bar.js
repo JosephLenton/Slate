@@ -231,7 +231,9 @@ window.slate.TouchBar = (function() {
                      * animate out.
                      */
                     if ( newNode.isEmpty() ) {
-                        newNode.add( this.addClass('pre-remove') );
+                        this.removeClass( 'select' );
+                        this.addClass('pre-remove') 
+                        newNode.add( this );
 
                         (function() {
                             this.removeClass( 'pre-remove' ).
@@ -1615,7 +1617,7 @@ window.slate.TouchBar = (function() {
 
                 this.insertNewEmpty();
 
-                this.replace( function( newCommand ) {
+                this.beforeReplace( function( newCommand ) {
                     if ( newCommand instanceof ast.Command ) {
                         this.setInputValue( newCommand.getInputValue() );
 

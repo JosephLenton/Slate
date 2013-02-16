@@ -39,6 +39,8 @@ window['BBGun'] = (function() {
                     this.register( name, f );
                 }
             } else {
+                assert( this.xe.isEvent(name), "unknown event, " + name );
+
                 if ( this.events.hasOwnProperty(name) ) {
                     this.events[name].push( f );
                 } else {
@@ -49,6 +51,8 @@ window['BBGun'] = (function() {
         },
 
         unregister: function( name, fun ) {
+            assert( this.xe.isEvent(name), "unknown event, " + name );
+
             if ( this.events.hasOwnProperty(name) ) {
                 var evs = this.events[name];
 
@@ -67,7 +71,7 @@ window['BBGun'] = (function() {
         once: function( name, f ) {
             var self = this;
             var fun = function(ev) {
-                self.unregister( fun );
+                self.unregister( name, fun );
                 return f.call( this, ev );
             }
 
@@ -244,7 +248,10 @@ window['BBGun'] = (function() {
         /**
          * A list of all 'legal' events.
          */
-        __eventList: {},
+        __eventList: {
+                'replace': true,
+                'beforeReplace': true
+        },
 
         /**
          *      parent() -> BBGun | null
@@ -512,6 +519,18 @@ window['BBGun'] = (function() {
         },
 
         /**
+         * The event is called *before* the replacement.
+         * This allows you to cancel the replacelement,
+         * by returning false.
+         */
+        beforeReplace: function( f ) {
+            assert( arguments.length === 1, "number of parameters is incorrect" );
+            assertFunction( f );
+
+            return this.on( 'beforeReplace', f );
+        },
+
+        /**
          * Replaces this node with the one given,
          * or replaces one child with another.
          *
@@ -540,9 +559,6 @@ window['BBGun'] = (function() {
          * If an Element was given, then 'newNode' and 'newDom'
          * will be identical.
          *
-         * The event is called *before* the replacement.
-         * This allows you to cancel the replacelement,
-         * by returning false.
          */
         replace: function( oldNode, newNode ) {
             if ( arguments.length === 1 ) {
@@ -567,9 +583,11 @@ window['BBGun'] = (function() {
                     assert( parentDom !== null, "replacing this element, when it has no parent dom" );
                     assert( newDom.parentNode === null, "replacing with node which already has a parent" );
 
-                    if ( this.fire('replace', newNode, newDom) ) {
-                        console.log( newDom.parentNode, this.__xeDom.parentNode );
+                    if ( this.fire('beforeReplace', newNode, newDom) ) {
+                        assert( this.__xeDom.parentNode === parentDom, "parent has been changed within the 'beforeReplace' event" );
                         parentDom.replaceChild( newDom, this.__xeDom );
+
+                        this.fire( 'replace', newNode, newDom );
                     }
                 }
             } else if ( arguments.length === 2 ) {
@@ -654,6 +672,10 @@ window['BBGun'] = (function() {
             } else {
                 logError( "invalid number of arguments given" );
             }
+        },
+
+        isEvent: function( name ) {
+            return this.__eventList.hasOwnProperty( name ) || bb.setup.isEvent( name );
         },
 
         /**

@@ -376,6 +376,11 @@ window['bb'] = (function() {
                     this.data.events[ name ] = fun;
                 },
 
+                isEvent: function( name ) {
+                    return this.data.events.hasOwnProperty( name ) ||
+                           HTML_EVENTS.hasOwnProperty( name );
+                },
+
                 /**
                  * Allows registering new types of elements.
                  *
@@ -1076,9 +1081,12 @@ window['bb'] = (function() {
                         addOne( bb, dom, arg[i] );
                     }
                 } else if ( arg instanceof Element ) {
+                    assert( arg.parentNode === null, "adding element, which already has a parent" );
                     dom.appendChild( arg );
                 } else if ( arg.__isBBGun ) {
-                    dom.appendChild( arg.dom() );
+                    var argDom = arg.dom();
+                    assert( argDom.parentNode === null, "adding element, which already has a parent" );
+                    dom.appendChild( argDom );
                 } else if ( isString(arg) ) {
                     dom.insertAdjacentHTML( 'beforeend', arg );
                 } else if ( isObject(arg) ) {
