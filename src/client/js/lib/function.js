@@ -345,7 +345,13 @@
      * @param The new prototype.
      */
     Function.prototype.proto = function( newProto ) {
-        while ( (typeof newProto === 'function') || (newProto instanceof Function) ) {
+        if ( (typeof newProto === 'function') || (newProto instanceof Function) ) {
+            for ( var k in newProto ) {
+                if ( newProto.hasOwnProperty(k) && k !== 'prototype' ) {
+                    this[k] = newProto[k];
+                }
+            }
+
             newProto = newProto.prototype;
         }
 

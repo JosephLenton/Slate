@@ -204,7 +204,7 @@ window['BBGun'] = (function() {
             methods[name] = new Function( "f", "return this.on('" + name + "', f);" );
         }
 
-        var extension = this.extends( methods );
+        var extension = this.extend( methods );
         extension.prototype.__eventList =
                 duplicateEventList( this.prototype.__eventList, arguments );
 
@@ -585,6 +585,14 @@ window['BBGun'] = (function() {
                 return this.__xeEvents.fireEvent( name, args );
             } else {
                 return true;
+            }
+        },
+
+        click: function( fun ) {
+            if ( arguments.length === 0 ) {
+                return this.on( 'click', fun );
+            } else {
+                logError( "invalid number of arguments given" );
             }
         },
 

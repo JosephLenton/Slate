@@ -548,7 +548,7 @@ window.slate.TouchBar = (function() {
                 this.
                         addClass( 'touch-ast-literal' ).
                         addClass( klass ).
-                        dom.appendChild( astHTML(displayValue) );
+                        add( astHTML(displayValue) );
             }).
             proto( ast.Node ).
             override({
@@ -568,14 +568,14 @@ window.slate.TouchBar = (function() {
     ast.NullLiteral = ast.Literal.
             params( null, 'touch-ast-null', 'null' ).
             sub(function() {
-                this.onClick( function() {
+                this.click( function() {
                     this.replace( new ast.UndefinedLiteral() );
                 } );
             });
     ast.UndefinedLiteral = ast.Literal.
             params( undefined, 'touch-ast-undefined', 'undefined' ).
             sub(function() {
-                this.onClick( function() {
+                this.click( function() {
                     this.replace( new ast.NullLiteral() );
                 } );
             });
@@ -583,7 +583,7 @@ window.slate.TouchBar = (function() {
     ast.TrueLiteral = ast.Literal.
             params( true, 'touch-ast-boolean' ).
             sub(function() {
-                this.onClick( function() {
+                this.click( function() {
                     this.replace( new ast.FalseLiteral() );
                 })
             });
@@ -591,7 +591,7 @@ window.slate.TouchBar = (function() {
     ast.FalseLiteral = ast.Literal.
             params( false, 'touch-ast-boolean' ).
             sub(function() {
-                this.onClick( function() {
+                this.click( function() {
                     this.replace( new ast.TrueLiteral() );
                 })
             });
@@ -1302,7 +1302,7 @@ window.slate.TouchBar = (function() {
 
                 this.resizeInput();
 
-                this.onClick(function() {
+                this.click(function() {
                     self.input.focus();
                 });
                 this.replace( function(other) {
