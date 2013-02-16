@@ -689,7 +689,30 @@ window['BBGun'] = (function() {
             return registerEvent( this, es, f, true )
         },
 
-        dom: function( newDom ) {
+        style: function( obj, val ) {
+            if (arguments.length === 0) {
+                return this.dom().style;
+            } else if (arguments.length === 1) {
+                if (isString(obj)) {
+                    return this.dom().style[obj];
+                } else if (isObject(obj)) {
+                    bb.style(this.dom(), obj);
+                } else {
+                    logError("invalid style parameter", obj);
+                }
+            } else if (arguments.length === 2) {
+                assert(isString(obj) && isLiteral(val),
+                        "invalid parameters")
+
+                this.dom().style[obj] = val;
+            } else {
+                logError("too many parameters", arguments);
+            }
+
+            return this;
+        },
+
+        dom: function(newDom) {
             if ( arguments.length === 0 ) {
                 return this.__xeDom;
             } else {

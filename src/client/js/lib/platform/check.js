@@ -57,6 +57,15 @@
         return ( typeof str === 'string' ) || ( str instanceof String );
     }
 
+    window['isLiteral'] = function(obj) {
+        return isString(obj) ||
+                isNumber(obj) ||
+                obj === undefined ||
+                obj === null ||
+                obj === true ||
+                obj === false
+    }
+
     window['isArrayArguments'] = function( arr ) {
         return ( arr instanceof Array ) ||
                (
@@ -188,14 +197,7 @@ function assertObject( obj, msg ) {
  * a literal value.
  */
 function assertLiteral( obj, msg ) {
-    if ( !(
-            isString( obj )     ||
-            isNumber( obj )     ||
-            obj === undefined   ||
-            obj === null        ||
-            obj === true        ||
-            obj === false
-    ) ) {
+    if ( ! isLiteral(obj) ) {
         throw new AssertionError( msg || "code expected a JSON object literal", obj );
     }
 }

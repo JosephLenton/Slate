@@ -1229,8 +1229,10 @@ window['bb'] = (function() {
             return dom;
         }
 
-        var attrOne = function( bb, bbGun, dom, k, val, classesAreElements ) {
-            if ( classesAreElements && k.charAt(0) === '.' ) {
+        var attrOne = function( bb, bbGun, dom, k, val ) {
+            if ( bbGun !== null && k.charAt(0) === '.' && k.length > 0 ) {
+                k = k.substring(1);
+
                 var descDom;
 
                 if ( val instanceof Element ) {
@@ -1315,7 +1317,7 @@ window['bb'] = (function() {
                         }
                     }
 
-                    attrOne( bb, bbGun, dom, k, obj[k], false );
+                    attrOne( bb, bbGun, dom, k, obj[k] );
                 }
             }
         }
@@ -1357,7 +1359,7 @@ window['bb'] = (function() {
                 }
             } else if ( arguments.length === 3 ) {
                 assertString( obj, "non-string given as key for attr", obj );
-                attrOne( this, null, dom, obj, val, false );
+                attrOne( this, null, dom, obj, val );
             } else {
                 if ( arguments.length < 2 ) {
                     throw new Error( "not enough parameters given" );

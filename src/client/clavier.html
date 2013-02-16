@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+
+<link rel="stylesheet" href="css/clavier.css">
+
+<script src="js/lib/platform/check.js"></script>
+<script src="js/lib/platform/shim.js"></script>
+<script src="js/lib/platform/function.js"></script>
+<script src="js/lib/platform/array.js"></script>
+<script src="js/lib/platform/bb.js"></script>
+<script src="js/lib/platform/bb-gun.js"></script>
+
+<script src="js/clavier.js"></script>
+
+<div class="main"></div>
+
+<style>
+    html, body {
+        display: block;
+
+        width: 100%;
+        height: 100%;
+
+        margin: 0;
+        padding: 0;
+    }
+</style>
+
+<script>
+    (function() {
+        var keyboard = new Clavier();
+
+        document.body.querySelector('.main').appendChild(keyboard.dom());
+
+        (function() {
+            keyboard.open();
+        }).later(1000);
+    }).later();
+</script>
