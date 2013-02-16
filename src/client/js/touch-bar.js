@@ -2291,23 +2291,7 @@ window.slate.TouchBar = (function() {
     }
 
     var newShiftButton = function( fun, key ) {
-        document.getElementsByTagName('body')[0].addEventListener( 'keydown', function( ev ) {
-            if ( ev.which === key ) {
-                if ( ! isDown ) {
-                    onDownFun();
-                }
-            }
-        })
-
-        document.getElementsByTagName('body')[0].addEventListener( 'keyup', function( ev ) {
-            if ( ev.which === key ) {
-                if ( isDown ) {
-                    onDownFun();
-                }
-            }
-        })
-
-        return bb.a( 'touch-shift-button', {
+        var button = bb.a( 'touch-shift-button', {
                 hold: function( ev, isPress ) {
                     if ( isPress ) {
                         this.classList.add( 'highlight' )
@@ -2318,6 +2302,22 @@ window.slate.TouchBar = (function() {
                     }
                 }
         } )
+
+        document.getElementsByTagName('body')[0].addEventListener( 'keydown', function( ev ) {
+            if ( ev.which === key ) {
+                button.classList.add( 'highlight' )
+                fun( true );
+            }
+        })
+
+        document.getElementsByTagName('body')[0].addEventListener( 'keyup', function( ev ) {
+            if ( ev.which === key ) {
+                button.classList.remove( 'highlight' )
+                fun( false )
+            }
+        })
+
+        return button;
     }
 
     var ShiftButtons =
