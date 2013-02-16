@@ -15,7 +15,8 @@
  * Checks
  */
 (function(window) {
-    var objConstructor = ({}).__proto__.constructor;
+    var objPrototype   = ({}).__proto__;
+    var objConstructor = objPrototype.constructor;
     
     var argsConstructor = (function() {
         return arguments.constructor;
@@ -26,7 +27,8 @@
             var proto = obj.__proto__;
 
             if ( proto !== undefined && proto !== null ) {
-                return ( proto.constructor === objConstructor )
+                return proto             === objPrototype   &&
+                       proto.constructor === objConstructor ;
             }
         }
 
@@ -161,6 +163,23 @@ function assertUnreachable( msg ) {
 
 function assertObject( obj, msg ) {
     if ( ! isObject(obj) ) {
+        throw new AssertionError( msg || "code expected a JSON object literal", obj );
+    }
+}
+
+/**
+ * Throws an AssertionError if the value given is not
+ * a literal value.
+ */
+function assertLiteral( obj, msg ) {
+    if ( !(
+            isString( obj )     ||
+            isNumber( obj )     ||
+            obj === undefined   ||
+            obj === null        ||
+            obj === true        ||
+            obj === false
+    ) ) {
         throw new AssertionError( msg || "code expected a JSON object literal", obj );
     }
 }

@@ -193,7 +193,6 @@ window.slate.TouchBar = (function() {
 
     var astText = function( text ) {
         return bb.text(
-                'touch-ast-text',
                 bb.createArray( 'touch-ast-text', arguments, 1 ),
                 html
         )
@@ -201,7 +200,7 @@ window.slate.TouchBar = (function() {
 
     var ast = {};
 
-    ast.Node = BBGun.curry( 'touch-ast', {
+    ast.Node = BBGun.params( 'touch-ast', {
                     click: function() {
                         if ( ! this.isSelected() ) {
                             this.getView().setCurrent( this );
@@ -388,7 +387,7 @@ window.slate.TouchBar = (function() {
                     return this;
                 },
 
-                isSelected: BBGun.prototype.hasClass.curry( 'select' ),
+                isSelected: BBGun.prototype.hasClass.params( 'select' ),
 
                 onSelect: function() {
                     this.addClass( 'select' );
@@ -567,14 +566,14 @@ window.slate.TouchBar = (function() {
             } )
 
     ast.NullLiteral = ast.Literal.
-            curry( null, 'touch-ast-null', 'null' ).
+            params( null, 'touch-ast-null', 'null' ).
             sub(function() {
                 this.onClick( function() {
                     this.replace( new ast.UndefinedLiteral() );
                 } );
             });
     ast.UndefinedLiteral = ast.Literal.
-            curry( undefined, 'touch-ast-undefined', 'undefined' ).
+            params( undefined, 'touch-ast-undefined', 'undefined' ).
             sub(function() {
                 this.onClick( function() {
                     this.replace( new ast.NullLiteral() );
@@ -582,7 +581,7 @@ window.slate.TouchBar = (function() {
             });
 
     ast.TrueLiteral = ast.Literal.
-            curry( true, 'touch-ast-boolean' ).
+            params( true, 'touch-ast-boolean' ).
             sub(function() {
                 this.onClick( function() {
                     this.replace( new ast.FalseLiteral() );
@@ -590,7 +589,7 @@ window.slate.TouchBar = (function() {
             });
 
     ast.FalseLiteral = ast.Literal.
-            curry( false, 'touch-ast-boolean' ).
+            params( false, 'touch-ast-boolean' ).
             sub(function() {
                 this.onClick( function() {
                     this.replace( new ast.TrueLiteral() );
@@ -1407,7 +1406,7 @@ window.slate.TouchBar = (function() {
             } )
 
     ast.RegExpInput = ast.Input.
-            curry(
+            params(
                     'text',
                     'touch-ast-regexp',
                     undefined,
@@ -1456,7 +1455,7 @@ window.slate.TouchBar = (function() {
             })
 
     ast.StringInput = ast.Input.
-            curry(
+            params(
                     'text',
                     'touch-ast-string',
                     undefined,
@@ -1484,7 +1483,7 @@ window.slate.TouchBar = (function() {
             })
 
     ast.NumberInput = ast.Input.
-            curry(
+            params(
                     'number',
                     'touch-ast-number',
                     '',
@@ -1512,7 +1511,7 @@ window.slate.TouchBar = (function() {
             })
 
     ast.VariableInput = ast.Input.
-            curry(
+            params(
                     'text',
                     'touch-ast-variable',
                     '',
@@ -2065,7 +2064,7 @@ window.slate.TouchBar = (function() {
      * The area that displays the AST.
      */
     var TouchView = BBGun.
-            curry( 'touch-bar-view' ).
+            params( 'touch-bar-view' ).
             sub(function( touchBar ) {
                 this.touchBar    = touchBar;
                 this.current     = null;
@@ -2086,7 +2085,7 @@ window.slate.TouchBar = (function() {
 
                 /* finally, setup! */
                 this.add( this.bar, this.errorDom ).
-                     setAST( new ast.Empty() )
+                     setAST( new ast.Empty() );
             }).
             extend({
                     execute: function() {
@@ -2288,12 +2287,6 @@ window.slate.TouchBar = (function() {
     }
 
     var newShiftButton = function( fun, key ) {
-        var onDownFun = function() {
-            dom.classList.toggle( 'highlight' )
-            fun( dom.classList.contains('highlight') )
-        }
-
-        var isDown = false;
         document.getElementsByTagName('body')[0].addEventListener( 'keydown', function( ev ) {
             if ( ev.which === key ) {
                 if ( ! isDown ) {
@@ -2313,13 +2306,13 @@ window.slate.TouchBar = (function() {
         })
 
         return bb.a( 'touch-shift-button', {
-                press: function( ev, isPress ) {
-                    if ( isPress && !isDown ) {
-                        isDown = true;
-                        onDownFun();
-                    } else if ( !isPress && isDown ) {
-                        isDown = false;
-                        onDownFun();
+                hold: function( ev, isPress ) {
+                    if ( isPress ) {
+                        this.classList.add( 'highlight' )
+                        fun( true )
+                    } else if ( !isPress ) {
+                        this.classList.remove( 'highlight' )
+                        fun( false )
                     }
                 }
         } )
@@ -2332,7 +2325,8 @@ window.slate.TouchBar = (function() {
                 this.hasLeft  = false;
                 this.hasRight = false;
 
-                BBGun.call( 'touch-shift',
+                BBGun.call( this,
+                        'touch-shift',
                         newShiftButton( function(isDown) {
                                     self.hasLeft = isDown;
                                 }, 81),

@@ -559,12 +559,28 @@ window['bb'] = (function() {
             return this.createArray( arguments[0], arguments, 1 );
         }
 
+        bb.createBBGun = function( bbGun, obj, args, i ) {
+            if ( i === undefined ) {
+                i = 0
+            }
+
+            return applyArray(
+                    this,
+                    bbGun,
+                    bb.createOne( obj ),
+                    args,
+                    i
+            )
+        }
+
         bb.createArray = function( obj, args, i ) {
             if ( i === undefined ) {
                 i = 0
             }
 
-            return bb.applyArray(
+            return applyArray(
+                    this,
+                    null,
                     bb.createOne( obj ),
                     args,
                     i
@@ -572,7 +588,9 @@ window['bb'] = (function() {
         }
 
         bb.apply = function( dom ) {
-            return applyArray( this,
+            return applyArray(
+                    this,
+                    null,
                     this.get( dom ),
                     arguments,
                     1
@@ -584,21 +602,23 @@ window['bb'] = (function() {
                 startI = 0
             }
 
-            return applyArray( this,
+            return applyArray(
+                    this,
+                    null,
                     this.get( dom ),
                     args,
                     startI
             )
         }
 
-        var applyArray = function( bb, dom, args, startI ) {
+        var applyArray = function( bb, bbGun, dom, args, startI ) {
             var argsLen = args.length;
 
             for ( var i = startI; i < argsLen; i++ ) {
                 var arg = args[i];
 
                 if ( arg instanceof Array ) {
-                    applyArray( this, dom, arg, 0 );
+                    applyArray( this, bbGun, dom, arg, 0 );
                 } else if ( arg instanceof HTMLElement ) {
                     dom.appendChild( arg );
                 } else if ( arg.__isBBGun ) {
@@ -616,9 +636,9 @@ window['bb'] = (function() {
                         bb.addClassOne( dom, arg );
                     }
                 } else if ( isObject(arg) ) {
-                    bb.attr( dom, arg );
+                    attrObj( bb, bbGun, dom, arg );
                 } else {
-                    error( arg, "unknown argument given" );
+                    logError( "invalid argument given", arg );
                 }
             }
 
@@ -680,7 +700,7 @@ window['bb'] = (function() {
 
             for ( var k in obj ) {
                 if ( obj.hasOwnProperty(k) ) {
-                    attrOne( this, dom, k, obj[k] );
+                    attrOne( this, null, dom, k, obj[k] );
                 }
             }
 
@@ -916,7 +936,7 @@ window['bb'] = (function() {
                 } else if ( isObject(arg) ) {
                     parentDom.insertBefore( bb.createObj(arg), dom );
                 } else {
-                    logError( "unknown argument given", arg );
+                    logError( "invalid argument given", arg );
                 }
             }
 
@@ -938,7 +958,7 @@ window['bb'] = (function() {
                 } else if ( isObject(arg) ) {
                     parentDom.insertAfter( bb.createObj(arg), dom );
                 } else {
-                    logError( "unknown argument given", arg );
+                    logError( "invalid argument given", arg );
                 }
             }
 
@@ -1012,7 +1032,7 @@ window['bb'] = (function() {
                 } else if ( isObject(arg) ) {
                     dom.appendChild( bb.createObj(arg) );
                 } else {
-                    logError( "unknown argument given", arg );
+                    logError( "invalid argument given", arg );
                 }
             }
 
@@ -1149,7 +1169,7 @@ window['bb'] = (function() {
             return dom;
         }
 
-        var attrOne = function( bb, dom, k, val, classesAreElements ) {
+        var attrOne = function( bb, bbGun, dom, k, val, classesAreElements ) {
             if ( classesAreElements && k.charAt(0) === '.' ) {
                 var descDom;
 
@@ -1193,13 +1213,50 @@ window['bb'] = (function() {
                 bb.htmlOne( dom, val );
             } else if ( k === 'value' ) {
                 dom.value = val
+
+            /* Events */
+
+            /* custom new event */
             } else if ( bb.setup.data.events.hasOwnProperty(k) ) {
-                var eventFun = bb.setup.data.events[k];
-                eventFun( dom, val );
+                if ( bbGun !== null ) {
+                    bbGun.on( k, val );
+                } else {
+                    var eventFun = bb.setup.data.events[k];
+                    eventFun( dom, val );
+                }
+            /* a HTML event */
             } else if ( HTML_EVENTS.hasOwnProperty(k) ) {
-                setOn( bb.setup.data.events, dom, k, val, false );
+                if ( bbGun !== null ) {
+                    bbGun.on( k, val );
+                } else {
+                    dom.addEventListener( k, val, false )
+                }
+            /* legal BBGun Event */
+            } else if ( bbGun !== null && bbGun.__proto__.__eventList[k] === true ) {
+                bbGun.on( k, val );
+
+            /* Arribute */
             } else {
+                assertLiteral( val, "setting an object to a DOM attribute (probably a bug)," + k, k, val )
                 dom.setAttribute( k, val );
+            }
+        }
+
+        var attrObj = function( bb, bbGun, dom, obj ) {
+            var hasHTMLText = false;
+
+            for ( var k in obj ) {
+                if ( obj.hasOwnProperty(k) ) {
+                    if ( k === 'text' || k === 'html' ) {
+                        if ( hasHTMLText ) {
+                            logError( "cannot use text and html at the same time", obj );
+                        } else {
+                            hasHTMLText = true;
+                        }
+                    }
+
+                    attrOne( bb, bbGun, dom, k, obj[k], false );
+                }
             }
         }
 
@@ -1234,27 +1291,13 @@ window['bb'] = (function() {
                         return dom.getAttribute( obj );
                     }
                 } else if ( isObject(obj) ) {
-                    var hasHTMLText = false;
-
-                    for ( var k in obj ) {
-                        if ( obj.hasOwnProperty(k) ) {
-                            if ( k === 'text' || k === 'html' ) {
-                                if ( hasHTMLText ) {
-                                    logError( "cannot use text and html at the same time", obj );
-                                } else {
-                                    hasHTMLText = true;
-                                }
-                            }
-
-                            attrOne( this, dom, k, obj[k], false );
-                        }
-                    }
+                    attrObj( this, null, dom, obj );
                 } else {
                     logError( "invalid parameter given", obj );
                 }
             } else if ( arguments.length === 3 ) {
                 assertString( obj, "non-string given as key for attr", obj );
-                attrOne( this, dom, obj, val, false );
+                attrOne( this, null, dom, obj, val, false );
             } else {
                 if ( arguments.length < 2 ) {
                     throw new Error( "not enough parameters given" );
@@ -1274,6 +1317,59 @@ window['bb'] = (function() {
                     bb[k] = new Function( "return this.createArray('" + k + "', arguments, 0);" );
                 }
             }
+        }
+
+        /*
+         *      Pre-provided Touch Events
+         */
+
+        var IS_TOUCH = !! ('ontouchstart' in window)  // works on most browsers 
+                    || !!('onmsgesturechange' in window); // works on IE 10
+
+        if ( IS_TOUCH ) {
+            bb.setup.event({
+                    click: function( el, fun ) {
+                        window.jester( el ).tap( fun );
+                    },
+
+                    hold: function( el, fun ) {
+                        window.jester(el).start( function(ev) {
+                            fun.call( el, ev, true );
+                        } )
+
+                        window.jester(el).end( function(ev) {
+                            fun.call( el, ev, false );
+                        } )
+                    }
+            })
+        } else {
+            bb.setup.event({
+                    hold: function( el, fun ) {
+                        var isDown = false;
+
+                        el.addEventListener( 'mousedown', function(ev) {
+                            ev = ev || window.event;
+
+                            if ( (ev.which || ev.button) === 1 ) {
+                                ev.preventDefault();
+                            
+                                isDown = true;
+                                fun.call( el, ev, true );
+                            }
+                        } )
+
+                        el.addEventListener( 'mouseup', function(ev) {
+                            ev = ev || window.event;
+
+                            if ( (ev.which || ev.button) === 1 && isDown ) {
+                                ev.preventDefault();
+                            
+                                isDown = false;
+                                fun.call( el, ev, false );
+                            }
+                        } )
+                    }
+            })
         }
 
         return bb;

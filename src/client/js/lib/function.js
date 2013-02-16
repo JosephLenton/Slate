@@ -462,6 +462,22 @@
     )
 
     /**
+     * This is just like curry,
+     * in that you can add extra parameters to this function.
+     *
+     * It differs, in that no more parameters can be added
+     * when the function is called.
+     */
+    Function.prototype.params = function() {
+        var self = this,
+            args = arguments;
+
+        return (function() {
+                    return self.apply( this, args );
+                }).proto( this );
+    }
+
+    /**
      * Copies this function, and returns a new one,
      * with the parameters given tacked on.
      *
@@ -631,6 +647,7 @@
      */
     Function.prototype.sub = function( post ) {
         var self = this;
+
         return (function() {
                     self.apply( this, arguments );
                     return post.apply( this, arguments );

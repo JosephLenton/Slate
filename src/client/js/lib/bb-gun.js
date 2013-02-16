@@ -153,20 +153,49 @@ window['BBGun'] = (function() {
     }
 
     var BBGun = function( domType ) {
-        var dom;
-
-        if ( arguments.length === 0 ) {
-            dom = bb.div();
-        } else {
-            dom = bb.createArray( domType, arguments, 1 );
-        }
-
         this.__xeEvents = null;
-        this.__xeDom    = dom ;
-
         this.__isBBGun  = true;
+        this.__xeDom    = ( arguments.length !== 0 ) ?
+                bb.createBBGun( this, domType, arguments, 1 ) :
+                bb.div() ;
     }
 
+    var duplicateEventList = function( oldList, newEvents ) {
+        var eventList = {};
+
+        for ( var k in oldList ) {
+            if ( oldList.hasOwnProperty(k) ) {
+                eventList[k] = true;
+            }
+        }
+
+        for ( var i = 0; i < newEvents; i++ ) {
+            eventList[ newEvents[i] ] = true;
+        }
+
+        return eventList;
+    }
+
+    /**
+     * Extends this BBGun prototype,
+     * with a new version, which includes the
+     * events given.
+     *
+     * These events must be added, for them to be
+     * legal events.
+     */
+    BBGun.registerEvents = function() {
+        return this.override({
+                __eventList: duplicateEventList( this.prototype.__eventList, arguments )
+        })
+    }
+
+    /**
+     * The same as 'registerEvents', only it also
+     * adds no method stubs.
+     *
+     * If a method already exists, an error will be raised.
+     */
     BBGun.events = function() {
         var methods = {};
 
@@ -175,10 +204,19 @@ window['BBGun'] = (function() {
             methods[name] = new Function( "f", "return this.on('" + name + "', f);" );
         }
 
-        return this.extends( methods );
+        var extension = this.extends( methods );
+        extension.prototype.__eventList =
+                duplicateEventList( this.prototype.__eventList, arguments );
+
+        return extension;
     }
 
     BBGun.prototype = {
+        /**
+         * A list of all 'legal' events.
+         */
+        __eventList: {},
+
         /**
          *      parent() -> BBGun | null
          *
