@@ -482,6 +482,30 @@ window['bb'] = (function() {
             }
         }
 
+        var iterateClasses = function( args, i, fun ) {
+            for ( ; i < args.length; i++ ) {
+                var arg = args[i];
+
+                if ( isString(arg) ) {
+                    assertString( arg, "expected string for add DOM class" );
+
+                    if ( arg.indexOf(' ') !== -1 ) {
+                        var klasses = arg.split( ' ' );
+
+                        for ( var j = 0; j < klasses.length; j++ ) {
+                            fun( arg );
+                        }
+                    } else {
+                        fun( arg );
+                    }
+                } else if ( isArray(arg) ) {
+                    iterateClasses( arg, 0, fun );
+                } else {
+                    logError( "invalid parameter", arg );
+                }
+            }
+        }
+
         var parseClassArray = function( arr, startI ) {
             var klass = '';
 
@@ -826,20 +850,13 @@ window['bb'] = (function() {
         bb.addClassArray = function( dom, args, i ) {
             assertArray( args );
 
-            var classes = parseClassArray( args, i );
-
-            if ( classes !== '' ) {
-                var currentClasses = dom.className;
-
-                if (
-                        currentClasses === undefined ||
-                        currentClasses === ''
-                ) {
-                    dom.className = classes;
-                } else {
-                    dom.className = currentClasses + ' ' + classes ;
-                }
+            if ( i === undefined ) {
+                i = 0;
             }
+
+            iterateClasses( args, i, function(klass) {
+                dom.classList.add( klass );
+            } )
 
             return dom;
         }
@@ -874,7 +891,16 @@ window['bb'] = (function() {
         bb.setClassArray = function( dom, args, i ) {
             assertArray( args );
 
-            dom.className = parseClassArray(args, i);
+            if ( i === undefined ) {
+                i = 0;
+            }
+
+            var str = '';
+            iterateClasses( args, i, function(klass) {
+                str += ' ' + klass;
+            } )
+
+            dom.className = str;
 
             return dom;
         }

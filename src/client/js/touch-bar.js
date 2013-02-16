@@ -2252,7 +2252,7 @@ window.slate.TouchBar = (function() {
                     insert: function( node ) {
                         this.current.replace( node );
                         this.current.setView( this );
-                        this.selectEmpty( this.current );
+                        this.selectEmpty( node );
                     },
 
                     selectEmpty: function( node, findEmptyVal ) {

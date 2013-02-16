@@ -43,6 +43,7 @@ window['BBGun'] = (function() {
                     this.events[name].push( f );
                 } else {
                     bb.on( this.xe.dom(), name, this.handleEvent );
+                    this.events[name] = [ f ];
                 }
             }
         },
@@ -74,12 +75,14 @@ window['BBGun'] = (function() {
         },
 
         fireEvent: function( name, args ) {
-            var evs = this.events[name],
-                xe  = this.xe;
+            if ( this.events.hasOwnProperty(name) ) {
+                var evs = this.events[name],
+                    xe  = this.xe;
 
-            for ( var i = 0; i < evs.length; i++ ) {
-                if ( evs[i].apply(xe, args) === false ) {
-                    return false;
+                for ( var i = 0; i < evs.length; i++ ) {
+                    if ( evs[i].apply(xe, args) === false ) {
+                        return false;
+                    }
                 }
             }
 
@@ -87,20 +90,22 @@ window['BBGun'] = (function() {
         },
 
         fireDomEvent: function( name, ev ) {
-            var evs = this.events[name],
-                xe  = this.xe;
+            if ( this.events.hasOwnProperty(name) ) {
+                var evs = this.events[name],
+                    xe  = this.xe;
 
-            prepEvent( ev );
+                prepEvent( ev );
 
-            for ( var i = 0; i < evs.length; i++ ) {
-                if ( evs[i].call(xe, ev) === false ) {
-                    ev.stopPropagation();
-                    return false;
+                for ( var i = 0; i < evs.length; i++ ) {
+                    if ( evs[i].call(xe, ev) === false ) {
+                        ev.stopPropagation();
+                        return false;
+                    }
                 }
-            }
 
-            if ( ! ev.doPropagate ) {
-                ev.stopPropagation();
+                if ( ! ev.doPropagate ) {
+                    ev.stopPropagation();
+                }
             }
 
             return true;
@@ -511,11 +516,32 @@ window['BBGun'] = (function() {
                 if ( isFunction(oldNode) ) {
                     this.on( 'replace', oldNode );
                 } else {
-                    var parent = this.parent();
-                    assert( parent, "replacing this element, when it has no parent" );
-                    parent.replace( this, arguments[0] );
+                    // copy it across, because the variable name is freakin me out
+                    newNode = oldNode;
+                    assert( newNode, "falsy newNode given" );
+
+                    var parentDom = this.__xeDom.parentNode;
+                    var newDom;
+
+                    if ( newNode instanceof HTMLElement ) {
+                        newNode = bb( newNode );
+                    } else if ( ! newNode.__isBBGun ) {
+                        newNode = bb( newNode );
+                    }
+
+                    var newDom = newNode.dom();
+
+                    assert( parentDom !== null, "replacing this element, when it has no parent dom" );
+                    assert( newDom.parentNode === null, "replacing with node which already has a parent" );
+
+                    if ( this.fire('replace', newNode, newDom) ) {
+                        parentDom.replaceChild( newDom, this.__xeDom );
+                    }
                 }
             } else if ( arguments.length === 2 ) {
+                assert( oldNode, "falsy oldNode given" );
+                assert( newNode, "falsy newNode given" );
+
                 var oldDom, newDom;
                 if ( oldNode instanceof HTMLElement ) {
                     oldDom = oldNode;
@@ -531,9 +557,9 @@ window['BBGun'] = (function() {
                 assert( oldDom.parentNode === dom , "removing node which is not a child of this element" );
                 assert( newDom.parentNode === null, "adding node which is already a child of another" );
 
-                if ( this.fire('replace', newNode, newDom) ) {
-                    oldDom.parentNode.replaceChild( newDom, oldDom );
-                }
+                logError( 'replacement events need to be sent to the child' );
+
+                oldDom.replace( newDom );
             } else {
                 logError( "too many, or not enough, parameters provided", arguments );
             }
@@ -589,7 +615,7 @@ window['BBGun'] = (function() {
         },
 
         click: function( fun ) {
-            if ( arguments.length === 0 ) {
+            if ( arguments.length === 1 ) {
                 return this.on( 'click', fun );
             } else {
                 logError( "invalid number of arguments given" );
