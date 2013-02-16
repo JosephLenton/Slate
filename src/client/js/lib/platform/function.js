@@ -176,7 +176,7 @@
      * Where it differes, is that if those parameters are functions,
      * they will be executed in turn.
      */
-    Function.lazy = function( target ) {
+    Function.prototype.lazy = function(target) {
         var args = arguments;
         var self = this;
 

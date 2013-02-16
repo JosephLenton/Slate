@@ -34,30 +34,135 @@
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
     }
-        .clavier-key {
-            font-family: helvetica, "segoe ui light";
-            font-weight: 100;
-            font-size: 18px;
+        .clavier-keys {
+            position: absolute;
 
-            background: #404853;
-            color: #ddd;
+            display: block;
 
-            -webkit-transition:
-                    background 150ms linear, 
-                    color 150ms linear; 
-            -moz-transition:
-                    background 150ms linear, 
-                    color 150ms linear; 
-            transition:
-                    background 150ms linear, 
-                    color 150ms linear; 
+            top: 3px;
+            bottom: 3px;
+
+            left: 3px;
+            right: 3px;
+
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
         }
-        .clavier-key.highlight {
-            background: #505863;
-            color: #fff;
+            .clavier-keys-inner {
+                position: absolute;
 
-            -webkit-transition: none;
-            -moz-transition: none;
-            transition: none;
-        }
+                top: 59px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+            }
+            .clavier-keys-inner.show { 
+                display: block;
+            }
+                .clavier-keys-row {
+                    width : 100%;
+                    height: 57px;
+                    text-align: right;
+                    margin-bottom: 2px;
+                }
+                .clavier-keys-row.top {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                }
+                    .clavier-key,
+                    .clavier-key:hover,
+                    .clavier-key:active,
+                    .clavier-key:focus,
+                    .clavier-key:visited {
+                        border-radius: 1px;
+                        background: #b0c0cf;
+                        color: #303843;
+                        text-decoration: none;
+                    }
+                    .clavier-key {
+                        font-family: helvetica, "segoe ui light";
+                        font-weight: 100;
+                        font-size: 36px;
+
+                        background: #404853;
+
+                        -webkit-transition:
+                                background 150ms linear, 
+                                color 150ms linear; 
+                        -moz-transition:
+                                background 150ms linear, 
+                                color 150ms linear; 
+                        transition:
+                                background 150ms linear, 
+                                color 150ms linear; 
+
+                        vertical-align: middle;
+                        line-height: 55px;
+                        margin: 2px;
+                        -moz-box-sizing: border-box;
+                        box-sizing: border-box;
+                        padding: 0 6px;
+                        display: inline-block;
+                    }
+                    .clavier-keys-row.top > .clavier-key,
+                    .clavier-keys-row.top > .clavier-key:hover,
+                    .clavier-keys-row.top > .clavier-key:active,
+                    .clavier-keys-row.top > .clavier-key:focus,
+                    .clavier-keys-row.top > .clavier-key:visited {
+                        border-radius: 0;
+                        background: transparent;
+                        color: #b0c0cf;
+                        text-decoration: none;
+                    }
+                    .clavier-keys-row.top > .clavier-key {
+                        background: transparent;
+                    }
+                    .clavier-keys-row > .clavier-key.highlight,
+                    .clavier-key.highlight {
+                        background: #505863;
+                        color: #fff;
+
+                        -webkit-transition: none;
+                        -moz-transition: none;
+                        transition: none;
+                    }
         
+                    .clavier-key-delete {
+
+                    }
+                    .clavier-key-delete:after {
+                        content: 'x';
+                    }
+                    .clavier-key-move-home {
+                    }
+                    .clavier-key-move-home:content {
+                    }
+                    .clavier-key-move-right,
+                    .clavier-key-move-left {
+                        width: 0;
+                        height: 0;
+
+                        border: 0 solid transparent;
+                        border-radius: 2px;
+                    }
+                    .clavier-key-move-right {
+                        border-top-width: 18px;
+                        border-left: 40px solid #b0c0cf;
+                        border-bottom-width: 18px;
+                    }
+                    .clavier-key-move-right:content {
+                    }
+                    .clavier-key-move-left {
+                        border-top-width: 18px;
+                        border-right: 40px solid #b0c0cf;
+                        border-bottom-width: 18px;
+                    }
+                    .clavier-key-move-left:content {
+                    }
+                    .clavier-key-move-end {
+                    }
+                    .clavier-key-move-end:content {
+                    }
+                    

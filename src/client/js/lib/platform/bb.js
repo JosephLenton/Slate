@@ -590,7 +590,7 @@ window['bb'] = (function() {
             return this.createArray( arguments[0], arguments, 1 );
         }
 
-        bb.createBBGun = function( bbGun, obj, args, i ) {
+        bb.createBBGun = function(bbGun, obj, args, i) {
             if ( i === undefined ) {
                 i = 0
             }
@@ -598,7 +598,7 @@ window['bb'] = (function() {
             return applyArray(
                     this,
                     bbGun,
-                    bb.createOne( obj ),
+                    bb.createOne(obj),
                     args,
                     i
             )
@@ -622,7 +622,7 @@ window['bb'] = (function() {
             return applyArray(
                     this,
                     null,
-                    this.get( dom ),
+                    this.get( dom, true ),
                     arguments,
                     1
             )
@@ -636,41 +636,43 @@ window['bb'] = (function() {
             return applyArray(
                     this,
                     null,
-                    this.get( dom ),
+                    this.get( dom, true ),
                     args,
                     startI
             )
         }
 
-        var applyArray = function( bb, bbGun, dom, args, startI ) {
+        var applyArray = function(bb, bbGun, dom, args, startI) {
             var argsLen = args.length;
 
-            for ( var i = startI; i < argsLen; i++ ) {
-                var arg = args[i];
+            for (var i = startI; i < argsLen; i++) {
+                applyOne(bb, bbGun, dom, args[i], false);
+            }
 
-                if ( arg instanceof Array ) {
-                    applyArray( this, bbGun, dom, arg, 0 );
-                } else if ( arg instanceof Element ) {
-                    dom.appendChild( arg );
-                } else if ( arg.__isBBGun ) {
-                    dom.appendChild( arg.dom() );
-                /*
-                 * - html
-                 * - class names
-                 */
-                } else if ( isString(arg) ) {
-                    var c = arg.trim().charAt( 0 );
+            return dom;
+        }
 
-                    if ( c === '<' ) {
-                        dom.insertAdjacentHTML( 'beforeend', arg );
-                    } else {
-                        bb.addClassOne( dom, arg );
-                    }
-                } else if ( isObject(arg) ) {
-                    attrObj( bb, bbGun, dom, arg );
+        var applyOne = function(bb, bbGun, dom, arg, stringsAreContent) {
+            if (arg instanceof Array) {
+                applyArray( this, bbGun, dom, arg, 0 );
+            } else if ( arg instanceof Element ) {
+                dom.appendChild( arg );
+            } else if ( arg.__isBBGun ) {
+                dom.appendChild( arg.dom() );
+            /*
+             * - html
+             * - class names
+             */
+            } else if ( isString(arg) ) {
+                if ( stringsAreContent || arg.trim().charAt(0) === '<' ) {
+                    dom.insertAdjacentHTML( 'beforeend', arg );
                 } else {
-                    logError( "invalid argument given", arg );
+                    bb.addClassOne( dom, arg );
                 }
+            } else if ( isObject(arg) ) {
+                attrObj( bb, bbGun, dom, arg );
+            } else {
+                logError( "invalid argument given", arg );
             }
 
             return dom
@@ -824,6 +826,8 @@ window['bb'] = (function() {
                 i = 0;
             }
 
+            dom = bb.get(dom, false);
+
             iterateClasses( klasses, i, function(klass) {
                 dom.classList.remove( klass );
             } )
@@ -844,7 +848,7 @@ window['bb'] = (function() {
         bb.toggleArray = function( args ) {
             var argsLen   = args.length;
 
-            var dom        = this.get( args[0] ),
+            var dom        = this.get( args[0], true ),
                 klass      = args[1],
                 onAddition = args[2],
                 onRemoval  = args[3];
@@ -890,7 +894,10 @@ window['bb'] = (function() {
             return dom;
         }
 
-        bb.addClassOne = function( dom, klass ) {
+        bb.addClassOne = function(dom, klass) {
+            dom = bb.get(dom, false);
+            assert(dom instanceof Element, "falsy dom given");
+
             if ( klass.indexOf(' ') === -1 ) {
                 dom.classList.add( klass );
             } else {
@@ -964,9 +971,9 @@ window['bb'] = (function() {
             return dom;
         }
 
-        bb.get = function( dom ) {
-            if ( (typeof dom === "string") || (dom instanceof String) ) {
-                return document.querySelector( dom ) || null;
+        bb.get = function(dom, performQuery) {
+            if (performQuery !== false && isString(dom)) {
+                return document.querySelector(dom) || null;
             } else if ( dom instanceof Element ) {
                 return dom;
             } else if ( isObject(dom) ) {
@@ -1023,14 +1030,14 @@ window['bb'] = (function() {
         }
 
         bb.beforeOne = function( dom, node ) {
-            var dom = bb.get( dom );
+            var dom = bb.get( dom, true );
             var parentDom = ensureParent( dom );
 
             return beforeOne( this, parentDom, dom, node );
         }
 
         bb.afterOne = function( dom, node ) {
-            var dom = bb.get( dom );
+            var dom = bb.get( dom, true );
             var parentDom = ensureParent( dom );
 
             return afterOne( this, parentDom, dom, node );
@@ -1041,7 +1048,7 @@ window['bb'] = (function() {
                 i = 0;
             }
 
-            var dom = bb.get( dom );
+            var dom = bb.get( dom, true );
             var parentDom = ensureParent( dom );
 
             for ( ; i < args.length; i++ ) {
@@ -1056,7 +1063,7 @@ window['bb'] = (function() {
                 i = 0;
             }
 
-            var dom = bb.get( dom );
+            var dom = bb.get( dom, true );
             var parentDom = ensureParent( dom );
 
             for ( ; i < args.length; i++ ) {
@@ -1111,7 +1118,7 @@ window['bb'] = (function() {
 
         bb.add = function( dom ) {
             if ( arguments.length === 2 ) {
-                return addOne( this, this.get(dom), arguments[1] );
+                return addOne( this, this.get(dom, true), arguments[1] );
             } else {
                 return this.addArray( dom, arguments, 1 );
             }
@@ -1122,7 +1129,7 @@ window['bb'] = (function() {
                 startI = 0;
             }
 
-            return addArray( bb, this.get(dom), args, startI );
+            return addArray( bb, this.get(dom, true), args, startI );
         }
 
         /**
@@ -1229,32 +1236,28 @@ window['bb'] = (function() {
             return dom;
         }
 
-        var attrOne = function( bb, bbGun, dom, k, val ) {
-            if ( bbGun !== null && k.charAt(0) === '.' && k.length > 0 ) {
+        var attrOne = function(bb, bbGun, dom, k, val) {
+            if (bbGun !== null && k.charAt(0) === '.' && k.length > 0) {
                 k = k.substring(1);
 
-                var descDom;
+                var newDom = bb.createElement('div');
+                newDom.className = k;
 
                 if ( val instanceof Element ) {
-                    descDom = bb.addClassOne( val, k )
+                    newDom.appendChild( val );
                 } else if ( val.__isBBGun ) {
-                    descDom = bb.addClassOne( val.dom(), k )
-                } else if ( isObject(val) ) {
-                    descDom = bb.addClassOne( bb(val), k )
+                    newDom.appendChild( val.dom() );
                 } else {
-                    descDom = bb.createElement( 'div' );
-                    descDom.className = k.substring( 1 );
-
-                    if ( isString(val) ) {
-                        descDom.innerHTML = val;
-                    } else if ( val instanceof Array ) {
-                        descDom = bb.applyArray( descDom, val, 1 );
-                    } else {
-                        logError( "invalid item given as objects contents, for " + k, val );
-                    }
+                    return applyOne(
+                            this,
+                            null,
+                            dom,
+                            val,
+                            true
+                    )
                 }
 
-                dom.appendChild( descDom );
+                dom.appendChild( newDom );
             } else if ( k === TYPE_NAME_PROPERTY ) {
                 /* do nothing */
             } else if ( k === 'className' ) {
@@ -1304,7 +1307,7 @@ window['bb'] = (function() {
             }
         }
 
-        var attrObj = function( bb, bbGun, dom, obj ) {
+        var attrObj = function(bb, bbGun, dom, obj) {
             var hasHTMLText = false;
 
             for ( var k in obj ) {
