@@ -898,16 +898,18 @@ window['bb'] = (function() {
             dom = bb.get(dom, false);
             assert(dom instanceof Element, "falsy dom given");
 
-            if ( klass.indexOf(' ') === -1 ) {
-                dom.classList.add( klass );
-            } else {
-                var klassParts = klass.split( ' ' );
+            if ( klass.trim().length > 0 ) {
+                if ( klass.indexOf(' ') === -1 ) {
+                    dom.classList.add( klass );
+                } else {
+                    var klassParts = klass.split( ' ' );
 
-                for ( var i = 0; i < klassParts.length; i++ ) {
-                    var part = klassParts[i];
+                    for ( var i = 0; i < klassParts.length; i++ ) {
+                        var part = klassParts[i];
 
-                    if ( part !== '' ) {
-                        dom.classList.add( part );
+                        if ( part !== '' ) {
+                            dom.classList.add( part );
+                        }
                     }
                 }
             }

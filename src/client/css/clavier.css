@@ -17,8 +17,10 @@
         top: 0;
         bottom: 0;
 
-        width: 320px;
+        width: 340px;
         background: #303843;
+
+        background: #1e1e20;
 
         border-radius: 3px;
     }
@@ -51,24 +53,36 @@
             .clavier-keys-inner {
                 position: absolute;
 
-                top: 59px;
+                top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
+
+                text-align: right;
+
+                display: none;
             }
             .clavier-keys-inner.show { 
                 display: block;
             }
                 .clavier-keys-row {
-                    width : 100%;
+                    position: relative;
                     height: 57px;
-                    text-align: right;
                     margin-bottom: 2px;
                 }
+                .clavier-left .clavier-keys-row {
+                    text-align: left;
+                }
+                .clavier-right .clavier-keys-row {
+                    text-align: right;
+                }
                 .clavier-keys-row.top {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
+                    right: 0;
+                }
+                .clavier-right .clavier-keys-row.middle {
+                    right: 0;
+                }
+                .clavier-right .clavier-keys-row.bottom {
                     right: 0;
                 }
                     .clavier-key,
@@ -77,92 +91,92 @@
                     .clavier-key:focus,
                     .clavier-key:visited {
                         border-radius: 1px;
-                        background: #b0c0cf;
-                        color: #303843;
+                        background: #ccc;
+                        color: #000;
                         text-decoration: none;
                     }
                     .clavier-key {
-                        font-family: helvetica, "segoe ui light";
+                        font-family: "segoe ui light", "helvetica";
                         font-weight: 100;
-                        font-size: 36px;
+                        font-size: 18px;
 
                         background: #404853;
 
+                        background: #333;
+                        color: #ccc;
+
                         -webkit-transition:
+                                border 150ms linear,
                                 background 150ms linear, 
                                 color 150ms linear; 
                         -moz-transition:
+                                border 150ms linear,
                                 background 150ms linear, 
                                 color 150ms linear; 
                         transition:
+                                border 150ms linear,
                                 background 150ms linear, 
                                 color 150ms linear; 
+
+                        text-align: center;
+                        width: 44px;
 
                         vertical-align: middle;
                         line-height: 55px;
                         margin: 2px;
                         -moz-box-sizing: border-box;
                         box-sizing: border-box;
-                        padding: 0 6px;
                         display: inline-block;
                     }
-                    .clavier-keys-row.top > .clavier-key,
-                    .clavier-keys-row.top > .clavier-key:hover,
-                    .clavier-keys-row.top > .clavier-key:active,
-                    .clavier-keys-row.top > .clavier-key:focus,
-                    .clavier-keys-row.top > .clavier-key:visited {
+                    .clavier-key.control {
+                        padding: 0 16px;
+                        width: auto;
+                        auto-width: 44px;
+                    }
+                    .clavier-key.control,
+                    .clavier-key.control:active,
+                    .clavier-key.control:focus,
+                    .clavier-key.control:visited {
                         border-radius: 0;
-                        background: transparent;
-                        color: #b0c0cf;
+                        background: #000;
+                        color: #999;
                         text-decoration: none;
                     }
-                    .clavier-keys-row.top > .clavier-key {
+                    .clavier-key.control.highlight,
+                    .clavier-key.control:hover {
+                        background: transparent;
+                        color: #fff;
+                    }
+                    .clavier-key.left,
+                    .clavier-key.right {
+                        padding: 0;
+                        width: 43px;
+                    }
+                    .clavier-key.right {
+                        margin-right: 1px;
+                    }
+                    .clavier-key.control {
                         background: transparent;
                     }
                     .clavier-keys-row > .clavier-key.highlight,
                     .clavier-key.highlight {
-                        background: #505863;
-                        color: #fff;
-
                         -webkit-transition: none;
                         -moz-transition: none;
                         transition: none;
                     }
-        
-                    .clavier-key-delete {
 
+                    .clavier-right .clavier-delete {
                     }
-                    .clavier-key-delete:after {
-                        content: 'x';
+                    .clavier-left .clavier-key.shift {
+                        margin-right: 19px;
                     }
-                    .clavier-key-move-home {
+                    .clavier-right .clavier-key.shift {
+                        margin-left: 19px;
                     }
-                    .clavier-key-move-home:content {
-                    }
-                    .clavier-key-move-right,
-                    .clavier-key-move-left {
-                        width: 0;
-                        height: 0;
 
-                        border: 0 solid transparent;
-                        border-radius: 2px;
+                    .clavier-key.close {
+                        margin-left: 19px;
                     }
-                    .clavier-key-move-right {
-                        border-top-width: 18px;
-                        border-left: 40px solid #b0c0cf;
-                        border-bottom-width: 18px;
+                    .clavier-key.space {
+                        width: 100px;
                     }
-                    .clavier-key-move-right:content {
-                    }
-                    .clavier-key-move-left {
-                        border-top-width: 18px;
-                        border-right: 40px solid #b0c0cf;
-                        border-bottom-width: 18px;
-                    }
-                    .clavier-key-move-left:content {
-                    }
-                    .clavier-key-move-end {
-                    }
-                    .clavier-key-move-end:content {
-                    }
-                    
