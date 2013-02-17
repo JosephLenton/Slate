@@ -18,9 +18,8 @@
         bottom: 0;
 
         width: 340px;
-        background: #303843;
-
-        background: #1e1e20;
+        background: #ff2377;
+        background: #eee;
 
         border-radius: 3px;
     }
@@ -91,19 +90,15 @@
                     .clavier-key:focus,
                     .clavier-key:visited {
                         border-radius: 1px;
-                        background: #ccc;
-                        color: #000;
+                        background: #ff2377;
+                        color: #fff;
+
                         text-decoration: none;
                     }
                     .clavier-key {
                         font-family: "segoe ui light", "helvetica";
-                        font-weight: 100;
+                        font-weight: 900;
                         font-size: 18px;
-
-                        background: #404853;
-
-                        background: #333;
-                        color: #ccc;
 
                         -webkit-transition:
                                 border 150ms linear,
@@ -128,6 +123,11 @@
                         box-sizing: border-box;
                         display: inline-block;
                     }
+                    .clavier-key.highlight {
+                        background: #ccc;
+                        color: #000;
+                    }
+
                     .clavier-key.control {
                         padding: 0 16px;
                         width: auto;
@@ -138,15 +138,18 @@
                     .clavier-key.control:focus,
                     .clavier-key.control:visited {
                         border-radius: 0;
-                        background: #000;
-                        color: #999;
                         text-decoration: none;
-                    }
-                    .clavier-key.control.highlight,
-                    .clavier-key.control:hover {
+
                         background: transparent;
-                        color: #fff;
+                        color: #ff2377;
                     }
+                    .clavier-key.control.highlight {
+                        color: #000;
+                    }
+                    .clavier-key.left-node,
+                    .clavier-key.right-node,
+                    .clavier-key.up-node,
+                    .clavier-key.down-node,
                     .clavier-key.left,
                     .clavier-key.right {
                         padding: 0;
@@ -178,5 +181,12 @@
                         margin-left: 19px;
                     }
                     .clavier-key.space {
-                        width: 100px;
+                        position: absolute;
+                        width: 160px;
+                    }
+                    .clavier-left .clavier-key.space {
+                        right: 0;
+                    }
+                    .clavier-right .clavier-key.space {
+                        left: 0;
                     }

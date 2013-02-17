@@ -129,6 +129,19 @@ window['Clavier'] = (function() {
     }
 
     var setupLeftKeys = function( pane ) {
+        pane.addSuperTop( '&#x21d0;', 'control left-node', function() {
+            // todo
+        } );
+        pane.addSuperTop( '&#x21d2;', 'control right-node', function() {
+            // todo
+        } );
+        pane.addTop( '&#x21d3;', 'control down-node', function() {
+            // todo
+        } );
+        pane.addTop( '&#x21d1;', 'control up-node', function() {
+            // todo
+        } );
+
         pane.addMiddle( 'shift', 'control shift', function() {
             // todo
         } )
@@ -142,11 +155,13 @@ window['Clavier'] = (function() {
         pane.addBottom( '1,2,3...', 'control numpad', function() {
             // todo
         } )
+        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', function() {
+            // todo
+        } )
         pane.addBottom( '&nbsp;', 'space', function() {
             // todo
         } )
     }
-
 
     var setupRightKeys = function( pane ) {
         setupButtonKeys( pane,
@@ -172,6 +187,9 @@ window['Clavier'] = (function() {
         } )
         
         pane.addBottom( '&nbsp;', 'space', function() {
+            // todo
+        } )
+        pane.addBottom( '";+*/', 'control symbols-common', function() {
             // todo
         } )
         pane.addBottom( 'close', 'control close', function() {
