@@ -161,45 +161,56 @@ body.slate-touch > .slate-content {
         position: absolute;
         left: 0;
 
-        min-width: 100%;
-        max-width: 100%;
-
         overflow: hidden;
-
-        height: 46px;
     }
-    .touch-bar-row.upper {
-        bottom: 46px;
+    .touch-bar-row.right {
+        left: 160px;
+        right: 0;
 
-        height: 94px;
-    }
-    .touch-bar-row.lower {
         bottom: 0;
-        background: #333;
+        height: 140px;
+    }
+    .touch-bar-row.left {
+        top: 48px;
+        bottom: 0;
+        left: 0;
+        width: 160px;
     }
         .touch-bar-row-inner {
-            -webkit-transition: top 120ms linear;
-               -moz-transition: top 120ms linear;
-                 -o-transition: top 120ms linear;
-                    transition: top 120ms linear;
-
             position: absolute;
 
             width : 100%;
             height: 100%;
 
-            top   : 100%;
             left  : 0;
             right : 0;
 
-            white-space: nowrap;
             overflow  : hidden;
-            overflow-x: scroll;
             -webkit-overflow-scrolling: touch;
         }
-        .touch-bar-row-inner.show {
+        .touch-bar-row.right > .touch-bar-row-inner {
+            top   : 100%;
+
+            -webkit-transition: top 120ms linear;
+               -moz-transition: top 120ms linear;
+                 -o-transition: top 120ms linear;
+                    transition: top 120ms linear;
+
+            white-space: nowrap;
+            overflow-x: scroll;
+        }
+        .touch-bar-row.right > .touch-bar-row-inner.show {
             top: 0;
         }
+        .touch-bar-row.left > .touch-bar-row-inner {
+            top: 0;
+            bottom: 0;
+
+            overflow-y: scroll;
+        }
+                    .touch-bar-row.left > .touch-bar-row-inner > .touch-bar-row-inner-scroll > .touch-bar-button {
+                        display: block;
+                    }
             .touch-bar-row-inner-scroll {
                 min-width: 100%;
             }
@@ -244,8 +255,8 @@ body.slate-touch > .slate-content {
                 .touch-bar-button:last-of-type {
                     border-right: 0 none;
                 }
-                .touch-bar-row.lower .touch-bar-button.select {
-                    background: #555;
+                .touch-bar-row.left .touch-bar-button.select {
+                    background: #333;
                 }
                 .touch-small {
                     font-size: 12px;

@@ -1225,6 +1225,24 @@ window.slate.TouchBar = (function() {
         return descMappings;
     })( descriptors );
 
+    var descriptorHTML = function( d ) {
+        assert( d.html, "descriptor is missing HTML display value, " + d.name );
+
+        var html = '';
+
+        if ( d.preHtml !== undefined ) {
+            html = d.preHtml + ' ';
+        }
+
+        html += SMALL_EMPTY + ' ' + d.html + ' ' + SMALL_EMPTY;
+
+        if ( d.postHtml !== undefined ) {
+            html += ' ' + d.postHtml;
+        }
+
+        return html;
+    }
+
     /**
      * Returns the width of the text given,
      * for a 'touch-ast-input > input' node.
@@ -2355,8 +2373,8 @@ window.slate.TouchBar = (function() {
     var TouchBar = function( parentDom, execute, commands ) {
         this.executeFun = execute;
 
-        this.upper  = bb( 'touch-bar-row upper' );
-        this.lower  = bb( 'touch-bar-row lower' );
+        this.upper  = bb( 'touch-bar-row right' );
+        this.lower  = bb( 'touch-bar-row left'  );
 
         this.buttons = new ShiftButtons();
 
@@ -2386,48 +2404,86 @@ window.slate.TouchBar = (function() {
         var insert = this.insert.bind( this );
 
         var commandsRow = new TouchRow( true );
+        var pipeDescriptor = descMappings['pipe']
+
         commandsRow.append(
                 SMALL_EMPTY,
                 function() {
                     insert( new ast.Command() )
                 },
 
+                descriptorHTML( pipeDescriptor ),
+                function() {
+                    insert( new ast.DoubleOp(pipeDescriptor, descriptors) );
+                },
+
                 null
         )
 
         commands = commands.sort();
-        for ( var i = 0; i < commands.length; i += 2 ) {
-            if ( i === commands.length-1 ) {
-                (function(cmd) {
-                    var cmdAlt = COMMAND_TO_SYMBOL[cmd];
+        for ( var i = 0; i < commands.length-2; i += 3 ) {
+            (function(top, middle, bottom) {
+                var topAlt    = COMMAND_TO_SYMBOL[top];
+                var middleAlt = COMMAND_TO_SYMBOL[middle];
+                var bottomAlt = COMMAND_TO_SYMBOL[bottom];
 
-                    commandsRow.append(
-                            ( cmdAlt ? cmdAlt : cmd ),
-                            function() {
-                                insert( new ast.Command(cmd, cmdAlt) );
-                            },
-                            
-                            null
-                    );
-                })( commands[i] );
-            } else {
-                (function(top, bottom) {
-                    var topAlt    = COMMAND_TO_SYMBOL[top];
-                    var bottomAlt = COMMAND_TO_SYMBOL[bottom];
+                commandsRow.append(
+                        ( topAlt ? topAlt : top ),
+                        function() {
+                            insert( new ast.Command(top, topAlt) );
+                        },
 
-                    commandsRow.append(
-                            ( topAlt ? topAlt : top ),
-                            function() {
-                                insert( new ast.Command(top, topAlt) );
-                            },
+                        ( middleAlt ? middleAlt : middle ),
+                        function() {
+                            insert( new ast.Command(middle, middleAlt) );
+                        },
 
-                            ( bottomAlt ? bottomAlt : bottom ),
-                            function() {
-                                insert( new ast.Command(bottom, bottomAlt) );
-                            }
-                    )
-                })( commands[i], commands[i+1] );
-            }
+                        ( bottomAlt ? bottomAlt : bottom ),
+                        function() {
+                            insert( new ast.Command(bottom, bottomAlt) );
+                        }
+                )
+            })(
+                    commands[i],
+                    commands[i+1],
+                    commands[i+2]
+            );
+        }
+
+        var commandsRest = ( commands.length % 3 );
+        if ( commandsRest === 1 ) {
+            var top = commands[commands.length-1];
+            var topAlt    = COMMAND_TO_SYMBOL[top];
+
+            commandsRow.append(
+                    ( topAlt ? topAlt : top ),
+                    function() {
+                        insert( new ast.Command(top, topAlt) );
+                    },
+
+                    null,
+                    null
+            )
+        } else if ( commandsRest === 2 ) {
+            var top = commands[commands.length-2],
+                middle = commands[commands.length-1];
+
+            var topAlt    = COMMAND_TO_SYMBOL[top];
+            var middleAlt = COMMAND_TO_SYMBOL[middle];
+
+            commandsRow.append(
+                    ( topAlt ? topAlt : top ),
+                    function() {
+                        insert( new ast.Command(top, topAlt) );
+                    },
+
+                    ( middleAlt ? middleAlt : middle ),
+                    function() {
+                        insert( new ast.Command(middle, middleAlt) );
+                    },
+
+                    null
+            )
         }
 
         /**
@@ -2441,7 +2497,11 @@ window.slate.TouchBar = (function() {
                     insert( new ast.VariableInput() );
                 },
 
-                null
+                '123',
+                function() { insert( new ast.NumberInput() ); },
+
+                '"text"',
+                function() { insert( new ast.StringInput() ); }
         )
 
 /*
@@ -2452,19 +2512,13 @@ window.slate.TouchBar = (function() {
 */
 
         valuesRow.append(
-                '123',
-                function() { insert( new ast.NumberInput() ); },
-
-                '"text"',
-                function() { insert( new ast.StringInput() ); }
-        )
-
-        valuesRow.append(
                 'true',
                 function() { insert( new ast.TrueLiteral() ); },
 
                 'false',
-                function() { insert( new ast.FalseLiteral() ); }
+                function() { insert( new ast.FalseLiteral() ); },
+
+                null
         )
 
         valuesRow.append(
@@ -2472,13 +2526,25 @@ window.slate.TouchBar = (function() {
                 function() { insert( new ast.NullLiteral() ); },
 
                 'undefined',
-                function() { insert( new ast.UndefinedLiteral() ); }
+                function() { insert( new ast.UndefinedLiteral() ); },
+
+                null
+        )
+
+        valuesRow.append(
+                '/ ' + SMALL_EMPTY + ' /',
+                function() { insert( new ast.RegExpInput() ); },
+
+                null,
+
+                null
         )
 
         valuesRow.append(
                 '&pi;',
                 function() { insert( new ast.NumLiteral('&pi;', Math.PI, 'Math.PI') ); },
 
+                null,
                 null
         )
 
@@ -2496,91 +2562,52 @@ window.slate.TouchBar = (function() {
         )
 */
 
-        valuesRow.append(
-                null,
-
-                '/ ' + SMALL_EMPTY + ' /', function() {
-                    insert( new ast.RegExpInput() );
-                }
-        )
-
         /*
          * Structural commands, like operators.
          */
 
         var opsRow = new TouchRow( true );
 
-        var descriptorHTML = function( d ) {
-            assert( d.html, "descriptor is missing HTML display value, " + d.name );
+        var appendDescriptor = function() {
+            var descriptors = [];
+            for ( var i = 0; i < arguments.length; i++ ) {
+                var arg = arguments[i];
 
-            var html = '';
+                if ( arg !== null ) {
+                    var desc = descMappings[arg];
+                    assert( desc, "descriptor not found, " + arg );
 
-            if ( d.preHtml !== undefined ) {
-                html = d.preHtml + ' ';
+                    descriptors.push( descriptorHTML(desc) );
+                    descriptors.push( (function(desc) {
+                        return (function() {
+                            insert( new ast.DoubleOp(bottom, descriptors) );
+                        })
+                    })(desc) );
+                } else {
+                    descriptors.push( null );
+                }
             }
 
-            html += SMALL_EMPTY + ' ' + d.html + ' ' + SMALL_EMPTY;
-
-            if ( d.postHtml !== undefined ) {
-                html += ' ' + d.postHtml;
-            }
-
-            return html;
+            opsRow.append.apply( opsRow, descriptors );
         }
 
-        var appendDescriptor = function( topName, bottomName ) {
-            var    top =    topName !== null ? descMappings[   topName] : null ;
-            var bottom = bottomName !== null ? descMappings[bottomName] : null ;
-
-            assert(    topName === null || top   , "top descriptor not found " + topName );
-            assert( bottomName === null || bottom, "bottom descriptor not found " + bottomName );
-
-            if ( top !== null && bottom !== null ) {
-                opsRow.append( 
-                        descriptorHTML( top ),
-                        function() { insert( new ast.DoubleOp(top   , descriptors) ); },
-
-                        descriptorHTML( bottom ),
-                        function() { insert( new ast.DoubleOp(bottom, descriptors) ); }
-                )
-            } else if ( top !== null ) {
-                opsRow.append( 
-                        descriptorHTML( top ),
-                        function() { insert( new ast.DoubleOp(top   , descriptors) ); },
-
-                        null
-                )
-            } else if ( bottom !== null ) {
-                opsRow.append( 
-                        null,
-
-                        descriptorHTML( bottom ),
-                        function() { insert( new ast.DoubleOp(bottom, descriptors) ); }
-                )
-            }
-        }
-
-        appendDescriptor( 'assignment'          , null              );
-        appendDescriptor( 'property access'     , 'array access'    );
-
-        appendDescriptor( 'pipe'                , null              );
+        appendDescriptor( 'assignment'          , 'property access'     , 'array access' );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( 'add'                 , 'subtract'        );
-        appendDescriptor( 'multiply'            , 'divide'          );
+        appendDescriptor( 'add'                 , 'subtract'    , null );
+        appendDescriptor( 'multiply'            , 'divide'      , null );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( 'equal'               , 'not equal'       );
-        appendDescriptor( 'less than equal'     , 'less than'       );
-        appendDescriptor( 'greater than equal'  , 'greater than'    );
+        appendDescriptor( 'equal'               , 'less than equal'     , 'less than'   );
+        appendDescriptor( 'not equal'           , 'greater than equal'  , 'greater than');
 
         opsRow.appendSeperator();
 
-        appendDescriptor( 'and'                 , 'or'              );
-        appendDescriptor( 'bitwise and'         , 'bitwise or'      );
-        appendDescriptor( 'left shift'          , 'right shift'     );
+        appendDescriptor( 'and'                 , 'or'          , null );
+        appendDescriptor( 'bitwise and'         , 'bitwise or'  , null );
+        appendDescriptor( 'left shift'          , 'right shift' , null );
 
         bb.add( this.upper, commandsRow, valuesRow, opsRow )
 
