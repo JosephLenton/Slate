@@ -421,10 +421,6 @@ window.slate.TouchBar = (function() {
                     } );
                 },
 
-                replaceChild: function( old, newChild ) {
-                    // do nothing
-                },
-
                 evaluateCallback: function( onSuccess ) {
                     var self = this;
 
@@ -643,8 +639,11 @@ window.slate.TouchBar = (function() {
 
                 this.addClass( 'touch-ast-op' );
 
-                this.left  = new ast.Empty();
-                this.right = new ast.Empty();
+                this.left  = null;
+                this.right = null;
+
+                this.setLeft( new ast.Empty() );
+                this.setRight( new ast.Empty() );
 
                 /*
                  * Convert the meta items we have,
@@ -699,6 +698,15 @@ window.slate.TouchBar = (function() {
                         this.setMeta( this.meta.altMeta );
                     }
                 });
+
+
+                this.beforeReplace( function( newCommand ) {
+                    if ( newCommand instanceof ast.DoubleOp ) {
+                        this.setMeta( newCommand.getMeta() );
+
+                        return false;
+                    }
+                } )
 
                 this.replace( function( other ) {
                     if ( other instanceof ast.DoubleOp ) {
@@ -772,22 +780,6 @@ window.slate.TouchBar = (function() {
                     // do nothing
                 },
 
-                replaceChild: function( old, newChild ) {
-                    if ( this.left === old ) {
-                        this.left = newChild;
-                        this.validateLeft();
-
-                        return old;
-                    } else if ( this.right === old ) {
-                        this.right = newChild;
-                        this.validateRight();
-
-                        return old;
-                    } else {
-                        throw new Error( "old child given, but it is not a child of this AST node" );
-                    }
-                },
-
                 /**
                  * Returns the empties from the child nodes.
                  *
@@ -832,6 +824,28 @@ window.slate.TouchBar = (function() {
                 }
             }).
             extend({
+                setLeft: function( left ) {
+                    var self = this;
+
+                    left.once( 'replace', function( newLeft ) {
+                        self.left = newLeft;
+                    } )
+
+                    this.left = left;
+                    return this;
+                },
+
+                setRight: function( right ) {
+                    var self = this;
+
+                    right.once( 'replace', function( newRight ) {
+                        self.right = newRight;
+                    } )
+
+                    this.right = right;
+                    return this;
+                },
+
                 replaceLeft: function( node ) {
                     var old = this.left;
                     this.left.replace( node );
@@ -1919,7 +1933,7 @@ window.slate.TouchBar = (function() {
                     }
                 }
             }).
-            override({
+            extend({
                 replaceChild: function( old, newAst ) {
                     var params = this.params;
                     var replaceNode = true;
@@ -1994,9 +2008,8 @@ window.slate.TouchBar = (function() {
                     } else {
                         assertUnreachable( "old AST node not found" );
                     }
-                }
-            }).
-            extend({
+                },
+
                 getNonEmptyParams: function() {
                     return this.params.filterOutMethod( 'isEmpty' );
                 },
@@ -2206,7 +2219,7 @@ window.slate.TouchBar = (function() {
 
                     getRootAST: function() {
                         assert( this.current !== null, "current should never be set to null" );
-                        return this.bar.child( 'touch-ast' );
+                        return this.bar.child( '.touch-ast' );
                     },
 
                     /**
