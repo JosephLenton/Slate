@@ -200,7 +200,7 @@ window.slate.TouchBar = (function() {
 
     var ast = {};
 
-    ast.Node = BBGun.params( 'touch-ast', {
+    ast.Node = BBGun.params('touch-ast', {
                     click: function() {
                         if ( ! this.isSelected() ) {
                             this.getView().setCurrent( this );
@@ -342,7 +342,8 @@ window.slate.TouchBar = (function() {
                     var self = this;
 
                     this.add(
-                            bb.a( 'touch-ast-delete', { click: function(ev) {
+                            bb.a('touch-ast-delete', {
+                                click: function(ev) {
                                     self.replace( new ast.Empty() )
                             }} )
                     )
@@ -413,6 +414,8 @@ window.slate.TouchBar = (function() {
                 },
 
                 onUnselect: function() {
+                    this.removeClass( 'select' );
+
                     this.parentAST( function(p) {
                         p.removeClass( 'select-parent' );
                     } );
@@ -2569,7 +2572,7 @@ window.slate.TouchBar = (function() {
         var opsRow = new TouchRow( true );
 
         var appendDescriptor = function() {
-            var descriptors = [];
+            var ds = [];
             for ( var i = 0; i < arguments.length; i++ ) {
                 var arg = arguments[i];
 
@@ -2577,18 +2580,18 @@ window.slate.TouchBar = (function() {
                     var desc = descMappings[arg];
                     assert( desc, "descriptor not found, " + arg );
 
-                    descriptors.push( descriptorHTML(desc) );
-                    descriptors.push( (function(desc) {
+                    ds.push( descriptorHTML(desc) );
+                    ds.push( (function(desc) {
                         return (function() {
-                            insert( new ast.DoubleOp(bottom, descriptors) );
+                            insert(new ast.DoubleOp(desc, descriptors));
                         })
                     })(desc) );
                 } else {
-                    descriptors.push( null );
+                    ds.push( null );
                 }
             }
 
-            opsRow.append.apply( opsRow, descriptors );
+            opsRow.append.apply( opsRow, ds );
         }
 
         appendDescriptor( 'assignment'          , 'property access'     , 'array access' );

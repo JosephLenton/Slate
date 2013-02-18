@@ -464,6 +464,8 @@ window['bb'] = (function() {
          */
 
         var setOnObject = function( events, dom, obj, useCapture ) {
+            assert( dom, "null or undefined dom given", dom );
+
             for ( var k in obj ) {
                 if ( obj.hasOwnProperty(k) ) {
                     setOn( events, dom, k, obj[k], useCapture )
@@ -472,6 +474,8 @@ window['bb'] = (function() {
         }
 
         var setOn = function( events, dom, name, fun, useCapture ) {
+            assert( dom, "null or undefined dom given", dom );
+
             if ( name instanceof Array ) {
                 for ( var i = 0; i < name.length; i++ ) {
                     setOn( events, dom, name, fun, useCapture );
@@ -598,7 +602,7 @@ window['bb'] = (function() {
             return applyArray(
                     this,
                     bbGun,
-                    bb.createOne(obj),
+                    createOneBBGun( this, bbGun, obj ),
                     args,
                     i
             )
@@ -612,7 +616,7 @@ window['bb'] = (function() {
             return applyArray(
                     this,
                     null,
-                    bb.createOne( obj ),
+                    createOne( this, obj ),
                     args,
                     i
             )
@@ -654,7 +658,7 @@ window['bb'] = (function() {
 
         var applyOne = function(bb, bbGun, dom, arg, stringsAreContent) {
             if (arg instanceof Array) {
-                applyArray( this, bbGun, dom, arg, 0 );
+                applyArray( bb, bbGun, dom, arg, 0 );
             } else if ( arg instanceof Element ) {
                 dom.appendChild( arg );
             } else if ( arg.__isBBGun ) {
@@ -690,6 +694,22 @@ window['bb'] = (function() {
          * @return A Element based on the object given.
          */
         bb.createOne = function( obj ) {
+            return createOne( this, obj );
+        }
+
+        var createOneBBGun = function( bb, bbgun, obj ) {
+            if ( isObject(obj) ) {
+                return createObj( bb, bbgun, obj );
+            } else {
+                var dom = createOne( bb, obj );
+                assert( ! dom.__isBBGun, "BBGun given as basis for new BBGun" );
+                bbgun.dom( dom );
+            }
+
+            return dom;
+        }
+
+        var createOne = function( bb, obj ) {
             /*
              * A String ...
              *  <html element="description"></html>
@@ -698,7 +718,7 @@ window['bb'] = (function() {
              *  '' (defaults to a div)
              */
             if ( isString(obj) ) {
-                return bb.createString( obj );
+                return createString( bb, obj );
                 
             /*
              * An array of classes.
@@ -706,9 +726,9 @@ window['bb'] = (function() {
             } else if ( obj instanceof Array ) {
                 if ( obj.length > 0 ) {
                     if ( obj[0].charAt(0) === '.' ) {
-                        return bb.createString( obj.join(' ') );
+                        return createString( bb, obj.join(' ') );
                     } else {
-                        return bb.createString( '.' + obj.join(' ') );
+                        return createString( bb, '.' + obj.join(' ') );
                     }
                 } else {
                     return bb.createElement();
@@ -718,7 +738,7 @@ window['bb'] = (function() {
             } else if ( obj.__isBBGun ) {
                 return obj;
             } else if ( isObject(obj) ) {
-                return bb.createObj( obj );
+                return createObj( bb, null, obj );
             } else {
                 logError( "unknown parameter given", obj );
             }
@@ -727,13 +747,21 @@ window['bb'] = (function() {
         bb.createObj = function( obj ) {
             assertObject( obj );
 
+            return createObj( this, null, obj );
+        }
+
+        var createObj = function( bb, bbGun, obj ) {
             var dom = obj.hasOwnProperty(TYPE_NAME_PROPERTY)      ?
-                    this.createElement( obj[TYPE_NAME_PROPERTY] ) :
-                    this.createElement()                          ;
+                    bb.createElement( obj[TYPE_NAME_PROPERTY] ) :
+                    bb.createElement()                          ;
+
+            if ( bbGun !== null ) {
+                bbGun.dom( dom );
+            }
 
             for ( var k in obj ) {
                 if ( obj.hasOwnProperty(k) ) {
-                    attrOne( this, null, dom, k, obj[k] );
+                    attrOne( bb, bbGun, dom, k, obj[k] );
                 }
             }
 
@@ -741,6 +769,10 @@ window['bb'] = (function() {
         }
 
         bb.createString = function( obj ) {
+            return createString( this, obj );
+        }
+
+        var createString = function( bb, obj ) {
             obj = obj.trim();
 
             /*
@@ -755,13 +787,13 @@ window['bb'] = (function() {
                     return dom;
                 }
             } else if ( obj.charAt(0) === '.' ) {
-                var dom = this.createElement();
+                var dom = bb.createElement();
                 dom.className = obj.substring(1)
                 return dom;
             } else if ( obj === '' ) {
-                return this.createElement();
+                return bb.createElement();
             } else {
-                return this.createElement( obj )
+                return bb.createElement( obj )
             }
         }
 
@@ -779,8 +811,8 @@ window['bb'] = (function() {
             if ( arguments.length === 0 ) {
                 name = DEFAULT_ELEMENT;
             } else {
-                assertString( name, "non-string name provided for nodeName", name );
-                assert( name !== '', "empty name provided" );
+                assertString( name, "non-string provided for name", name );
+                assert( name !== '', "empty string given for name", name );
             }
 
             var setup = this.setup.data.elements[ name ];
@@ -979,7 +1011,7 @@ window['bb'] = (function() {
             } else if ( dom instanceof Element ) {
                 return dom;
             } else if ( isObject(dom) ) {
-                return this.createObj( dom );
+                return createObj( this, null, dom );
             } else if ( dom && dom.__isBBGun ) {
                 return dom.dom()
             } else {
@@ -1000,7 +1032,7 @@ window['bb'] = (function() {
                 } else if ( isString(arg) ) {
                     dom.insertAdjacentHTML( 'beforebegin', arg );
                 } else if ( isObject(arg) ) {
-                    parentDom.insertBefore( bb.createObj(arg), dom );
+                    parentDom.insertBefore( createObj(bb, null, arg), dom );
                 } else {
                     logError( "invalid argument given", arg );
                 }
@@ -1022,7 +1054,7 @@ window['bb'] = (function() {
                 } else if ( isString(arg) ) {
                     dom.insertAdjacentHTML( 'afterend', arg );
                 } else if ( isObject(arg) ) {
-                    parentDom.insertAfter( bb.createObj(arg), dom );
+                    parentDom.insertAfter( createObj(bb, null, arg), dom );
                 } else {
                     logError( "invalid argument given", arg );
                 }
@@ -1099,7 +1131,7 @@ window['bb'] = (function() {
                 } else if ( isString(arg) ) {
                     dom.insertAdjacentHTML( 'beforeend', arg );
                 } else if ( isObject(arg) ) {
-                    dom.appendChild( bb.createObj(arg) );
+                    dom.appendChild( createObj(bb, null, arg) );
                 } else {
                     logError( "invalid argument given", arg );
                 }
@@ -1251,7 +1283,7 @@ window['bb'] = (function() {
                     newDom.appendChild( val.dom() );
                 } else {
                     return applyOne(
-                            this,
+                            bb,
                             null,
                             dom,
                             val,

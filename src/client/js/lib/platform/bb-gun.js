@@ -28,7 +28,7 @@ window['BBGun'] = (function() {
 
         var self = this;
         this.handleEvent = function( ev ) {
-            self.fireDomEvent( ev.name, ev );
+            self.fireDomEvent( ev.type || ev.name, ev );
         }
     }
 
@@ -44,7 +44,10 @@ window['BBGun'] = (function() {
                 if ( this.events.hasOwnProperty(name) ) {
                     this.events[name].push( f );
                 } else {
-                    bb.on( this.xe.dom(), name, this.handleEvent );
+                    if ( bb.setup.isEvent(name) ) {
+                        bb.on( this.xe.dom(), name, this.handleEvent );
+                    }
+
                     this.events[name] = [ f ];
                 }
             }
