@@ -760,6 +760,8 @@ body.slate-touch > .slate-content {
          box-sizing: border-box;
 
     padding: 0 0 0 48px;
+
+    left: 0;
 }
     .slate-content-item-contents > .touch-bar-view > .touch-bar-view-ast-bar {
         bottom: auto;
