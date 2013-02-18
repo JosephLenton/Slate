@@ -178,7 +178,7 @@ window['Clavier'] = (function() {
             // todo
         } );
 
-        pane.addTop( 'delete', 'control delete', function() {
+        pane.addTop( 'BS', 'control backspace', function() {
             // todo
         } )
 
@@ -192,7 +192,7 @@ window['Clavier'] = (function() {
         pane.addBottom( '";+*/', 'control symbols-common', function() {
             // todo
         } )
-        pane.addBottom( 'close', 'control close', function() {
+        pane.addBottom( '&#x25Be;', 'control close', function() {
             // todo
         } )
     }

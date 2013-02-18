@@ -153,7 +153,16 @@
                     .clavier-key.left,
                     .clavier-key.right {
                         padding: 0;
-                        width: 43px;
+                    }
+                    .clavier-key.left-node,
+                    .clavier-key.right-node,
+                    .clavier-key.left,
+                    .clavier-key.right {
+                        width: 39px;
+                    }
+                    .clavier-key.up-node,
+                    .clavier-key.down-node {
+                        width: 41px;
                     }
                     .clavier-key.right {
                         margin-right: 1px;
@@ -168,17 +177,17 @@
                         transition: none;
                     }
 
-                    .clavier-right .clavier-delete {
+                    .clavier-key.backspace {
+                        width: 84px;
                     }
-                    .clavier-left .clavier-key.shift {
-                        margin-right: 19px;
-                    }
+                    .clavier-left .clavier-key.shift,
                     .clavier-right .clavier-key.shift {
-                        margin-left: 19px;
+                        width: 88px;
                     }
 
                     .clavier-key.close {
                         margin-left: 19px;
+                        min-width: 50px;
                     }
                     .clavier-key.space {
                         position: absolute;
