@@ -270,7 +270,8 @@ body.slate-touch > .slate-content {
         pointer-events: none;
 
         height: 500px;
-        width : 100%;
+        left: 160px;
+        right: 0;
 
         position: absolute;
         bottom: 140px;
