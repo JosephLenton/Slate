@@ -1252,7 +1252,7 @@ window['bb'] = (function() {
             } else if ( isString(text) ) {
                 dom.textContent = text;
             } else {
-                logError( "none string given for text content", text );
+                logError( "non-string given for text content", text );
             }
 
             return dom;
@@ -1307,7 +1307,7 @@ window['bb'] = (function() {
             } else if ( k === 'style' ) {
                 bb.style( dom, val );
             } else if ( k === 'text' ) {
-                bb.textOne( dom. val );
+                bb.textOne( dom, val );
             } else if ( k === 'html' ) {
                 bb.htmlOne( dom, val );
             } else if ( k === 'value' ) {
