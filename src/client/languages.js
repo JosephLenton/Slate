@@ -5,7 +5,7 @@
  */
 (function() {
     slate.language( 'touch-js', function(src, next) {
-        next(src.toJS());
+        next( src.toJS() );
     } );
 
     /**

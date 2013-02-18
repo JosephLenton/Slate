@@ -230,8 +230,8 @@
     }
 
     var generateCommandHtml = function( cmd, isError, reRun ) {
-        if ( isFunction(cmd.getDom) ) {
-            return cmd.getDom();
+        if ( isFunction(cmd.dom) ) {
+            return cmd.dom();
         } else if ( isString(cmd) ) {
             var input = document.createElement( 'div' );
 

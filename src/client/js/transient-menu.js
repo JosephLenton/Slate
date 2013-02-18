@@ -69,7 +69,7 @@ window.TransientMenu = (function() {
             this.hide();
         },
 
-        getDom: function() {
+        dom: function() {
             return this.dom;
         },
 

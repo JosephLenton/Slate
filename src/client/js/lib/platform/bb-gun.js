@@ -442,7 +442,7 @@ window['BBGun'] = (function() {
         child: function( obj, f ) {
             if ( arguments.length === 1 ) {
                 if ( isString(obj) ) {
-                    var child = document.querySelector( obj );
+                    var child = this.dom().querySelector( obj );
 
                     if ( child !== null ) {
                         if ( child.__xe ) {

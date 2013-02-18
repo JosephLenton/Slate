@@ -162,9 +162,9 @@
         assert(
                 cmd === undefined ||
                 isString(cmd) ||
-                isFunction(cmd.getDom),
+                isFunction(cmd.dom),
 
-                "invalid command given; must be undefined, a string, or have the method 'getDom' for conversion to HTML"
+                "invalid command given; must be undefined, a string, or have the method 'dom' for conversion to HTML"
         )
 
         var varDisplay = uniqueVar();
@@ -709,7 +709,7 @@
 
             return function( type, cmd, post ) {
                 assertString( type, "non-string given for language; should be 'js' or 'coffee' or whatever" );
-                assert( isString(cmd) || isFunction(cmd.getDom), "non-string and non-dom-producing command given" );
+                assert( isString(cmd) || isFunction(cmd.dom), "command given is not a string, or produces a dom" );
                 assertFunction( post, "non-function given for post execution" );
                 assert( languages[type], "language not found: " + type );
 
