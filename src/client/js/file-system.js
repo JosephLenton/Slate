@@ -59,15 +59,15 @@
 
             var mult = 1;
 
-            if ( size.indexOf( 'kb' ) ) {
+            if ( size.contains('kb') ) {
                 mult = 1024;
-            } else if ( size.indexOf( 'mb' ) ) {
+            } else if ( size.contains('mb') ) {
                 mult = 1024*1024;
-            } else if ( size.indexOf( 'gb' ) ) {
+            } else if ( size.contains('gb') ) {
                 mult = 1024*1024*1024;
-            } else if ( size.indexOf( 'tb' ) ) {
+            } else if ( size.contains('tb') ) {
                 mult = 1024*1024*1024*1024;
-            } else if ( size.indexOf( 'pb' ) ) {
+            } else if ( size.contains('pb') ) {
                 mult = 1024*1024*1024*1024*1024;
             }
 
@@ -130,12 +130,7 @@
     }
 
     File.prototype.extension = function( type, callback ) {
-        var extension = '';
-
-        var lastDot = this.name.lastIndexOf( '.' );
-        if ( lastDot !== -1 ) {
-            extension = this.name.substring( lastDot + 1 );
-        }
+        var extension = this.name.lastSplit( '.' ) || '';
 
         if ( arguments.length === 0 ) {
             return extension;
@@ -289,7 +284,7 @@
                             var info = tds[0].getElementsByTagName('a')[0];
 
                             if ( info ) {
-                                if ( info.className.indexOf('file') !== -1 ) {
+                                if ( info.className.contains('file') ) {
                                     var size;
 
                                     if ( tds[1] > 0 ) {
@@ -297,7 +292,7 @@
                                     }
 
                                     files.push( new File(info.href, size) );
-                                } else if ( info.className.indexOf('dir') !== -1 ) {
+                                } else if ( info.className.contains('dir') ) {
                                     files.push( new Dir(info.href) );
                                 }
                             }

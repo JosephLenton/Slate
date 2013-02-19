@@ -129,7 +129,7 @@
 
                 wrap.className = wrap.className.replace(/ ?slate-show/, '');
                 setTimeout( function() {
-                    if ( wrap.className.indexOf('slate-show') === -1 ) {
+                    if ( wrap.className.contains('slate-show') ) {
                         wrap.className += ' slate-show';
                     }
                 }, 100 );
