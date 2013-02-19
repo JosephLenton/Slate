@@ -1540,7 +1540,7 @@ window.slate.TouchBar = (function() {
                     evaluate: function() {
                         var value = this.getInputValue();
 
-                        return value.indexOf('.') !== -1 ?
+                        return value.contains('.') ?
                                 parseFloat( value ) :
                                 parseInt( value )   ;
                     },

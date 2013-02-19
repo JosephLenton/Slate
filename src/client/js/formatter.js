@@ -92,13 +92,11 @@
         var strFun = f.toString();
         var args = '';
 
-        if ( strFun.indexOf('function') !== -1 ) {
-            var firstParen = strFun.indexOf( '(' );
-
+        if ( strFun.contains('function') ) {
             args = strFun.substring(
-                    firstParen,
+                    strFun.indexOf( '(' ),
                     strFun.indexOf( ')' ) + 1
-            );
+            )
         }
 
         var propStr;
