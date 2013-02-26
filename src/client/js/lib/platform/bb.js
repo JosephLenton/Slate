@@ -1311,26 +1311,29 @@ window['bb'] = (function() {
             } else if ( k === 'html' ) {
                 bb.htmlOne( dom, val );
             } else if ( k === 'value' ) {
-                dom.value = val
+                if ( val === undefined || val === null ) {
+                    dom.value = '';
+                } else {
+                    dom.value = val
+                }
 
             /* Events */
 
-            /* custom new event */
+            /* custom HTML event */
             } else if ( bb.setup.data.events.hasOwnProperty(k) ) {
                 if ( bbGun !== null ) {
                     bbGun.on( k, val );
                 } else {
-                    var eventFun = bb.setup.data.events[k];
-                    eventFun( dom, val );
+                    bb.setup.data.events[k]( dom, val );
                 }
-            /* a HTML event */
+            /* standard HTML event */
             } else if ( HTML_EVENTS.hasOwnProperty(k) ) {
                 if ( bbGun !== null ) {
                     bbGun.on( k, val );
                 } else {
                     dom.addEventListener( k, val, false )
                 }
-            /* legal BBGun Event */
+            /* custom BBGun Event */
             } else if ( bbGun !== null && bbGun.__proto__.__eventList[k] === true ) {
                 bbGun.on( k, val );
 
