@@ -212,6 +212,54 @@ window['BBGun'] = (function() {
         return eventList;
     }
 
+    var replaceNode = function( oldNode, newNode, args, startI ) {
+        assert( newNode, "falsy newNode given" );
+
+        var parentDom = oldNode.__xeDom.parentNode;
+        var newDom;
+
+        if ( newNode instanceof Element ) {
+            newNode = bb( newNode );
+        } else if ( ! newNode.__isBBGun ) {
+            newNode = bb( newNode );
+        }
+
+        var newDom = newNode.dom();
+
+        assert( parentDom !== null, "replacing this element, when it has no parent dom" );
+        assert( newDom.parentNode === null, "replacing with node which already has a parent" );
+
+        var shouldDelete;
+        var hasArgs = ( args !== null && args.length > startI ),
+            args;
+        
+        if ( hasArgs ) {
+            args = new Array( (arguments.length-startI) + 2 );
+
+            args[0] = newNode;
+            args[1] = newDom;
+
+            for ( var i = startI; i < arguments.length; i++ ) {
+                args[i+2] = arguments[i];
+            }
+
+            shouldDelete = oldNode.fireApply( 'beforeReplace', args );
+        } else {
+            shouldDelete = oldNode.fire('beforeReplace', newNode, newDom);
+        }
+
+        if ( shouldDelete ) {
+            assert( oldNode.__xeDom.parentNode === parentDom, "parent has been changed within the 'beforeReplace' event" );
+            parentDom.replaceChild( newDom, oldNode.__xeDom );
+
+            if ( hasArgs ) {
+                oldNode.fireApply( 'replace', args );
+            } else {
+                oldNode.fire( 'replace', newNode, newDom );
+            }
+        }
+    }
+
     /**
      * Extends this BBGun prototype,
      * with a new version, which includes the
@@ -533,6 +581,12 @@ window['BBGun'] = (function() {
             return this.on( 'beforeReplace', f );
         },
 
+        replaceWith: function( node ) {
+            replaceNode( this, node, arguments, 1 );
+
+            return this;
+        },
+
         /**
          * Replaces this node with the one given,
          * or replaces one child with another.
@@ -564,36 +618,15 @@ window['BBGun'] = (function() {
          *
          */
         replace: function( oldNode, newNode ) {
-            if ( arguments.length === 1 ) {
-                if ( isFunction(oldNode) ) {
-                    this.on( 'replace', oldNode );
-                } else {
-                    // copy it across, because the variable name is freakin me out
-                    newNode = oldNode;
-                    assert( newNode, "falsy newNode given" );
+            var argsLen = arguments.length;
+            assert( argsLen > 0, "not enough arguments given" );
 
-                    var parentDom = this.__xeDom.parentNode;
-                    var newDom;
-
-                    if ( newNode instanceof Element ) {
-                        newNode = bb( newNode );
-                    } else if ( ! newNode.__isBBGun ) {
-                        newNode = bb( newNode );
-                    }
-
-                    var newDom = newNode.dom();
-
-                    assert( parentDom !== null, "replacing this element, when it has no parent dom" );
-                    assert( newDom.parentNode === null, "replacing with node which already has a parent" );
-
-                    if ( this.fire('beforeReplace', newNode, newDom) ) {
-                        assert( this.__xeDom.parentNode === parentDom, "parent has been changed within the 'beforeReplace' event" );
-                        parentDom.replaceChild( newDom, this.__xeDom );
-
-                        this.fire( 'replace', newNode, newDom );
-                    }
-                }
-            } else if ( arguments.length === 2 ) {
+            if ( isFunction(oldNode) ) {
+                assert( argsLen === 1, "too many arguments given" );
+                this.on( 'replace', oldNode );
+            } else if ( argsLen === 1 ) {
+                replaceNode( this, newDom, null, 0 );
+            } else if ( argsLen >= 2 ) {
                 assert( oldNode, "falsy oldNode given" );
                 assert( newNode, "falsy newNode given" );
 
@@ -614,7 +647,7 @@ window['BBGun'] = (function() {
 
                 logError( 'replacement events need to be sent to the child' );
 
-                oldDom.replace( newDom );
+                replaceNode( oldDom, newDom, arguments, 2 );
             } else {
                 logError( "too many, or not enough, parameters provided", arguments );
             }
@@ -655,15 +688,36 @@ window['BBGun'] = (function() {
             return this;
         },
 
-        fire: function( name ) {
+        fireApply: function( name, args, startI ) {
             if ( this.__xeEvents !== null ) {
-                var args = new Array( arguments.length-1 );
-
-                for ( var i = 0; i < args.length; i++ ) {
-                    args[i] = arguments[i+1];
+                if ( startI === undefined ) {
+                    startI = 0;
                 }
 
-                return this.__xeEvents.fireEvent( name, args );
+                var newArgs;
+                if (
+                        args !== undefined &&
+                        args !== null && 
+                        startI < args.length
+                ) {
+                    newArgs = new Array( args.length-startI );
+
+                    for ( var i = startI; i < args.length; i++ ) {
+                        newArgs[i-startI] = arguments[i];
+                    }
+
+                    return this.__xeEvents.fireEvent( name, newArgs );
+                } else {
+                    return this.__xeEvents.fireEvent( name, null );
+                }
+            } else {
+                return true;
+            }
+        },
+
+        fire: function( name ) {
+            if ( this.__xeEvents !== null ) {
+                return this.fireApply( name, arguments, 1 );
             } else {
                 return true;
             }
