@@ -216,14 +216,10 @@ window.slate.TouchBar = (function() {
                 this.setupDeleteButton();
 
                 this.replace( function(newNode) {
-                    var view = this.getView();
-
-                    if ( view ) {
-                        if ( this.isSelected() ) {
+                    if ( this.isSelected() ) {
+                        this.maybeView( function(view) {
                             view.setCurrent( newNode );
-                        }
-
-                        view.hideError();
+                        } )
                     }
 
                     /*
@@ -361,6 +357,26 @@ window.slate.TouchBar = (function() {
 
                     return this;
                 },
+
+                maybeView: function( fun ) {
+                    var view;
+
+                    if ( this.view === null ) {
+                        view = ( this.view = this.parentAST( function(p) {
+                            return p.maybeView();
+                        } ) || null );
+                    } else {
+                        view = this.view;
+                    }
+
+                    if ( arguments.length === 1 ) {
+                        assertFunction( fun );
+
+                        fun.call( this, view );
+                    }
+
+                    return view;
+                },
                 
                 /**
                  * Returns the view area, which this AST node is
@@ -372,17 +388,14 @@ window.slate.TouchBar = (function() {
                  * Essentially you shouldn't be trying to interact
                  * with the view, if there isn't one.
                  */
-                getView: function() {
-                    if ( this.view === null ) {
-                        return this.parentAST( function(p) {
-                                    this.view = p.getView();
-                                    return this.view;
-                                }) ||
-                                logError("getView called when node is not within a view")
-                    } else {
-                        return this.view;
-                    }
+                getView: function( fun ) {
+                    var view = ( arguments.length > 1 ) ?
+                            this.maybeView( fun )   :
+                            this.maybeView()        ;
+
+                    return view || logError("getView called when node is not within a view");
                 },
+
                 setView: function( view ) {
                     assert( view, "falsy view given" );
                     this.view = view;
@@ -1343,9 +1356,14 @@ window.slate.TouchBar = (function() {
 
                 this.click(function() {
                     self.input.focus();
-                });
+                })
+
                 this.replace( function(other) {
-                    if ( other.setInputValue !== undefined ) {
+                    if (
+                            other.setInputValue !== undefined &&
+                            ( this instanceof ast.Command) === (other instanceof ast.Command)
+                    ) {
+                        console.log( this.getInputValue());
                         other.setInputValue( this.getInputValue() );
                     }
                 } )
@@ -1540,7 +1558,7 @@ window.slate.TouchBar = (function() {
                     evaluate: function() {
                         var value = this.getInputValue();
 
-                        return value.contains('.') ?
+                        return value.indexOf('.') !== -1 ?
                                 parseFloat( value ) :
                                 parseInt( value )   ;
                     },
@@ -1955,10 +1973,14 @@ window.slate.TouchBar = (function() {
                         
                         if ( replaceNode && param === old ) {
                             param = params[i] = newAst;
+
+                            var self = this;
+                            newAst.once('replace', function(old) {
+                                self.replaceChild( empty, old );
+                            } );
+
                             newAstI = i;
 
-                            //old.replace( newAst ); // todo, is this line needed?
-                            
                             replaceNode = false;
                         }
                         
@@ -2016,6 +2038,11 @@ window.slate.TouchBar = (function() {
 
                 insertNewEmpty: function() {
                     var empty = new ast.Empty();
+
+                    var self = this;
+                    empty.once('replace', function(old) {
+                        self.replaceChild( empty, old );
+                    } );
 
                     this.params.push( empty );
                     this.before( this.rightParen, empty );
@@ -2214,6 +2241,8 @@ window.slate.TouchBar = (function() {
 
                         this.current.onEverySelect()
 
+                        this.hideError();
+
                         return this;
                     },
 
@@ -2262,9 +2291,17 @@ window.slate.TouchBar = (function() {
                              *  !isLeft -> replaceLeft
                              */
                             if ( isLeft ) {
-                                current.replaceLeft ( node.replaceRight(current) )
+                                var empty = node.replaceRight( current );
+
+                                if ( current.replaceLeft ) {
+                                    current.replaceLeft( empty )
+                                }
                             } else {
-                                current.replaceRight( node.replaceLeft (current) )
+                                var empty = node.replaceLeft( current );
+
+                                if ( current.replaceRight ) {
+                                    current.replaceRight( empty )
+                                }
                             }
                         }
 
