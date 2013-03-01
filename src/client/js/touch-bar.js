@@ -228,14 +228,15 @@ window.slate.TouchBar = (function() {
                      */
                     if ( newNode.isEmpty() ) {
                         this.removeClass( 'select' );
-                        this.addClass('pre-remove') 
                         newNode.add( this );
+
+                        this.addClass('pre-remove');
 
                         (function() {
                             this.removeClass( 'pre-remove' ).
                                  addClass( 'remove' );
 
-                            this.once( 'transitionend', this.remove.bind(this) );
+                            this.on( 'transitionend', this.remove.bind(this) );
                         }).later( this );
                     }
                 } )
@@ -340,8 +341,11 @@ window.slate.TouchBar = (function() {
                     this.add(
                             bb.a('touch-ast-delete', {
                                 click: function(ev) {
-                                    self.replace( new ast.Empty() )
-                            }} )
+                                    self.replace( new ast.Empty() );
+
+                                    ev.stopPropagation();
+                                }
+                            } )
                     )
                 },
 
@@ -407,7 +411,6 @@ window.slate.TouchBar = (function() {
 
                 onSelect: function() {
                     this.addClass( 'select' );
-
                     this.selectMore();
                 },
 
@@ -722,13 +725,6 @@ window.slate.TouchBar = (function() {
                         return false;
                     }
                 } )
-
-                this.replace( function( other ) {
-                    if ( other instanceof ast.DoubleOp ) {
-                        other.replaceLeft( this.left.remove() );
-                        other.replaceRight( this.right.remove() );
-                    }
-                } )
             }).
             extend( ast.Node ).
             override({
@@ -869,7 +865,7 @@ window.slate.TouchBar = (function() {
                 },
 
                 replaceRight: function( node ) {
-                    var old = this.left;
+                    var old = this.right;
                     this.right.replace( node );
 
                     return old;
@@ -1435,6 +1431,7 @@ window.slate.TouchBar = (function() {
                         return this.input;
                     },
 
+                    // todo, animate out old text, animate in new text
                     setInputValue: function( val ) {
                         this.input.value = val;
 
@@ -1671,14 +1668,9 @@ window.slate.TouchBar = (function() {
 
                 this.insertNewEmpty();
 
-                this.beforeReplace( function( newCommand, force ) {
-                    if ( 
-                            ! force &&
-                            ( newCommand instanceof ast.Command )
-                    ) {
+                this.beforeReplace( function(newCommand) {
+                    if ( newCommand instanceof ast.Command ) {
                         this.setInputValue( newCommand.getInputValue() );
-
-                        // todo, animate out old text, animate in new text
 
                         (function() {
                             this.getView().setCurrent( this.getEmpty() )
@@ -1979,8 +1971,8 @@ window.slate.TouchBar = (function() {
                             param = params[i] = newAst;
 
                             var self = this;
-                            newAst.once('replace', function(old) {
-                                self.replaceChild( empty, old );
+                            newAst.once('replace', function(newNode) {
+                                self.replaceChild( this, newNode );
                             } );
 
                             newAstI = i;
@@ -2044,8 +2036,8 @@ window.slate.TouchBar = (function() {
                     var empty = new ast.Empty();
 
                     var self = this;
-                    empty.once('replace', function(old) {
-                        self.replaceChild( empty, old );
+                    empty.once('replace', function(newNode) {
+                        self.replaceChild( this, newNode );
                     } );
 
                     this.params.push( empty );
@@ -2284,7 +2276,7 @@ window.slate.TouchBar = (function() {
                             current = p
                         } )
 
-                        current.replace( node );
+                        current.replaceWith( node, true ); // true -> force the replacement, no matter what
                         node.setView( this );
                         
                         if ( !current.isEmpty() && node.replaceRight !== undefined ) {
@@ -2726,13 +2718,11 @@ window.slate.TouchBar = (function() {
                 var buttons = this.buttons,
                     view = this.view;
 
-                if ( buttons.isLeft() && buttons.isRight() ) {
-                    view.insert( node );
+                if ( buttons.isLeft() === buttons.isRight() ) {
+                    view.insertRight( node );
                 } else if ( buttons.isLeft() ) {
                     view.insertLeft( node );
                 } else if ( buttons.isRight() ) {
-                    view.insertRight( node );
-                } else {
                     view.insert( node );
                 }
             },
