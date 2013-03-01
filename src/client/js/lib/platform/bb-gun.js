@@ -28,7 +28,10 @@ window['BBGun'] = (function() {
 
         var self = this;
         this.handleEvent = function( ev ) {
-            self.fireDomEvent( ev.type || ev.name, ev );
+            self.fireDomEvent(
+                    bb.setup.normalizeEventName( ev.type || ev.name ),
+                    ev
+            );
         }
     }
 
@@ -39,16 +42,22 @@ window['BBGun'] = (function() {
                     this.register( name, f );
                 }
             } else {
-                assert( this.xe.isEvent(name), "unknown event, " + name );
+                var bbGunName = bb.setup.normalizeEventName( name );
 
-                if ( this.events.hasOwnProperty(name) ) {
-                    this.events[name].push( f );
+                assert(
+                        this.xe.__eventList.hasOwnProperty( bbGunName ) ||
+                                bb.setup.isEvent( name ),
+                        "unknown event, " + name
+                );
+
+                if ( this.events.hasOwnProperty(bbGunName) ) {
+                    this.events[bbGunName].push( f );
                 } else {
                     if ( bb.setup.isEvent(name) ) {
                         bb.on( this.xe.dom(), name, this.handleEvent );
                     }
 
-                    this.events[name] = [ f ];
+                    this.events[bbGunName] = [ f ];
                 }
             }
         },
@@ -56,8 +65,9 @@ window['BBGun'] = (function() {
         unregister: function( name, fun ) {
             assert( this.xe.isEvent(name), "unknown event, " + name );
 
-            if ( this.events.hasOwnProperty(name) ) {
-                var evs = this.events[name];
+            var bbGunName = bb.setup.normalizeEventName( name );
+            if ( this.events.hasOwnProperty(bbGunName) ) {
+                var evs = this.events[bbGunName];
 
                 for ( var i = 0; i < evs.length; i++ ) {
                     if ( evs[i] === fun ) {
@@ -82,8 +92,10 @@ window['BBGun'] = (function() {
         },
 
         fireEvent: function( name, args, startI ) {
-            if ( this.events.hasOwnProperty(name) ) {
-                var evs = this.events[name],
+            var bbGunName = bb.setup.normalizeEventName( name );
+
+            if ( this.events.hasOwnProperty(bbGunName) ) {
+                var evs = this.events[bbGunName],
                     xe  = this.xe;
 
                 if ( args === null ) {
@@ -116,9 +128,9 @@ window['BBGun'] = (function() {
             return true;
         },
 
-        fireDomEvent: function( name, ev ) {
-            if ( this.events.hasOwnProperty(name) ) {
-                var evs = this.events[name],
+        fireDomEvent: function( bbGunName, ev ) {
+            if ( this.events.hasOwnProperty(bbGunName) ) {
+                var evs = this.events[bbGunName],
                     xe  = this.xe;
 
                 prepEvent( ev );
@@ -139,7 +151,17 @@ window['BBGun'] = (function() {
         }
     }
 
-    var removeOne = function( self, selfDom, node ) {
+    var removeDomCycle = function( node, args ) {
+        var shouldDelete = node.fireApply( 'beforeremove', args, 0 );
+        if ( shouldDelete !== false ) {
+            var nodeDom = node.dom();
+            nodeDom.parentNode.removeChild( nodeDom );
+
+            node.fireApply( 'remove', args, 0 );
+        }
+    }
+
+    var removeOne = function( self, selfDom, node, args ) {
         if ( node.__isBBGun ) {
             var nodeParent = node.parent();
 
@@ -149,8 +171,7 @@ window['BBGun'] = (function() {
                 logError( "removing node which is not a child of this node", node );
             }
 
-            var nodeDom = node.dom();
-            nodeDom.parentNode.removeChild( nodeDom );
+            removeDomCycle( node, args );
         } else if ( node instanceof Element ) {
             if ( node.parentNode !== selfDom ) {
                 logError( "removing Element which is not a child of this node", node );
@@ -226,7 +247,8 @@ window['BBGun'] = (function() {
         }
 
         for ( var i = 0; i < newEvents; i++ ) {
-            eventList[ newEvents[i] ] = true;
+            var name = bb.setup.normalizeEventName( newEvents[i] );
+            eventList[ name ] = true;
         }
 
         return eventList;
@@ -321,7 +343,10 @@ window['BBGun'] = (function() {
          */
         __eventList: {
                 'replace': true,
-                'beforeReplace': true
+                'beforereplace': true,
+
+                'remove': true,
+                'beforeremove': true
         },
 
         /**
@@ -656,10 +681,14 @@ window['BBGun'] = (function() {
                 } else if ( oldNode.__isBBGun ) {
                     oldDom = oldNode.dom();
                 } else {
-                    logError( "unknown 'oldNode' given", oldNode );
+                    logError( "node given, is not a HTML element", oldNode );
                 }
 
-                var newDom = bb( newNode );
+                try {
+                    var newDom = bb( newNode );
+                } catch ( err ) {
+                    logError( "replacement node is not a HTML element (perhaps you meant 'replaceWith'?)", err, err.stack );
+                }
 
                 var dom = this.dom();
                 assert( oldDom.parentNode === dom , "removing node which is not a child of this element" );
@@ -675,26 +704,60 @@ window['BBGun'] = (function() {
             return this;
         },
 
+        beforeRemove: function( f ) {
+            assert( arguments.length === 1, "number of parameters is incorrect" );
+            assertFunction( f );
+
+            return this.on( 'beforeremove', f );
+        },
+
         /**
          * remove()
          *
          *  Removes this from it's parent DOM node.
          *
+         * remove( Event )
+         *
+         *  Removes this from it's parent DOM node,
+         *  and passes the event to any listeners.
+         *
          * remove( node )
          *
          *  Removes the node given, from this.
          *  If it is not found, then an error is raised.
+         *
+         * remove( function(ev) {
+         *      // on remove code here
+         * } )
+         *
+         *  Adds an event to be called, when this node is
+         *  removed. Note that it only works if you are
+         *  working through BBGun objects API.
          */
         remove: function() {
             if ( arguments.length === 0 ) {
                 var dom = this.__xeDom;
                 assert( dom.parentNode !== null, "removing this when it has no parent" );
 
-                dom.parentNode.removeChild( dom );
-            } else {
-                for ( var i = 0; i < arguments.length; i++ ) {
-                    removeOne( this, this.__xeDom, arguments[i] );
+                removeDomCycle( this, null );
+            } else if ( arguments.length === 1 ) {
+                var arg = arguments[0];
+
+                if ( isFunction(arg) ) {
+                    this.on( 'remove', arg );
+                } else if ( arg instanceof Event ) {
+                    removeDomCycle( this, [arg] );
+                } else {
+                    removeOne( this, this.__xeDom, arguments[0], null );
                 }
+            } else {
+                var newArgs = new Array( arguments.length-1 );
+
+                for ( var i = startI; i < arguments.length; i++ ) {
+                    newArgs[i-1] = arguments[i];
+                }
+
+                removeOne( this, this.__xeDom, arguments[0], newArgs );
             }
 
             return this;
@@ -733,7 +796,7 @@ window['BBGun'] = (function() {
         },
 
         isEvent: function( name ) {
-            return this.__eventList.hasOwnProperty( name ) || bb.setup.isEvent( name );
+            return this.__eventList.hasOwnProperty( bb.setup.normalizeEventName(name) ) || bb.setup.isEvent( name );
         },
 
         /**

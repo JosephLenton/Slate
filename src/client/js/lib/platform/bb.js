@@ -151,7 +151,11 @@ window['bb'] = (function() {
 
     var HTML_EVENTS = listToMap(
             /* CSS Events */
-            'transitionend',
+
+            // this is added manually as a custom event,
+            // to deal with prefixes.
+            
+            //'transitionend',
             'animationstart',
             'animationend',
             'animationiteration',
@@ -376,6 +380,13 @@ window['bb'] = (function() {
                     this.data.events[ name ] = fun;
                 },
 
+                normalizeEventName: function( name ) {
+                    return name.
+                            toLowerCase().
+                            replace( /^webkit/, '' ).
+                            replace( /^moz/, '' );
+                },
+
                 isEvent: function( name ) {
                     return this.data.events.hasOwnProperty( name ) ||
                            HTML_EVENTS.hasOwnProperty( name );
@@ -405,6 +416,10 @@ window['bb'] = (function() {
         }
 
         bb.setup.
+                event( 'transitionend', function(dom, fun) {
+                    dom.addEventListener( 'transitionend', fun );
+                    dom.addEventListener( 'webkitTransitionEnd', fun );
+                } ).
                 element( 'a', function() {
                     var anchor = document.createElement('a');
                     anchor.setAttribute( 'href', '#' );
@@ -482,7 +497,11 @@ window['bb'] = (function() {
                 }
             } else {
                 if ( dom instanceof Element ) {
-                    dom.addEventListener( name, fun, useCapture )
+                    if ( events.hasOwnProperty(name) ) {
+                        events[name](dom, fun, useCapture);
+                    } else {
+                        dom.addEventListener( name, fun, useCapture )
+                    }
                 } else if ( dom instanceof Array ) {
                     for ( var i = 0; i < dom.length; i++ ) {
                         setOn( events, dom[i], name, fun, useCapture );
