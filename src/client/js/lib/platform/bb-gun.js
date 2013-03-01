@@ -81,14 +81,34 @@ window['BBGun'] = (function() {
             this.register( name, fun );
         },
 
-        fireEvent: function( name, args ) {
+        fireEvent: function( name, args, startI ) {
             if ( this.events.hasOwnProperty(name) ) {
                 var evs = this.events[name],
                     xe  = this.xe;
 
-                for ( var i = 0; i < evs.length; i++ ) {
-                    if ( evs[i].apply(xe, args) === false ) {
-                        return false;
+                if ( args === null ) {
+                    for ( var i = 0; i < evs.length; i++ ) {
+                        if ( evs[i].call(xe) === false ) {
+                            return false;
+                        }
+                    }
+                } else {
+                    var newArgs;
+
+                    if ( startI === undefined || startI === 0 ) {
+                        newArgs = args;
+                    } else {
+                        newArgs = new Array( args.length-startI );
+
+                        for ( var i = startI; i < args.length; i++ ) {
+                            newArgs[i-startI] = args[i];
+                        }
+                    }
+                    
+                    for ( var i = 0; i < evs.length; i++ ) {
+                        if ( evs[i].apply(xe, newArgs) === false ) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -234,18 +254,18 @@ window['BBGun'] = (function() {
             args;
         
         if ( hasArgs ) {
-            args = new Array( (arguments.length-startI) + 2 );
+            var newArgs = new Array( (arguments.length-startI) + 2 );
 
-            args[0] = newNode;
-            args[1] = newDom;
+            newArgs[0] = newNode;
+            newArgs[1] = newDom;
 
             for ( var i = startI; i < arguments.length; i++ ) {
-                args[i+2] = arguments[i];
+                newArgs[i+2] = args[i];
             }
 
-            shouldDelete = oldNode.fireApply( 'beforeReplace', args );
+            shouldDelete = oldNode.fireApply( 'beforeReplace', newArgs, 0 );
         } else {
-            shouldDelete = oldNode.fire('beforeReplace', newNode, newDom);
+            shouldDelete = oldNode.fireApply('beforeReplace', [newNode, newDom], 0);
         }
 
         if ( shouldDelete ) {
@@ -625,7 +645,7 @@ window['BBGun'] = (function() {
                 assert( argsLen === 1, "too many arguments given" );
                 this.on( 'replace', oldNode );
             } else if ( argsLen === 1 ) {
-                replaceNode( this, newDom, null, 0 );
+                replaceNode( this, oldNode, null, 0 );
             } else if ( argsLen >= 2 ) {
                 assert( oldNode, "falsy oldNode given" );
                 assert( newNode, "falsy newNode given" );
@@ -690,26 +710,7 @@ window['BBGun'] = (function() {
 
         fireApply: function( name, args, startI ) {
             if ( this.__xeEvents !== null ) {
-                if ( startI === undefined ) {
-                    startI = 0;
-                }
-
-                var newArgs;
-                if (
-                        args !== undefined &&
-                        args !== null && 
-                        startI < args.length
-                ) {
-                    newArgs = new Array( args.length-startI );
-
-                    for ( var i = startI; i < args.length; i++ ) {
-                        newArgs[i-startI] = arguments[i];
-                    }
-
-                    return this.__xeEvents.fireEvent( name, newArgs );
-                } else {
-                    return this.__xeEvents.fireEvent( name, null );
-                }
+                return this.__xeEvents.fireEvent( name, args, startI );
             } else {
                 return true;
             }
