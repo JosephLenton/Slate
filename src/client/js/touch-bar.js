@@ -712,9 +712,11 @@ window.slate.TouchBar = (function() {
                     }
                 });
 
-
-                this.beforeReplace( function( newCommand ) {
-                    if ( newCommand instanceof ast.DoubleOp ) {
+                this.beforeReplace( function( newCommand, force ) {
+                    if (
+                            ! force &&
+                            ( newCommand instanceof ast.DoubleOp )
+                    ) {
                         this.setMeta( newCommand.getMeta() );
 
                         return false;
@@ -723,8 +725,8 @@ window.slate.TouchBar = (function() {
 
                 this.replace( function( other ) {
                     if ( other instanceof ast.DoubleOp ) {
-                        other.replaceLeft( this.left );
-                        other.replaceRight( this.right );
+                        other.replaceLeft( this.left.remove() );
+                        other.replaceRight( this.right.remove() );
                     }
                 } )
             }).
@@ -1363,7 +1365,6 @@ window.slate.TouchBar = (function() {
                             other.setInputValue !== undefined &&
                             ( this instanceof ast.Command) === (other instanceof ast.Command)
                     ) {
-                        console.log( this.getInputValue());
                         other.setInputValue( this.getInputValue() );
                     }
                 } )
@@ -1670,8 +1671,11 @@ window.slate.TouchBar = (function() {
 
                 this.insertNewEmpty();
 
-                this.beforeReplace( function( newCommand ) {
-                    if ( newCommand instanceof ast.Command ) {
+                this.beforeReplace( function( newCommand, force ) {
+                    if ( 
+                            ! force &&
+                            ( newCommand instanceof ast.Command )
+                    ) {
                         this.setInputValue( newCommand.getInputValue() );
 
                         // todo, animate out old text, animate in new text
