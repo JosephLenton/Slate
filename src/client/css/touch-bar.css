@@ -92,26 +92,22 @@ body.slate-touch > .slate-content {
         position: absolute;
         top: -20px;
         left: 9px;
-        width: 140px;
         height: 30px;
     }
         .touch-shift-button {
-            display: block;
+            display: inline-block;
             text-align: center;
-            width: 70px;
             vertical-align: middle;
 
-            padding: 12px 0 13px 0;
-
-            position: absolute;
-            top: 0;
+            padding: 12px 12px 13px 12px;
+            margin-left: 8px;
 
             font-size: 21px;
 
             border-radius: 2px;
 
-            border-right : 1px solid #000;
-            border-bottom: 1px solid #000;
+            border-right : 1px solid #111;
+            border-bottom: 1px solid #111;
         }
         .touch-shift-button,
         .touch-shift-button:hover,
@@ -131,10 +127,6 @@ body.slate-touch > .slate-content {
         }
         .touch-shift-button:first-of-type {
             background: #050E17;
-            left: 0;
-
-            border-top-right-radius: 0;
-            border-bottom-right-radius: 0;
         }
         .touch-shift-button.highlight:first-of-type {
             background: #1B3442;
@@ -144,17 +136,12 @@ body.slate-touch > .slate-content {
         }
         .touch-shift-button:last-of-type {
             background: #05170C;
-
-            right: 0;
-
-            border-top-left-radius: 0;
-            border-bottom-left-radius: 0;
         }
         .touch-shift-button.highlight:last-of-type {
             background: #20421B;
         }
         .touch-shift-button:last-of-type:after {
-            content: 'right';
+            content: 'replace';
         }
     .touch-bar-row {
         text-align: center;
