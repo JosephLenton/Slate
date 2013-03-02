@@ -85,18 +85,18 @@ window.slate.UndoStack = (function(window) {
         if ( this.index < this.stack.length ) {
             this.stack.splice( this.index++, 0, state );
 
-            callFuns( this.redoChange, false );
+            callFuns( this.target, this.redoChange, false );
         } else {
             this.stack[ this.index++ ] = state;
         }
 
-        callFuns( this.undoChange, true  );
+        callFuns( this.target, this.undoChange, true  );
     }
 
     UndoStack.prototype.undo = function() {
         if ( this.hasUndo() ) {
             if ( ! this.hasRedo() ) {
-                callFuns( this.redoChange, true );
+                callFuns( this.target, this.redoChange, true );
             }
 
             this.index--;
@@ -104,10 +104,10 @@ window.slate.UndoStack = (function(window) {
             
             // If we now reached the back, update the events.
             if ( ! this.hasUndo() ) {
-                callFuns( this.undoChange, false );
+                callFuns( this.target, this.undoChange, false );
             }
 
-            callFuns( this.undoFuns, temp );
+            callFuns( this.target, this.undoFuns, temp );
 
             return temp;
         } else {
@@ -121,7 +121,7 @@ window.slate.UndoStack = (function(window) {
             // and so we will no longer be at the beginning.
             // So undo's are allowed.
             if ( ! this.hasUndo() ) {
-                callFuns( this.undoChange, true );
+                callFuns( this.target, this.undoChange, true );
             }
 
             var temp = this.stack[ this.index ];
@@ -129,10 +129,10 @@ window.slate.UndoStack = (function(window) {
 
             // If we now reached the front, update the events.
             if ( ! this.hasRedo() ) {
-                callFuns( this.redoChange, false );
+                callFuns( this.target, this.redoChange, false );
             }
 
-            callFuns( this.redoFuns, temp );
+            callFuns( this.target, this.redoFuns, temp );
 
             return temp;
         } else {
@@ -150,12 +150,12 @@ window.slate.UndoStack = (function(window) {
     UndoStack.prototype.undoEnd = function() {
         if ( this.hasRedo() ) {
             if ( ! this.hasUndo() ) {
-                callFuns( this.undoChange, true );
+                callFuns( this.target, this.undoChange, true );
             }
 
             this.index = this.stack.length;
 
-            callFuns( this.redoChange, false );
+            callFuns( this.target, this.redoChange, false );
         }
     }
 

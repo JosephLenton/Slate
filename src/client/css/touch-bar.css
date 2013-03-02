@@ -56,6 +56,10 @@ body.slate-touch > .slate-content {
 
         font-size  : 24px;
         font-weight: 100;
+
+        -webkit-transition: color 150ms linear, background 150ms linear;
+           -moz-transition: color 150ms linear, background 150ms linear;
+                transition: color 150ms linear, background 150ms linear;
     }
     .touch-controls > a.disabled {
         color: #777;

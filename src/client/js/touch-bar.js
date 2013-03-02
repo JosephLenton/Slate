@@ -216,10 +216,16 @@ window.slate.TouchBar = (function() {
                 this.setupDeleteButton();
 
                 this.replace( function(newNode) {
-                    if ( this.isSelected() ) {
-                        this.maybeView( function(view) {
+                    var view = this.maybeView();
+                    
+                    if ( view ) {
+                        if ( this.isSelected() ) {
                             view.setCurrent( newNode );
-                        } )
+                        }
+
+                        view.storeChange();
+                    } else {
+                        newNode.updateViewChange();
                     }
 
                     /*
@@ -282,6 +288,14 @@ window.slate.TouchBar = (function() {
              * to have them return different values.
              */
             extend({
+                updateViewChange: function() {
+                    var view = this.maybeView();
+
+                    if ( view !== null ) {
+                        view.storeChange();
+                    }
+                },
+
                 parentAST: function( f ) {
                     if ( arguments.length === 1 ) {
                         return this.parent( '.touch-ast', f );
@@ -376,7 +390,9 @@ window.slate.TouchBar = (function() {
                     if ( arguments.length === 1 ) {
                         assertFunction( fun );
 
-                        fun.call( this, view );
+                        if ( view !== null ) {
+                            fun.call( this, view );
+                        }
                     }
 
                     return view;
@@ -721,6 +737,8 @@ window.slate.TouchBar = (function() {
                             ( newCommand instanceof ast.DoubleOp )
                     ) {
                         this.setMeta( newCommand.getMeta() );
+
+                        this.updateViewChange();
 
                         return false;
                     }
@@ -1362,6 +1380,7 @@ window.slate.TouchBar = (function() {
                             ( this instanceof ast.Command) === (other instanceof ast.Command)
                     ) {
                         other.setInputValue( this.getInputValue() );
+                        this.updateViewChange();
                     }
                 } )
             }).
@@ -2138,11 +2157,9 @@ window.slate.TouchBar = (function() {
             }).
             extend({
                     undo: function( state ) {
-                        console.log( 'undo', state );
                         // todo
                     },
                     redo: function( state ) {
-                        console.log( 'redo', state );
                         // todo
                     },
 
@@ -2328,6 +2345,8 @@ window.slate.TouchBar = (function() {
                          * when it searches for an empty node.
                          */
                         this.selectEmpty( node, isLeft );
+
+                        this.storeChange();
                     },
 
                     insertLeft: function( node ) {
@@ -2346,6 +2365,8 @@ window.slate.TouchBar = (function() {
                         this.current.replace( node );
                         this.current.setView( this );
                         this.selectEmpty( node );
+
+                        this.storeChange();
                     },
 
                     selectEmpty: function( node, findEmptyVal ) {
@@ -2728,8 +2749,10 @@ window.slate.TouchBar = (function() {
 
                         'a.touch-controls-redo disabled'  : {
                             self: function() {
+                                var self = this;
+
                                 undo.onRedoChange( function(hasRedo) {
-                                    bb.toggleClass( hasRedo, 'disabled' )
+                                    bb.toggleClass( self, !hasRedo, 'disabled' )
                                 } );
                             },
 
@@ -2738,12 +2761,10 @@ window.slate.TouchBar = (function() {
 
                         'a.touch-controls-undo disabled'  : {
                             self: function() {
+                                var self = this;
+
                                 undo.onUndoChange( function(hasUndo) {
-                                    if ( hasUndo ) {
-                                        this.removeClass( 'disabled' );
-                                    } else {
-                                        this.addClass( 'disabled' );
-                                    }
+                                    bb.toggleClass( self, !hasUndo, 'disabled' )
                                 } );
                             },
 

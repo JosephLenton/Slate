@@ -928,6 +928,26 @@ window['bb'] = (function() {
             return dom;
         },
 
+        bb.toggleClass = function( dom, arg ) {
+            if ( arg === true ) {
+                this.addClassArray( dom, arguments, 2 );
+            } else if ( arg === false ) {
+                this.removeClassArray( dom, arguments, 2 );
+            } else {
+                assert( arguments.length > 1, "not enough arguments given" );
+
+                iterateClasses( arguments, 1, function(klass) {
+                    if ( dom.classList.contains(klass) ) {
+                        dom.classList.remove(klass);
+                    } else {
+                        dom.classList.add(klass);
+                    }
+                } );
+            }
+
+            return dom;
+        },
+
         bb.addClass = function( dom ) {
             if ( arguments.length === 2 ) {
                 return this.addClassOne( dom, arguments[1] );
