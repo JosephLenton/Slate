@@ -11,6 +11,43 @@
 
     /*
      * ### ### ### ### ### ### ### ### ### ### ### ### 
+     *          Object
+     * ### ### ### ### ### ### ### ### ### ### ### ### 
+     */
+
+    extend( Object.prototype, {
+            /**
+             * Finds the method, and binds it to 'this' object.
+             * This is so you can do:
+             *
+             *      this.foo.bar.something().whatever.method( 'doWork' );
+             *
+             * ... instead of ...
+             *
+             *      this.foo.bar.something().whatever.doWork.bind(
+             *              this.foo.bar.something().whatever
+             *      )
+             */
+            method: function( name ) {
+                var fun = this[name];
+
+                if ( (typeof fun !== 'function') || !(fun instanceof Function) ) {
+                    throw new Error( "function not found ", name );
+                } else if ( arguments.length === 1 ) {
+                    return fun.bind( this );
+                } else {
+                    var args = new Array( arguments.length-1 );
+                    for ( var i = 0; i < args.length; i++ ) {
+                        args[i] = arguments[i+1];
+                    }
+
+                    return fun.bind.apply( fun, args );
+                }
+            }
+    } );
+
+    /*
+     * ### ### ### ### ### ### ### ### ### ### ### ### 
      *          String
      * ### ### ### ### ### ### ### ### ### ### ### ### 
      */
