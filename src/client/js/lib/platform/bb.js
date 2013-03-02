@@ -392,6 +392,11 @@ window['bb'] = (function() {
                            HTML_EVENTS.hasOwnProperty( name );
                 },
 
+                isElement: function( name ) {
+                    return this.data.elements.hasOwnProperty(name) ||
+                            HTML_ELEMENTS.hasOwnProperty(name);
+                },
+
                 /**
                  * Allows registering new types of elements.
                  *
@@ -1289,28 +1294,64 @@ window['bb'] = (function() {
             return dom;
         }
 
-        var attrOne = function(bb, bbGun, dom, k, val) {
-            if (bbGun !== null && k.charAt(0) === '.' && k.length > 0) {
-                k = k.substring(1);
+        /**
+         * If there is a '.' in an attribute name,
+         * then this will be called.
+         *
+         * These handle attributes in the form:
+         *
+         *      'div.classFoo whatever'
+         *      'div.className'
+         *      '.className'
+         *
+         */
+        var attrOneNewChild = function( bb, bbGun, dom, k, val, dotI ) {
+            assert( k.length > 1, "empty description given" );
 
-                var newDom = bb.createElement('div');
-                newDom.className = k;
+            var className = k.substring(dotI+1);
+            var newDom;
 
+            if ( dotI === 0 ) {
                 if ( val instanceof Element ) {
-                    newDom.appendChild( val );
+                    newDom = val;
                 } else if ( val.__isBBGun ) {
-                    newDom.appendChild( val.dom() );
+                    newDom = val.dom();
                 } else {
-                    return applyOne(
-                            bb,
-                            null,
-                            dom,
-                            val,
-                            true
-                    )
+                    newDom = createOne( bb, val );
                 }
+            } else {
+                var domType = k.substring( 0, dotI );
 
-                dom.appendChild( newDom );
+                if ( isArray(val) ) {
+                    bb.createElement( domType );
+
+                    applyArray(
+                            this,
+                            null,
+                            newDom,
+                            val,
+                            0
+                    )
+                } else if ( isObject(val) ) {
+                    assert( bb.setup.isElement(domType), "invalid element type given, " + domType );
+                    val[TYPE_NAME_PROPERTY] = domType;
+
+                    newDom = bb.createObj( val );
+                } else {
+                    logError( "invalid object description given for, " + k, k );
+                }
+            }
+
+            bb.addClassOne( newDom, className );
+
+            dom.appendChild( newDom );
+        }
+
+        var attrOne = function(bb, bbGun, dom, k, val) {
+            var dotI = k.indexOf( '.' );
+
+            if ( dotI !== -1 ) {
+                attrOneNewChild( bb, bbGun, dom, k, val, dotI );
             } else if ( k === TYPE_NAME_PROPERTY ) {
                 /* do nothing */
             } else if ( k === 'className' ) {
@@ -1334,6 +1375,15 @@ window['bb'] = (function() {
                     dom.value = '';
                 } else {
                     dom.value = val
+                }
+
+            } else if ( k === 'self' || k === 'this' ) {
+                assertFunction( val, "none function given for 'self' attribute" );
+
+                if ( bbGun !== null ) {
+                    val.call( bbGun, dom );
+                } else {
+                    val.call( dom, dom );
                 }
 
             /* Events */
