@@ -1442,21 +1442,6 @@ window.slate.TouchBar = (function() {
 
                     getInputValue: function() {
                         return this.input.value;
-                    },
-
-                    withInput: function( fun ) {
-                        var self = this;
-
-                        if ( this.timeout !== null ) {
-                            clearTimeout( this.timeout );
-                            this.timeout = null;
-                        }
-
-                        this.timeout = setTimeout( function() {
-                            this.timeout = null;
-                            
-                            fun.call( self );
-                        }, 0 );
                     }
             } )
 
@@ -2130,6 +2115,9 @@ window.slate.TouchBar = (function() {
                 this.touchBar    = touchBar;
                 this.current     = null;
                 this.selectLater = null;
+                this.insertionFun = null;
+
+                this.changeDelay = null;
 
                 /* the bar where the AST nodes are shown */
                 this.bar = new BBGun( 'touch-bar-view-ast-bar' );
@@ -2146,9 +2134,44 @@ window.slate.TouchBar = (function() {
 
                 /* finally, setup! */
                 this.add( this.bar, this.errorDom ).
-                     setAST( new ast.Empty() );
+                         setAST( new ast.Empty() );
             }).
             extend({
+                    undo: function( state ) {
+                        console.log( 'undo', state );
+                        // todo
+                    },
+                    redo: function( state ) {
+                        console.log( 'redo', state );
+                        // todo
+                    },
+
+                    onChange: function( fun ) {
+                        assertFunction( fun );
+
+                        this.insertionFun = fun;
+
+                        return this;
+                    },
+
+                    storeChange: function() {
+                        clearTimeout( this.changeDelay )
+                        this.changeDelay = this.storeChangeNow.later( this, 10 );
+
+                        return this;
+                    },
+
+                    storeChangeNow: function() {
+                        // get the tree structure as HTML doms,
+                        // translated to JSON
+                        // then store the JSON
+                        //
+                        var structure = 'foo';
+                        
+                        assert( this.insertionFun !== null, "no insertion fun set" );
+                        this.insertionFun( structure );
+                    },
+
                     execute: function() {
                         if ( this.touchBar ) {
                             this.touchBar.execute();
@@ -2231,9 +2254,7 @@ window.slate.TouchBar = (function() {
                             this.current.onSelect();
                         }
 
-                        if ( this.selectLater !== null ) {
-                            clearTimeout( this.selectLater );
-                        }
+                        clearTimeout( this.selectLater );
 
                         this.current.onEverySelect()
 
@@ -2318,9 +2339,10 @@ window.slate.TouchBar = (function() {
                     },
 
                     /**
-                     * Inserts a node into the currently empty space.
+                     * Replaces the current node,
+                     * with the one given.
                      */
-                    insert: function( node ) {
+                    replaceCurrent: function( node ) {
                         this.current.replace( node );
                         this.current.setView( this );
                         this.selectEmpty( node );
@@ -2392,7 +2414,7 @@ window.slate.TouchBar = (function() {
                 var self = this;
 
                 this.hasLeft  = false;
-                this.hasRight = false;
+                this.hasReplace = false;
 
                 BBGun.call( this,
                         'touch-shift',
@@ -2400,7 +2422,7 @@ window.slate.TouchBar = (function() {
                                     self.hasLeft = isDown;
                                 }, 81),
                         newShiftButton( function(isDown) {
-                                    self.hasRight = isDown;
+                                    self.hasReplace = isDown;
                                 }, 87)
                 )
             }).
@@ -2409,8 +2431,8 @@ window.slate.TouchBar = (function() {
                     return this.hasLeft;
                 },
 
-                isRight: function() {
-                    return this.hasRight;
+                isReplace: function() {
+                    return this.hasReplace;
                 }
             } )
 
@@ -2436,15 +2458,16 @@ window.slate.TouchBar = (function() {
         this.bar   = barDom;
         this.row   = null;
         this.view  = null;
+        this.undo = new slate.UndoStack();
+
+        this.newTouchView();
 
         parentDom.appendChild(
                 bb( 'touch-bar-wrap',
                         barDom,
-                        this.newControls()
+                        this.newControls( this.undo )
                 )
         )
-
-        this.newTouchView();
 
         /**
          * Add the initial commands
@@ -2695,35 +2718,62 @@ window.slate.TouchBar = (function() {
     }
 
     TouchBar.prototype = {
-            newControls: function() {
+            newControls: function( undo ) {
                 var self = this;
 
-                return newButtons( 'touch-controls', {
-                        'touch-controls-run'   : function() {
-                            self.execute();
+                return bb( 'touch-controls', {
+                        'a.touch-controls-run' : {
+                            click: self.method( 'execute' )
                         },
-                        'touch-controls-redo disabled'  : function() {
-                            /* todo: perform a redo */
+
+                        'a.touch-controls-redo disabled'  : {
+                            self: function() {
+                                undo.onRedoChange( function(hasRedo) {
+                                    bb.toggleClass( hasRedo, 'disabled' )
+                                } );
+                            },
+
+                            click: undo.method( 'redo' )
                         },
-                        'touch-controls-undo disabled'  : function() {
-                            /* todo: perform an undo */
+
+                        'a.touch-controls-undo disabled'  : {
+                            self: function() {
+                                undo.onUndoChange( function(hasUndo) {
+                                    if ( hasUndo ) {
+                                        this.removeClass( 'disabled' );
+                                    } else {
+                                        this.addClass( 'disabled' );
+                                    }
+                                } );
+                            },
+
+                            click: undo.method( 'undo' )
                         },
-                        'touch-controls-clear' : function() {
-                            this.view.clear();
+
+                        'a.touch-controls-clear' : {
+                            click: self.view.method( 'clear' )
                         }
                 } )
             },
 
+            /**
+             * This inserts the node given,
+             * and does based on the current state of the button.
+             *
+             * default -> insert towards the right
+             * replace -> replace current node
+             * left    -> insert towards the left
+             */
             insert: function( node ) {
                 var buttons = this.buttons,
                     view = this.view;
 
-                if ( buttons.isLeft() === buttons.isRight() ) {
+                if ( buttons.isLeft() === buttons.isReplace() ) {
                     view.insertRight( node );
                 } else if ( buttons.isLeft() ) {
                     view.insertLeft( node );
-                } else if ( buttons.isRight() ) {
-                    view.insert( node );
+                } else if ( buttons.isReplace() ) {
+                    view.replaceCurrent( node );
                 }
             },
 
@@ -2750,8 +2800,16 @@ window.slate.TouchBar = (function() {
                     }
                 }
 
-                this.view = new TouchView( this );
+                this.view = new TouchView( this ).
+                        onChange( this.undo.method('add') );
+
                 this.bar.appendChild( this.view.dom() );
+
+                this.undo.
+                        clearUndos().
+                        clearRedos().
+                        onUndo( this.view.method('undo') ).
+                        onRedo( this.view.method('redo') );
             },
 
             showRow: function( row ) {
