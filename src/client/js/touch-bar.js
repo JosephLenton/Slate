@@ -2502,7 +2502,6 @@ window.slate.TouchBar = (function() {
          */
 
         document.body.addEventListener( 'mousedown', closeThis );
-setTimeout( this.method('open'), 1000 );
 
         this.isOpen = false;
         var self = this;

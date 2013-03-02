@@ -272,11 +272,15 @@
             var body = document.getElementsByTagName( 'body' )[0];
             body.className += ' slate-touch';
 
-            new window.slate.TouchBar(
+            var touchBar = new window.slate.TouchBar(
                     body,
                     executor,
                     window.slate.commands.listCommands()
             );
+            
+            if ( options.open ) {
+                setTimeout( touchBar.method('open'), 1000 );
+            }
         } else {
             new window.slate.TerminalBar(
                     document.getElementsByClassName( 'slate-input' )[0],
