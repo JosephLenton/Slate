@@ -268,18 +268,18 @@
                 isDev
         );
        
-        var inputDom = document.getElementsByClassName( 'slate-input' )[0];
-
         if ( useTouch ) {
-            document.getElementsByTagName( 'body' )[0].className += ' slate-touch';
+            var body = document.getElementsByTagName( 'body' )[0];
+            body.className += ' slate-touch';
 
             new window.slate.TouchBar(
-                    inputDom,
+                    body,
                     executor,
                     window.slate.commands.listCommands()
             );
         } else {
             new window.slate.TerminalBar(
+                    document.getElementsByClassName( 'slate-input' )[0],
                     inputDom,
                     executor,
                     slate.data.languages,

@@ -30,8 +30,14 @@ body {
     padding-bottom: 30px;
 }
 body.slate-touch {
-    padding-bottom: 100px;
+    padding-bottom: 90px;
 }
+    body.slate-touch > .slate-content {
+        bottom: 0;
+    }
+    body.slate-touch > .slate-input {
+        display: none;
+    }
 
 .slate-cmd,
 .slate-result,
@@ -158,6 +164,7 @@ body.touch > .slate-content {
 .slate-bar-input {
     line-height: 20px;
 }
+
 .slate-input {
     position: fixed;
     bottom: 0;

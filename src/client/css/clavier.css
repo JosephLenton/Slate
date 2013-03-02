@@ -1,9 +1,49 @@
 @charset "utf-8";
 
+/*
+ * Standard colours for all keys.
+ *
+ * Override these to get different highlighting.
+ */
+.clavier-background {
+    background: #eee;
+}
+
+.clavier-key,
+.clavier-key:hover,
+.clavier-key:active,
+.clavier-key:focus,
+.clavier-key:visited {
+    background: #ff2377;
+    color: #fff;
+}
+.clavier-key.highlight {
+    background: #ccc;
+    color: #000;
+}
+
+.clavier-key.control,
+.clavier-key.control:active,
+.clavier-key.control:focus,
+.clavier-key.control:visited {
+    background: transparent;
+    color: #ff2377;
+}
+.clavier-key.control.highlight {
+    color: #000;
+}
+
+/*
+ * Clavier structure it's self.
+ */
 .clavier {
-    position: fixed;
     width: 100%;
     height: 240px;
+
+    position: absolute;
+}
+.clavier.fixed {
+    position: fixed;
 
     -webkit-transition: top 200ms ease-out;
     -moz-transition: top 200ms ease-out;
@@ -18,8 +58,6 @@
         bottom: 0;
 
         width: 340px;
-        background: #ff2377;
-        background: #eee;
 
         border-radius: 3px;
     }
@@ -40,17 +78,15 @@
 
             display: block;
 
-            top: 3px;
-            bottom: 3px;
-
-            left: 3px;
-            right: 3px;
-
-            -moz-box-sizing: border-box;
-            box-sizing: border-box;
+            top: 0;
+            bottom: 0;
         }
             .clavier-keys-inner {
                 position: absolute;
+
+                -moz-box-sizing: border-box;
+                box-sizing: border-box;
+                padding: 2px;
 
                 top: 0;
                 left: 0;
@@ -90,9 +126,6 @@
                     .clavier-key:focus,
                     .clavier-key:visited {
                         border-radius: 1px;
-                        background: #ff2377;
-                        color: #fff;
-
                         text-decoration: none;
                     }
                     .clavier-key {
@@ -101,15 +134,12 @@
                         font-size: 18px;
 
                         -webkit-transition:
-                                border 150ms linear,
                                 background 150ms linear, 
                                 color 150ms linear; 
                         -moz-transition:
-                                border 150ms linear,
                                 background 150ms linear, 
                                 color 150ms linear; 
                         transition:
-                                border 150ms linear,
                                 background 150ms linear, 
                                 color 150ms linear; 
 
@@ -123,10 +153,6 @@
                         box-sizing: border-box;
                         display: inline-block;
                     }
-                    .clavier-key.highlight {
-                        background: #ccc;
-                        color: #000;
-                    }
 
                     .clavier-key.control {
                         padding: 0 16px;
@@ -138,13 +164,6 @@
                     .clavier-key.control:focus,
                     .clavier-key.control:visited {
                         border-radius: 0;
-                        text-decoration: none;
-
-                        background: transparent;
-                        color: #ff2377;
-                    }
-                    .clavier-key.control.highlight {
-                        color: #000;
                     }
                     .clavier-key.left-node,
                     .clavier-key.right-node,

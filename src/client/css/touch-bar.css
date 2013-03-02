@@ -1,19 +1,32 @@
 
-body.slate-touch > .slate-content {
-    bottom: 210px;
+.touch-bar-wrap .clavier-background {
+    background: transparent;
+    color: #fff;
+}
+.touch-bar-wrap .clavier-key {
+    color: #fff;
+    background: #444;
+}
+.touch-bar-wrap .clavier-key.control {
+    background: transparent;
+    color: #666;
 }
 
 .touch-bar-wrap {
-    width : 100% ;
-    height: 220px;
-
-    position: relative;
-
-    color: #eee;
-    font-weight: 100;
-    font-family: 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
-
     background: #1a1a1a;
+
+    width : 100% ;
+    height: 460px;
+
+    position: fixed;
+    bottom: -390px;
+
+    font-weight: 100;
+    font-family: "segoe ui light", 'helvetica', 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
+
+    -webkit-transition: bottom 200ms ease-out;
+    -moz-transition: bottom 200ms ease-out;
+    transition: bottom 200ms ease-out;
 }
 .touch-bar-wrap *:not( input ) {
     -webkit-user-select: none;
@@ -25,21 +38,16 @@ body.slate-touch > .slate-content {
 .touch-controls,
 .touch-bar {
     position: absolute;
-    bottom: 0;
     top: 0;
+    height: 220px;
 }
 .touch-controls {
-    top: -4px;
     bottom: 0px;
     right: 0;
     width: 100px;
 
     overflow: hidden;
 }
-    .touch-controls,
-    .touch-controls > a:first-of-type {
-        border-top-left-radius: 6px;
-    }
     .touch-controls > a {
         width: 100%;
         height: 56px;
@@ -82,6 +90,12 @@ body.slate-touch > .slate-content {
     .touch-controls-clear        { background: #CB252A; }
     .touch-controls-clear:hover  { background: #CC4348; }
 
+.touch-bar-wrap > .clavier {
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
 .touch-bar {
     position: absolute;
     left: 0;
@@ -97,6 +111,21 @@ body.slate-touch > .slate-content {
         top: -20px;
         left: 9px;
         height: 30px;
+
+        opacity: 0;
+        visibility: hidden;
+
+        -webkit-transition: opacity 150ms linear, visibility 0ms linear 150ms;
+        -moz-transition: opacity 150ms linear, visibility 0ms linear 150ms;
+        transition: opacity 150ms linear, visibility 0ms linear 150ms;
+    }
+    .touch-bar-wrap.open .touch-shift {
+        opacity: 1;
+        visibility: visible;
+
+        -webkit-transition: opacity 150ms linear, visibility 150ms linear 0s;
+        -moz-transition: opacity 150ms linear, visibility 150ms linear 0s;
+        transition: opacity 150ms linear, visibility 150ms linear 0s;
     }
         .touch-shift-button {
             display: inline-block;

@@ -2465,6 +2465,16 @@ window.slate.TouchBar = (function() {
     var TouchBar = function( parentDom, execute, commands ) {
         this.executeFun = execute;
 
+        this.row   = null;
+        this.view  = null;
+
+        var closeThis = this.method('close');
+
+        this.undo = new slate.UndoStack();
+        this.keyboard = new Clavier({
+                onClose: closeThis
+        });
+
         this.upper  = bb( 'touch-bar-row right' );
         this.lower  = bb( 'touch-bar-row left'  );
 
@@ -2476,19 +2486,35 @@ window.slate.TouchBar = (function() {
                 this.buttons
         )
 
-        this.bar   = barDom;
-        this.row   = null;
-        this.view  = null;
-        this.undo = new slate.UndoStack();
-
+        this.bar = barDom;
         this.newTouchView();
 
-        parentDom.appendChild(
-                bb( 'touch-bar-wrap',
-                        barDom,
-                        this.newControls( this.undo )
-                )
+        this.barWrap = bb( 'touch-bar-wrap',
+                barDom,
+                this.newControls( this.undo ),
+                this.keyboard
         )
+
+        parentDom.appendChild( this.barWrap );
+
+        /*
+         * Setup opening / closing this pane.
+         */
+
+        document.body.addEventListener( 'mousedown', closeThis );
+setTimeout( this.method('open'), 1000 );
+
+        this.isOpen = false;
+        var self = this;
+        var openThis = function( ev ) {
+            if ( ! this.isOpen ) {
+                ev.stopPropagation();
+                ev.preventDefault();
+
+                self.open();
+            }
+        }
+        this.barWrap.addEventListener( 'mousedown', openThis, true );
 
         /**
          * Add the initial commands
@@ -2739,6 +2765,22 @@ window.slate.TouchBar = (function() {
     }
 
     TouchBar.prototype = {
+            open: function() {
+                if ( ! this.isOpen ) {
+                    this.isOpen = true;
+                    this.barWrap.classList.add( 'open' );
+                    this.barWrap.style.bottom = '20px';
+                }
+            },
+
+            close: function() {
+                if ( this.isOpen ) {
+                    this.isOpen = false;
+                    this.barWrap.classList.remove('open');
+                    this.barWrap.style.bottom = '-390px';
+                }
+            },
+
             newControls: function( undo ) {
                 var self = this;
 

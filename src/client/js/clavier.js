@@ -163,7 +163,7 @@ window['Clavier'] = (function() {
         } )
     }
 
-    var setupRightKeys = function( pane ) {
+    var setupRightKeys = function( pane, options ) {
         setupButtonKeys( pane,
                 [ 'y', 'u', 'i', 'o', 'p' ],
                 [ 'h', 'j', 'k', 'l' ],
@@ -192,29 +192,29 @@ window['Clavier'] = (function() {
         pane.addBottom( '";+*/', 'control symbols-common', function() {
             // todo
         } )
-        pane.addBottom( '&#x25Be;', 'control close', function() {
-            // todo
-        } )
+        pane.addBottom( '&#x25Be;', 'control close', options.onClose );
     }
 
     var setupRightNumpad = function( pane ) {
         // todo
     }
 
-    var Clavier = (function() {
+    var Clavier = (function(options) {
+        assertObject( options, "no options provided" );
+
         this.left  = new KeyPane();
         this.right = new KeyPane();
 
         BBGun.call( this, 'clavier',
                 {
-                    '.clavier-right' : this.right,
-                    '.clavier-left'  : this.left
+                    '.clavier-right clavier-background' : this.right,
+                    '.clavier-left  clavier-background' : this.left
                 }
         )
 
         this.lastPosition = DEFAULT_POSITION;
 
-        setupRightKeys( this.right.main() );
+        setupRightKeys( this.right.main(), options );
         setupRightNumpad( this.right.alt() );
 
         setupLeftKeys( this.left.main() );
@@ -227,6 +227,10 @@ window['Clavier'] = (function() {
         rightControl: function( html, fun ) {
             this.right.controlButton( html, fun );
             return this;
+        },
+
+        fixed: function() {
+            this.addClass( 'fixed' );
         },
 
         open: function() {
