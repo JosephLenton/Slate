@@ -7,42 +7,6 @@
         UP_KEY      = 38,
         ESCAPE_KEY  = 27;
 
-    function UndoStack() {
-        this.stack = [];
-        this.index = 0;
-    }
-
-    UndoStack.prototype.add = function( cmd ) {
-        if ( this.index < this.stack.length ) {
-            this.index++;
-            this.stack.splice( this.index, 0, cmd );
-        } else {
-            this.stack[this.index++] = cmd;
-        }
-    }
-
-    UndoStack.prototype.backward = function() {
-        console.log( this.index, this.stack.length );
-
-        if ( this.index > 0 ) {
-            this.index--;
-            return this.stack[ this.index ];
-        }
-    }
-
-    UndoStack.prototype.forward = function() {
-        console.log( this.index, this.stack.length );
-
-        if ( this.index < this.stack.length ) {
-            this.index++;
-            return this.stack[ this.index ];
-        }
-    }
-
-    UndoStack.prototype.toEnd = function() {
-        this.index = this.stack.length;
-    }
-
     /**
      * The bar at the bottom of the terminal.
      */
@@ -102,7 +66,7 @@
 
         setType( langI );
 
-        var undoStack = new UndoStack();
+        var undoStack = new slate.UndoStack( this );
 
         if ( dom ) {
             dom.addEventListener( 'keypress', function(ex) {
@@ -127,24 +91,20 @@
                 if ( ex.keyCode === UP_KEY ) {
                     handled = true;
 
-                    var cmd = undoStack.backward();
-                    if ( cmd ) {
-                        self.setText( cmd );
+                    if ( undoStack.hasUndo() ) {
+                        self.setText( undoStack.undo() );
                     }
                 } else if ( ex.keyCode === DOWN_KEY ) {
                     handled = true;
 
-                    var cmd = undoStack.forward();
-                    if ( ! cmd ) {
-                        cmd = '';
+                    if ( undoStack.hasRedo() ) {
+                        self.setText( undoStack.redo() );
                     }
-
-                    self.setText( cmd );
                 } else if ( ex.keyCode === ESCAPE_KEY ) {
                     handled = true;
 
                     self.setText( '' );
-                    undoStack.toEnd();
+                    undoStack.undoEnd();
                 } else if ( ex.keyCode === TAB_KEY ) {
                     switchType( ex );
 
