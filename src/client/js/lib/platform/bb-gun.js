@@ -276,12 +276,13 @@ window['BBGun'] = (function() {
             args;
         
         if ( hasArgs ) {
-            var newArgs = new Array( (arguments.length-startI) + 2 );
+            var argsLen = arguments.length;
+            var newArgs = new Array( (argsLen-startI) + 2 );
 
             newArgs[0] = newNode;
             newArgs[1] = newDom;
 
-            for ( var i = startI; i < arguments.length; i++ ) {
+            for ( var i = startI; i < argsLen; i++ ) {
                 newArgs[i+2] = args[i];
             }
 
@@ -396,7 +397,9 @@ window['BBGun'] = (function() {
          * of parent.
          */
         parent: function( f, f2 ) {
-            if ( arguments.length === 0 ) {
+            var argsLen = arguments.length;
+
+            if ( argsLen === 0 ) {
                 for (
                         var upDom = this.dom().parentNode; 
                         upDom !== null;
@@ -406,7 +409,7 @@ window['BBGun'] = (function() {
                         return upDom.__xe;
                     }
                 }
-            } else if ( arguments.length === 1 ) {
+            } else if ( argsLen === 1 ) {
                 var p = this.parent();
 
                 if ( f instanceof Function ) {
@@ -438,7 +441,7 @@ window['BBGun'] = (function() {
                 } else {
                     logError( "invalid parameter given", f );
                 }
-            } else if ( arguments.length === 2 ) {
+            } else if ( argsLen === 2 ) {
                 assertFunction( f2, "second parameter is expected to be a function" );
 
                 var p = this.parent( f );
@@ -467,7 +470,9 @@ window['BBGun'] = (function() {
          * @return An array containing all of the children of this BBGun.
          */
         children: function( f, f2 ) {
-            if ( arguments.length === 0 ) {
+            var argsLen = arguments.length;
+
+            if ( argsLen === 0 ) {
                 var bbGuns = [];
                 var doms = this.dom().childNodes;
 
@@ -481,7 +486,7 @@ window['BBGun'] = (function() {
                 }
 
                 return bbGuns;
-            } else if ( arguments.length === 1 ) {
+            } else if ( argsLen === 1 ) {
                 if ( isFunction(f) ) {
                     var guns = this.children();
 
@@ -514,7 +519,7 @@ window['BBGun'] = (function() {
                 } else {
                     logError( "unknown parameter given", f );
                 }
-            } else if ( arguments.length === 3 ) {
+            } else if ( argsLen === 3 ) {
                 assertString( f, "non string given for element selector" );
                 assertFunction( f2, "non function given for function callback" );
 
@@ -533,7 +538,9 @@ window['BBGun'] = (function() {
         },
 
         child: function( obj, f ) {
-            if ( arguments.length === 1 ) {
+            var argsLen = arguments.length;
+
+            if ( argsLen === 1 ) {
                 if ( isString(obj) ) {
                     var child = this.dom().querySelector( obj );
 
@@ -564,7 +571,7 @@ window['BBGun'] = (function() {
                 }
 
                 return null;
-            } else if ( arguments.length === 2 ) {
+            } else if ( argsLen === 2 ) {
                 var child = this.child( obj );
 
                 assertFunction( f, "none function given" );
@@ -614,6 +621,13 @@ window['BBGun'] = (function() {
             return this;
         },
 
+        addTo: function( dest ) {
+            assert( arguments.length === 1, "no destination node given" );
+            bb.addOne( dest, this );
+
+            return this;
+        },
+
         /**
          * The event is called *before* the replacement.
          * This allows you to cancel the replacelement,
@@ -651,6 +665,22 @@ window['BBGun'] = (function() {
          * Adds a function to be called, when this node
          * is replaced by another.
          *
+         *      foo.replace( function(newNode) {
+         *          // on 'replace' event here
+         *      } );
+         *
+         *      replace( (newNode, newDom:Element) -> any,
+         *               (newNode, newDom:Element) -> any ) -> this 
+         *
+         *      foo.replace(
+         *          function(newNode) {
+         *              // on 'beforeReplace' event here
+         *          },
+         *          function(newNode) {
+         *              // on 'replace' event here
+         *          }
+         *      );
+         *
          * The first parameter is whatever was given, for
          * the replacement. This could be text, an object
          * description, a BBGun node, or whatever.
@@ -672,31 +702,41 @@ window['BBGun'] = (function() {
             } else if ( argsLen === 1 ) {
                 replaceNode( this, oldNode, null, 0 );
             } else if ( argsLen >= 2 ) {
-                assert( oldNode, "falsy oldNode given" );
-                assert( newNode, "falsy newNode given" );
+                if ( isFunction(oldNode) ) {
+                    assert( isFunction(newNode), "'replace' event is not a function" );
+                    assert( argsLen === 2, "too many parameters provided" );
 
-                var oldDom, newDom;
-                if ( oldNode instanceof Element ) {
-                    oldDom = oldNode;
-                } else if ( oldNode.__isBBGun ) {
-                    oldDom = oldNode.dom();
+                    this.on( 'beforeReplace', newNode );
+                    this.on( 'replace', newNode );
+                } else if ( isFunction(newNode) ) {
+                    logError( "'beforeReplace' event is not a function" );
                 } else {
-                    logError( "node given, is not a HTML element", oldNode );
+                    assert( oldNode, "falsy oldNode given" );
+                    assert( newNode, "falsy newNode given" );
+
+                    var oldDom, newDom;
+                    if ( oldNode instanceof Element ) {
+                        oldDom = oldNode;
+                    } else if ( oldNode.__isBBGun ) {
+                        oldDom = oldNode.dom();
+                    } else {
+                        logError( "node given, is not a HTML element", oldNode );
+                    }
+
+                    try {
+                        var newDom = bb( newNode );
+                    } catch ( err ) {
+                        logError( "replacement node is not a HTML element (perhaps you meant 'replaceWith'?)", err, err.stack );
+                    }
+
+                    var dom = this.dom();
+                    assert( oldDom.parentNode === dom , "removing node which is not a child of this element" );
+                    assert( newDom.parentNode === null, "adding node which is already a child of another" );
+
+                    logError( 'replacement events need to be sent to the child' );
+
+                    replaceNode( oldDom, newDom, arguments, 2 );
                 }
-
-                try {
-                    var newDom = bb( newNode );
-                } catch ( err ) {
-                    logError( "replacement node is not a HTML element (perhaps you meant 'replaceWith'?)", err, err.stack );
-                }
-
-                var dom = this.dom();
-                assert( oldDom.parentNode === dom , "removing node which is not a child of this element" );
-                assert( newDom.parentNode === null, "adding node which is already a child of another" );
-
-                logError( 'replacement events need to be sent to the child' );
-
-                replaceNode( oldDom, newDom, arguments, 2 );
             } else {
                 logError( "too many, or not enough, parameters provided", arguments );
             }
@@ -735,12 +775,14 @@ window['BBGun'] = (function() {
          *  working through BBGun objects API.
          */
         remove: function() {
-            if ( arguments.length === 0 ) {
+            var argsLen = arguments.length;
+
+            if ( argsLen === 0 ) {
                 var dom = this.__xeDom;
                 assert( dom.parentNode !== null, "removing this when it has no parent" );
 
                 removeDomCycle( this, null );
-            } else if ( arguments.length === 1 ) {
+            } else if ( argsLen === 1 ) {
                 var arg = arguments[0];
 
                 if ( isFunction(arg) ) {
@@ -751,13 +793,26 @@ window['BBGun'] = (function() {
                     removeOne( this, this.__xeDom, arguments[0], null );
                 }
             } else {
-                var newArgs = new Array( arguments.length-1 );
+                var a = arguments[0],
+                    b = arguments[1];
 
-                for ( var i = startI; i < arguments.length; i++ ) {
-                    newArgs[i-1] = arguments[i];
+                if ( isFunction(a) ) {
+                    assert( isFunction(a), "'remove' event is not a function" );
+                    assert( argsLen === 2, "too many parameters provided" );
+
+                    this.on( 'beforeRemove', a );
+                    this.on( 'remove', b );
+                } else if ( isFunction(b) ) {
+                    logError( "'beforeRemove' event is not a function" );
+                } else {
+                    var newArgs = new Array( argsLen-1 );
+
+                    for ( var i = startI; i < argsLen; i++ ) {
+                        newArgs[i-1] = arguments[i];
+                    }
+
+                    removeOne( this, this.__xeDom, arguments[0], newArgs );
                 }
-
-                removeOne( this, this.__xeDom, arguments[0], newArgs );
             }
 
             return this;
@@ -811,9 +866,11 @@ window['BBGun'] = (function() {
         },
 
         style: function( obj, val ) {
-            if (arguments.length === 0) {
+            var argsLen = arguments.length;
+
+            if (argsLen === 0) {
                 return this.dom().style;
-            } else if (arguments.length === 1) {
+            } else if (argsLen === 1) {
                 if (isString(obj)) {
                     return this.dom().style[obj];
                 } else if (isObject(obj)) {
@@ -821,7 +878,7 @@ window['BBGun'] = (function() {
                 } else {
                     logError("invalid style parameter", obj);
                 }
-            } else if (arguments.length === 2) {
+            } else if (argsLen === 2) {
                 assert(isString(obj) && isLiteral(val),
                         "invalid parameters")
 
@@ -878,13 +935,23 @@ window['BBGun'] = (function() {
             return this;
         },
 
+        toggleClass: function() {
+            bb.toggleClassArray( this.__xeDom, arguments, 0 );
+            return this;
+        },
+
+        toggleClassInv: function() {
+            bb.toggleClassInvArray( this.__xeDom, arguments, 0 );
+            return this;
+        },
+
         addClass: function() {
-            bb.addClassArray( this.__xeDom, arguments );
+            bb.addClassArray( this.__xeDom, arguments, 0 );
             return this;
         },
 
         setClass: function() {
-            bb.setClassArray( this.__xeDom, arguments );
+            bb.setClassArray( this.__xeDom, arguments, 0 );
             return this;
         },
 

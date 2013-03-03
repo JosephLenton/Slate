@@ -275,7 +275,10 @@
             var touchBar = new window.slate.TouchBar(
                     body,
                     executor,
-                    window.slate.commands.listCommands()
+                    window.slate.commands.listCommands(),
+                    options.tron ?
+                            'tron' :
+                            ''
             );
             
             if ( options.open ) {

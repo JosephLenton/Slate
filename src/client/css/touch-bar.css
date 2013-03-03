@@ -1,4 +1,6 @@
 
+@import url(http://fonts.googleapis.com/css?family=Oxygen+Mono);
+
 .touch-bar-wrap .clavier-background {
     background: transparent;
     color: #fff;
@@ -6,10 +8,22 @@
 .touch-bar-wrap .clavier-key {
     color: #fff;
     background: #444;
+
+    font-family: "Oxygen Mono";
+    font-size: 21px;
+    font-weight: 900;
 }
+.touch-bar-wrap .clavier-key.right,
+.touch-bar-wrap .clavier-key.left,
+.touch-bar-wrap .clavier-key.close {
+    font-family: "segoe ui light", "helvetica";
+}
+
 .touch-bar-wrap .clavier-key.control {
     background: transparent;
     color: #666;
+
+    font-weight: 400;
 }
 
 .touch-bar-wrap {
@@ -22,18 +36,13 @@
     bottom: -390px;
 
     font-weight: 100;
-    font-family: "segoe ui light", 'helvetica', 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
+    font-family: "Oxygen Mono", "segoe ui light", 'helvetica', 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
 
     -webkit-transition: bottom 200ms ease-out;
     -moz-transition: bottom 200ms ease-out;
     transition: bottom 200ms ease-out;
 }
-.touch-bar-wrap *:not( input ) {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -khtml-user-select: none;
-    user-select: none;
-}
+
 
 .touch-controls,
 .touch-bar {
@@ -147,7 +156,8 @@
         .touch-shift-button:visited,
         .touch-shift-button:active,
         .touch-shift-button:focus {
-            color: #666;
+            color: #777;
+            background: #242424;
             text-decoration: none;
         }
         .touch-shift-button.highlight,
@@ -158,17 +168,11 @@
             color: #fff;
             text-decoration: none;
         }
-        .touch-shift-button:first-of-type {
-            background: #050E17;
-        }
         .touch-shift-button.highlight:first-of-type {
             background: #1B3442;
         }
         .touch-shift-button:first-of-type:after {
             content: 'left';
-        }
-        .touch-shift-button:last-of-type {
-            background: #05170C;
         }
         .touch-shift-button.highlight:last-of-type {
             background: #20421B;
@@ -217,7 +221,7 @@
                     transition: top 120ms linear;
 
             white-space: nowrap;
-            overflow-x: scroll;
+            overflow-x: auto;
         }
         .touch-bar-row.right > .touch-bar-row-inner.show {
             top: 0;
@@ -226,7 +230,7 @@
             top: 0;
             bottom: 0;
 
-            overflow-y: scroll;
+            overflow-y: auto;
         }
                     .touch-bar-row.left > .touch-bar-row-inner > .touch-bar-row-inner-scroll > .touch-bar-button {
                         display: block;
@@ -811,4 +815,126 @@
             .slate-content-item-contents .touch-ast-delete {
                 display: none;
             }
+
+/*
+ * Tron
+ *
+ * An experimental 'tron' inspired,
+ * more futuristic terminal appearance.
+ *
+ * Needs a lot more work to be fully done,
+ * like visualizations.
+ *
+ * Colors also slowly alternate from terminal green-blue,
+ * to burnt-orange, over 10 minutes, and back;
+ *
+ * @see http://jtnimoy.net/workviewer.php?q=178
+ */
+
+.touch-bar-wrap.tron {
+    background: #000;
+
+    -webkit-animation-duration: 600s; /* 10 minutes */
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-direction: alternate;
+}
+.touch-bar-wrap.tron * {
+    -webkit-animation-duration: inherit;
+    -webkit-animation-iteration-count: inherit;
+    -webkit-animation-direction: inherit;
+}
+.touch-bar-wrap.tron .touch-shift-button,
+.touch-bar-wrap.tron .touch-ast.select,
+.touch-bar-wrap.tron .clavier-key {
+    border-radius: 0;
+
+    color: #8CD2BB;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #8cd2bb;
+    margin-bottom: -1px;
+
+    -webkit-animation-name: tron-key;
+}
+.touch-bar-wrap.tron .touch-controls > a {
+    height: 54px;
+}
+.touch-bar-wrap.tron .touch-shift-button {
+    background: #000;
+}
+.touch-bar-wrap.tron .touch-controls > a,
+.touch-bar-wrap.tron .clavier-key.control {
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    color: #276;
+
+    -webkit-animation-name: tron-key-control;
+}
+.touch-bar-wrap.tron .touch-controls > a.disabled,
+.touch-bar-wrap.tron .touch-controls > a.disabled:hover,
+.touch-bar-wrap.tron .touch-controls > a.disabled:focus,
+.touch-bar-wrap.tron .touch-controls > a.disabled:active {
+    color: #999 !important;
+    color: #f00 !important;
+}
+.touch-bar-wrap.tron .touch-bar-button {
+    color: #8cd2bb;
+
+    -webkit-animation-name: tron-button;
+}
+.touch-bar-wrap.tron .touch-ast-empty.select > .touch-ast-text {
+    color: #5a9;
+
+    -webkit-animation-name: tron-button;
+}
+
+@-webkit-keyframes tron-ast-select {
+  from {
+        color: #5a9;
+  }
+ 
+  to {
+        color: #D2AF8C;
+  }
+}
+
+@-webkit-keyframes tron-button {
+  from {
+        color: #8cd2bb;
+  }
+ 
+  to {
+        color: #D2AF8C;
+  }
+}
+
+@-webkit-keyframes tron-key {
+  from {
+        color: #8CD2BB;
+        border-bottom-color: #8cd2bb;
+  }
+ 
+  to {
+        color: #D2AF8C;
+        border-bottom-color: #191006;
+  }
+}
+
+@-webkit-keyframes tron-key-control {
+  from {
+        color: #276;
+  }
+ 
+  to {
+        color: #774D23;
+  }
+}
+
+.touch-bar-wrap *:not( input ) {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    user-select: none;
+}
+
 

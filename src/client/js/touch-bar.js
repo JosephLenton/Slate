@@ -288,6 +288,69 @@ window.slate.TouchBar = (function() {
              * to have them return different values.
              */
             extend({
+                selectNode: function( dir ) {
+                    assert(
+                            dir === 'left'  ||
+                            dir === 'right' ||
+                            dir === 'up'    ||
+                            dir === 'down'
+                    );
+
+                    if ( dir === 'left' ) {
+                        return this.getChildBefore( this, 0 );
+                    } else if ( dir === 'right' ) {
+                        return this.getChildAfter( this, 0 );
+                    } else if ( dir === 'up' ) {
+                        return this.parent( '.touch-ast' );
+                    } else if ( dir === 'down' ) {
+                        return this.child( '.touch-ast' );
+                    }
+
+                    return null;
+                },
+
+                getFirstChild: function() {
+                    return this;
+                },
+                getLastChild: function() {
+                    return this;
+                },
+
+                getChildBefore: function( node, count ) {
+                    assert( arguments.length === 2 );
+
+                    var parent = this.parent( '.touch-ast' );
+
+                    if ( parent ) {
+                        var r = parent.getChildBefore( this, count+1 );
+
+                        if ( r === null || r === this ) {
+                            return this.getFirstChild( count );
+                        } else {
+                            return r;
+                        }
+                    } else {
+                        return this.getFirstChild( count );
+                    }
+                },
+                getChildAfter: function( node, count ) {
+                    assert( arguments.length === 2 );
+
+                    var parent = this.parent( '.touch-ast' );
+
+                    if ( parent ) {
+                        var r = parent.getChildAfter( this, count+1 );
+
+                        if ( r === null || r === this ) {
+                            return this.getLastChild( count );
+                        } else {
+                            return r;
+                        }
+                    } else {
+                        return this.getLastChild( count );
+                    }
+                },
+
                 updateViewChange: function() {
                     var view = this.maybeView();
 
@@ -746,6 +809,52 @@ window.slate.TouchBar = (function() {
             }).
             extend( ast.Node ).
             override({
+                getFirstChild: function( count ) {
+                    if ( count <= 0 ) {
+                        return this.left;
+                    } else {
+                        return this.left.getFirstChild( count-1 );
+                    }
+                },
+                getLastChild: function( count ) {
+                    if ( count <= 0 ) {
+                        return this.right;
+                    } else {
+                        return this.right.getLastChild( count-1 );
+                    }
+                },
+
+                getChildBefore: function( exclude, count ) {
+                    if ( exclude !== this ) {
+                        if ( count <= 0 ) {
+                            if ( this.right === exclude ) {
+                                return this.left;
+                            }
+                        } else {
+                            if ( this.right === exclude ) {
+                                return this.left.getLastChild( count-1 );
+                            }
+                        }
+                    }
+
+                    return ast.Node.prototype.getChildBefore.call( this, this, count );
+                },
+                getChildAfter: function( exclude, count ) {
+                    if ( exclude !== this ) {
+                        if ( count <= 0 ) {
+                            if ( this.left === exclude ) {
+                                return this.right;
+                            }
+                        } else {
+                            if ( this.left === exclude ) {
+                                return this.right.getFirstChild( count-1 );
+                            }
+                        }
+                    }
+
+                    return ast.Node.prototype.getChildAfter.call( this, this, count );
+                },
+
                 validate: function(onError) {
                     if ( this.left.isEmpty() ) {
                         return this.left.validate( onError );
@@ -1425,6 +1534,7 @@ window.slate.TouchBar = (function() {
             after({
                     onUnselect: function() {
                         this.input.classList.remove( 'multi-change' );
+                        this.getInputDom().blur();
                     }
             }).
             extend({
@@ -1578,7 +1688,9 @@ window.slate.TouchBar = (function() {
             ).
             sub(function() {
                 this.onInput( function() {
-                    if ( isValidIdentifier(this.getInputValue()) ) {
+                    var val = this.getInputValue();
+
+                    if ( isValidIdentifier(val) ) {
                         this.removeError()
                     } else {
                         this.setError()
@@ -1683,6 +1795,55 @@ window.slate.TouchBar = (function() {
                         return false;
                     }
                 })
+            }).
+            override({
+                getLastChild: function( count ) {
+                    if ( count === 0 ) {
+                        return this.params[ this.params.length-1 ];
+                    } else {
+                        return this.params[ this.params.length-1 ].getLastChild( count-1 );
+                    }
+                },
+
+                getChildBefore: function( exclude, count ) {
+                    if ( exclude === this ) {
+                        return ast.Node.prototype.getChildBefore.call( this, this, count+1 );
+                    } else {
+                        for ( var i = 0; i < this.params.length; i++ ) {
+                            if ( exclude === this.params[i] ) {
+                                if ( i === 0 ) {
+                                    return this;
+                                } else {
+                                    if ( count === 0 ) {
+                                        return this.params[i-1]
+                                    } else {
+                                        return this.params[i-1].getLastChild();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+
+                getChildAfter: function( exclude, count ) {
+                    if ( exclude === this ) {
+                        return ast.Node.prototype.getChildAfter.call( this, this, count+1 );
+                    } else {
+                        for ( var i = 0; i < this.params.length; i++ ) {
+                            if ( exclude === this.params[i] ) {
+                                if ( i === this.params.length-1 ) {
+                                    return ast.Node.prototype.getChildAfter.call( this, this, count+1 );
+                                } else {
+                                    if ( count === 0 ) {
+                                        return this.params[i+1]
+                                    } else {
+                                        return this.params[i+1].getLastChild();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }).
             override({
                     getInputValue: function() {
@@ -2154,6 +2315,26 @@ window.slate.TouchBar = (function() {
                 /* finally, setup! */
                 this.add( this.bar, this.errorDom ).
                          setAST( new ast.Empty() );
+
+                var self = this;
+                this.viewInput = bb('text', {
+                    input: function(ev) {
+                        ev.preventDefault();
+
+                        var newAST = isNumeric(this.value) ?
+                                new ast.NumberInput() :
+                                new ast.VariableInput() ;
+
+                        newAST.setInputValue( this.value );
+                        this.value = '';
+
+                        if ( self.current.isEmpty() ) {
+                            self.replaceCurrent( newAST );
+                        } else {
+                            self.insertRight( newAST );
+                        }
+                    }
+                })
             }).
             extend({
                     undo: function( state ) {
@@ -2272,12 +2453,31 @@ window.slate.TouchBar = (function() {
                         }
 
                         clearTimeout( this.selectLater );
+                        this.selectLater = this.runOnSetCurrent.later( this )
 
                         this.current.onEverySelect()
 
                         this.hideError();
 
                         return this;
+                    },
+
+                    onSetCurrent: function( f ) {
+                        assertFunction( f );
+
+                        this.onSetCurrentFun = f;
+
+                        return this;
+                    },
+
+                    runOnSetCurrent: function() {
+                        if ( this.onSetCurrentFun ) {
+                            this.onSetCurrentFun.call( this,
+                                    this.current.getInputDom !== undefined ?
+                                            this.current.getInputDom() :
+                                            this.viewInput
+                            )
+                        }
                     },
 
                     getRootAST: function() {
@@ -2372,6 +2572,18 @@ window.slate.TouchBar = (function() {
                     selectEmpty: function( node, findEmptyVal ) {
                         node = ( node || this.current );
                         this.setCurrent( node.findEmpty(findEmptyVal) || node );
+                    },
+
+                    /*
+                     * Node movement controls,
+                     * for selecting nodes around the current node.
+                     */
+
+                    selectNodeMove: function( dir ) {
+                        var node = this.current.selectNode( dir );
+                        if ( node ) {
+                            this.setCurrent( node );
+                        }
                     }
             } )
 
@@ -2462,7 +2674,7 @@ window.slate.TouchBar = (function() {
      *
      * This is the top component, and the public facing API.
      */
-    var TouchBar = function( parentDom, execute, commands ) {
+    var TouchBar = function( parentDom, execute, commands, wrapKlass ) {
         this.executeFun = execute;
 
         this.row   = null;
@@ -2490,6 +2702,7 @@ window.slate.TouchBar = (function() {
         this.newTouchView();
 
         this.barWrap = bb( 'touch-bar-wrap',
+                wrapKlass,
                 barDom,
                 this.newControls( this.undo ),
                 this.keyboard
@@ -2733,33 +2946,14 @@ window.slate.TouchBar = (function() {
          * Lower Row
          */
 
-        var touchBar = this;
-        var selectButton = function( bs, button ) {
-            var bs = bs.getElementsByClassName( 'select' );
+        bb.add( this.lower,
+                new TouchRow().
+                        append( 'command'  , this.method('showRow', commandsRow) ).
+                        append( 'values'   , this.method('showRow',   valuesRow) ).
+                        append( 'operators', this.method('showRow',      opsRow) ).
+                        show()
+        );
 
-            for ( var i = 0; i < bs.length; i++ ) {
-                bs[i].classList.remove( 'select' );
-            }
-
-            button.classList.add( 'select' );
-        }
-
-        var sectionButtons = new TouchRow().
-                append( 'command', function() {
-                    touchBar.showRow( commandsRow );
-                    selectButton( sectionButtons.dom(), this );
-                } ).
-                append( 'values', function() {
-                    touchBar.showRow( valuesRow );
-                    selectButton( sectionButtons.dom(), this );
-                } ).
-                append( 'operators', function() {
-                    touchBar.showRow( opsRow );
-                    selectButton( sectionButtons.dom(), this );
-                } ).
-                show();
-
-        bb.add( this.lower, sectionButtons );
         this.showRow( commandsRow );
     }
 
@@ -2863,9 +3057,12 @@ window.slate.TouchBar = (function() {
                 }
 
                 this.view = new TouchView( this ).
-                        onChange( this.undo.method('add') );
+                        onChange( this.undo.method('add') ).
+                        onSetCurrent( this.keyboard.method('setInput') );
 
                 this.bar.appendChild( this.view.dom() );
+
+                this.keyboard.controlMove( this.view.method('selectNodeMove') );
 
                 this.undo.
                         clearUndos().

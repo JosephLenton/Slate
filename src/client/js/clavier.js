@@ -29,8 +29,10 @@ window['Clavier'] = (function() {
                 logError( "invalid parameters", args );
             }
 
-            bb.add( row, bb.a('clavier-key', klass, { html: html, click: fun } ) )
-            return this;
+            var key = bb.a('clavier-key', klass, { html: html, click: fun } );
+            bb.add( row, key );
+
+            return key;
         },
 
         addSuperTop: function( html, klass, fun ) {
@@ -49,38 +51,84 @@ window['Clavier'] = (function() {
     })
 
     var KeyPane = (function() {
-        BBGun.call(this, 'clavier-keys');
+        BBGun.call( this, 'clavier-keys' );
 
-        this.add(
-                this.mainPane = new KeyPaneInner( 'main' ),
-                this.altPane  = new KeyPaneInner( 'alt' )
-        )
+        this.add( 
+                this.mainPane =
+                        new KeyPaneInner( 'main' )
+        );
+
+        var alts = [];
+        for ( var i = 0; i < arguments.length; i++ ) {
+            alts.push(
+                    new KeyPaneInner( arguments[i] ).
+                            addTo( this )
+            )
+        }
+
+        this.alts = alts;
 
         this.showMain();
-        
-    }).extend( BBGun, {
-        showMain: function() {
-            this.mainPane.addClass( 'show' );
-            this.altPane.removeClass( 'show' );
+    }).
+    extend( BBGun,
+        (function() {
+            var newMainAltMethod = function( mainMeth, altMeth ) {
+                return function( klass ) {
+                    this.mainPane[mainMeth]( 'show' );
 
-            return this;
-        },
+                    var found = false;
+                    for ( var i = 0; i < this.alts.length; i++ ) {
+                        var alt = this.alts[i];
 
-        showAlt: function() {
-            this.mainPane.removeClass( 'show' );
-            this.altPane.addClass( 'show' );
+                        if ( klass && alt.hasClass(klass) ) {
+                            this.alts[i][altMeth]( 'show' );
+                            found = true;
+                        } else {
+                            this.alts[i].removeClass( 'show' );
+                        }
+                    }
 
-            return this;
-        },
+                    if ( klass ) {
+                        assert( found, klass + ", was not found" );
+                    }
 
-        main: function() {
-            return this.mainPane;
-        },
+                    return this;
+                }
+            };
 
-        alt: function() {
-            return this.altPane;
+            return {
+                    showMain : newMainAltMethod(    'addClass', 'removeClass' ),
+                    showAlt  : newMainAltMethod( 'removeClass', 'addClass'    ),
+                    toggleAlt: function( klass ) {
+                        return this.alts.each( this, function(alt) {
+                            if ( alt.hasClass(klass) ) {
+                                alt.toggleClass( 'show',
+                                        this.mainPane.method('toggleClassInv', 'show') );
+                            } else {
+                                alt.removeClass( 'show' )
+                            }
+                        } );
+                    }
+            }
+        })(),
+        {
+                main: function() {
+                    return this.mainPane;
+                },
+
+                alt: function( klass ) {
+                    assert( klass, "no klass name provided" );
+
+                    for ( var i = 0; i < this.alts.length; i++ ) {
+                        if ( this.alts[i].hasClass(klass) ) {
+                            return this.alts[i];
+                        }
+                    }
+
+                    assertUnreachable();
+                }
         }
-    })
+    )
 
     var setupTextMoveControlButtons = function( clavier ) {
         clavier.
@@ -102,108 +150,159 @@ window['Clavier'] = (function() {
         ;
     }
 
-    var newKeyPress = function( key ) {
+    var newKeyPress = function( self ) {
         return function() {
-            // todo
+            self.inputCharacter( this.textContent );
         }
     }
 
-    var setupButtonKeys = function( pane ) {
-        for ( var i = 1; i < Math.min(arguments.length, 4); i++ ) {
+    var setupButtonKeys = function( self, pane ) {
+        var buttons = [];
+
+        var argsStart = 2;
+        for ( var i = argsStart; i < Math.min(arguments.length, argsStart+3); i++ ) {
             var row = arguments[i];
 
             for ( var j = 0; j < row.length; j++ ) {
                 var k = row[j];
 
-                if ( i === 1 ) {
-                    pane.addSuperTop( k, newKeyPress(k) );
-                } else if ( i === 2 ) {
-                    pane.addTop( k, newKeyPress(k) );
-                } else if ( i === 3 ) {
-                    pane.addMiddle( k, newKeyPress(k) );
-                } else if ( i === 4 ) {
-                    pane.addBottom( k, newKeyPress(k) );
+                var fun = newKeyPress( self );
+
+                if ( i === argsStart ) {
+                    buttons.push( pane.addSuperTop( k, fun ) );
+                } else if ( i === argsStart+1 ) {
+                    buttons.push( pane.addTop( k, fun ) );
+                } else if ( i === argsStart+2 ) {
+                    buttons.push( pane.addMiddle( k, fun ) );
+                } else if ( i === argsStart+3 ) {
+                    buttons.push( pane.addBottom( k, fun ) );
+                } else {
+                    logError( "more than 4 rows is not supported" )
                 }
             }
         }
+
+        return buttons;
     }
 
-    var setupLeftKeys = function( pane ) {
-        pane.addSuperTop( '&#x21d0;', 'control left-node', function() {
-            // todo
-        } );
-        pane.addSuperTop( '&#x21d2;', 'control right-node', function() {
-            // todo
-        } );
-        pane.addTop( '&#x21d3;', 'control down-node', function() {
-            // todo
-        } );
-        pane.addTop( '&#x21d1;', 'control up-node', function() {
-            // todo
-        } );
+    var setupLeftKeys = function( self, pane, options ) {
+        setupLeftLower( self, pane, options );
 
-        pane.addMiddle( 'shift', 'control shift', function() {
-            // todo
-        } )
-
-        setupButtonKeys( pane,
+        var buttons = setupButtonKeys( self, pane,
                 [ 'q', 'w', 'e', 'r', 't' ],
                 [ 'a', 's', 'd', 'f', 'g' ],
                 [ 'z', 'x', 'c', 'v', 'b' ]
         )
 
-        pane.addBottom( '1,2,3...', 'control numpad', function() {
-            // todo
-        } )
-        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', function() {
-            // todo
-        } )
-        pane.addBottom( '&nbsp;', 'space', function() {
-            // todo
-        } )
+        return buttons;
     }
 
-    var setupRightKeys = function( pane, options ) {
-        setupButtonKeys( pane,
+    var setupLeftLower = function( self, pane, options ) {
+        pane.addSuperTop( '&#x21d0;', 'control left-node' , self.method('controlMove', 'left' ) );
+        pane.addSuperTop( '&#x21d2;', 'control right-node', self.method('controlMove', 'right') );
+        pane.addTop(      '&#x21d3;', 'control down-node' , self.method('controlMove', 'down' ) );
+        pane.addTop(      '&#x21d1;', 'control up-node'   , self.method('controlMove', 'up'   ) );
+
+        pane.addMiddle( 'shift', 'control shift', self.method('toggleShift') );
+
+        pane.addBottom( '123'  , 'control numpad', self.right.method( 'toggleAlt', 'numpad' ) );
+
+        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', self.right.method('toggleAlt', 'symbols') );
+
+        pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
+    }
+
+    var setupRightKeys = function( self, pane, options ) {
+        var buttons = setupButtonKeys( self, pane,
                 [ 'y', 'u', 'i', 'o', 'p' ],
                 [ 'h', 'j', 'k', 'l' ],
                 [ 'n', 'm', ',', '.' ]
         )
 
-        pane.addSuperTop( '&#x25C4;', 'control left', function() {
-            // todo
-        } );
+        setupRightLower( self, pane, options );
 
-        pane.addSuperTop( '&#x25Ba;', 'control right', function() {
-            // todo
-        } );
+        return buttons;
+    }
 
-        pane.addTop( 'BS', 'control backspace', function() {
-            // todo
-        } )
+    var setupLeftSymbols = function( self, pane, options ) {
+        setupLeftLower( self, pane, options );
 
-        pane.addMiddle( 'shift', 'control shift', function() {
-            // todo
-        } )
+        setupButtonKeys( self, pane,
+                [  '{', '}', '`', ':', '-' ],
+                [  '[', ']', '^', ';', '_' ],
+                [ '\\', '~', '#', '|', '$' ]
+        )
+    }
+
+    // missing: %
+    var setupRightSymbols = function( self, pane, options ) {
+        setupButtonKeys( self, pane,
+                [ '!', '\'', '"', '-', '*' ],
+                [ '?',  '(', ')', '+', '/' ],
+                [ '=',  '<', '>', ';', ':' ]
+        )
+
+        setupRightLower( self, pane, options );
+    }
+
+    var setupRightNumpad = function( self, pane, options ) {
+        setupButtonKeys( self, pane,
+                [ '7', '8', '9', '-', '*' ],
+                [ '4', '5', '6', '+', '/' ],
+                [ '1', '2', '3', '0', '.' ]
+        )
+
+        setupRightLower( self, pane, options );
+    }
+
+    var setupRightLower = function( self, pane, options ) {
+        pane.addSuperTop( '&#x25C4;', 'control left' , self.method('inputLeft') );
+
+        pane.addSuperTop( '&#x25Ba;', 'control right', self.method('inputRight') );
+
+        pane.addTop( 'back', 'control backspace', self.method( 'inputBackspace' ) );
+
+        pane.addMiddle( 'shift', 'control shift', self.method('toggleShift') );
         
-        pane.addBottom( '&nbsp;', 'space', function() {
-            // todo
-        } )
-        pane.addBottom( '";+*/', 'control symbols-common', function() {
-            // todo
-        } )
+        pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
+
+        pane.addBottom( '";+*/', 'control symbols-common', self.left.method('toggleAlt', 'symbols') );
+
         pane.addBottom( '&#x25Be;', 'control close', options.onClose );
     }
 
-    var setupRightNumpad = function( pane ) {
-        // todo
+    /*
+     * This 'double-focus', is to lose and then regain
+     * focus artificially.
+     *
+     * Artificial focus, closes the iOS keyboard.
+     */
+    var newDoubleFocusEvent = function() {
+        var isDoubleFocusing = false;
+
+        return function(ev) {
+            if ( isDoubleFocusing ) {
+                isDoubleFocusing = false;
+                return;
+            } else {
+                this.blur();
+                var self = this;
+
+                setTimeout( function() {
+                    isDoubleFocusing = true;
+                    self.focus();
+                }, 0 );
+            }
+        }
     }
 
     var Clavier = (function(options) {
         assertObject( options, "no options provided" );
 
-        this.left  = new KeyPane();
-        this.right = new KeyPane();
+        this.input = null;
+
+        this.left  = new KeyPane( 'symbols' );
+        this.right = new KeyPane( 'symbols', 'numpad' );
 
         BBGun.call( this, 'clavier',
                 {
@@ -214,18 +313,146 @@ window['Clavier'] = (function() {
 
         this.lastPosition = DEFAULT_POSITION;
 
-        setupRightKeys( this.right.main(), options );
-        setupRightNumpad( this.right.alt() );
+        var rightButtons = setupRightKeys( this, this.right.main(), options );
+        var leftButtons = setupLeftKeys( this, this.left.main(), options );
 
-        setupLeftKeys( this.left.main() );
+        this.shiftButtons = rightButtons.concat( leftButtons );
+        this.shiftDown = false;
+
+        setupLeftSymbols( this, this.left.alt( 'symbols' ), options );
+
+        setupRightNumpad( this, this.right.alt( 'numpad' ), options );
+        setupRightSymbols( this, this.right.alt( 'symbols' ), options );
+
+        this.focusEvent = newDoubleFocusEvent();
     }).
     extend( BBGun, {
-        leftControl: function( html, fun ) {
-            this.left.controlButton( html, fun );
+        toggleShift: function() {
+            this.shiftDown = ! this.shiftDown;
+
+            for ( var i = 0; i < this.shiftButtons.length; i++ ) {
+                var button = this.shiftButtons[i];
+
+                button.textContent = this.shiftDown ?
+                        button.textContent.toUpperCase() :
+                        button.textContent.toLowerCase() ;
+            }
+        },
+
+        inputLeft: function() {
+            var input = this.input;
+
+            if ( input ) {
+                input.selectionEnd =
+                        input.selectionStart =
+                                Math.max( 0, input.selectionStart-1 );
+            }
+        },
+
+        inputRight: function() {
+            var input = this.input;
+
+            if ( input ) {
+                input.selectionEnd =
+                        input.selectionStart =
+                                Math.max( 0, input.selectionStart+1 );
+            }
+        },
+
+        inputBackspace: function() {
+            var input = this.input;
+
+            if ( input ) {
+                var start = input.selectionStart,
+                    end = input.selectionEnd;
+
+                if ( start === end ) {
+                    if ( start > 0 ) {
+                        input.value =
+                                input.value.substring( 0, start-1 ) +
+                                input.value.substring( start );
+                    }
+                } else {
+                    if ( start > end ) {
+                        var temp = start;
+                        start = end;
+                        end = temp;
+                    }
+
+                    input.value =
+                            input.value.substring( 0, start ) +
+                            input.value.substring( end );
+                }
+
+                input.selectionEnd =
+                        input.selectionStart = start;
+
+                this.informInput();
+            }
+        },
+
+        inputCharacter: function( char ) {
+            assert( char !== undefined, "undefined character given" );
+
+            var input = this.input;
+
+            if ( input ) {
+                var start = input.selectionStart,
+                    end   = input.selectionEnd;
+
+                if ( start > end ) {
+                    var temp = start;
+                    start = end;
+                    end = temp;
+                }
+
+                input.value =
+                        input.value.substring( 0, start ) +
+                        char +
+                        input.value.substring( end );
+
+                input.selectionEnd =
+                        input.selectionStart =
+                                start + char.length;
+
+                this.informInput();
+            }
+        },
+
+        informInput: function() {
+            if ( this.input ) {
+                var event = document.createEvent("HTMLEvents");
+                event.initEvent( 'input', true, true )
+                this.input.dispatchEvent( event );
+            }
+        },
+
+        clearInput: function() {
+            this.input = null;
+
             return this;
         },
-        rightControl: function( html, fun ) {
-            this.right.controlButton( html, fun );
+        setInput: function( input ) {
+            assert( input instanceof Element );
+
+            if ( this.input !== null ) {
+                this.input.removeEventListener( 'focus', this.focusEvent, true );
+                this.input.blur();
+            }
+
+            this.input = input;
+            this.input.addEventListener( 'focus', this.focusEvent, true );
+
+            return this;
+        },
+
+        controlMove: function( fun ) {
+            if ( isFunction(fun) ) {
+                this.controlMoveFun = fun;
+            } else if ( this.controlMoveFun ) {
+                this.controlMoveFun( fun );
+            }
+
             return this;
         },
 

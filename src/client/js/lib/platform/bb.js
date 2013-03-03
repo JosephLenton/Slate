@@ -457,8 +457,10 @@ window['bb'] = (function() {
                         ],
 
                         function( type ) {
+                            assert( type );
+
                             var input = document.createElement('input');
-                            input.type = type;
+                            input.setAttribute( 'type', type );
                             return input;
                         }
                 );
@@ -515,8 +517,8 @@ window['bb'] = (function() {
             }
         }
 
-        var iterateClasses = function( args, i, fun ) {
-            for ( ; i < args.length; i++ ) {
+        var iterateClasses = function( args, i, endI, fun ) {
+            for ( ; i < endI; i++ ) {
                 var arg = args[i];
 
                 if ( isString(arg) ) {
@@ -534,9 +536,9 @@ window['bb'] = (function() {
                         fun( arg );
                     }
                 } else if ( isArray(arg) ) {
-                    iterateClasses( arg, 0, fun );
+                    iterateClasses( arg, 0, arg.length, fun );
                 } else {
-                    logError( "invalid parameter", arg );
+                    logError( "invalid parameter", arg, args, i, endI );
                 }
             }
         }
@@ -839,10 +841,8 @@ window['bb'] = (function() {
                 assert( name !== '', "empty string given for name", name );
             }
 
-            var setup = this.setup.data.elements[ name ];
-
             if ( this.setup.data.elements.hasOwnProperty(name) ) {
-                return this.setup.data.elements[name]();
+                return this.setup.data.elements[name]( name );
             } else if ( HTML_ELEMENTS.hasOwnProperty(name) ) {
                 return document.createElement( name );
             } else {
@@ -863,7 +863,7 @@ window['bb'] = (function() {
             }
 
             var isRemoved = false;
-            iterateClasses( klasses, i, function(klass) {
+            iterateClasses( klasses, i, klasses.length, function(klass) {
                 if ( ! isRemoved && dom.classList.contains(klass) ) {
                     isRemoved = true;
                     return false;
@@ -884,7 +884,7 @@ window['bb'] = (function() {
 
             dom = bb.get(dom, false);
 
-            iterateClasses( klasses, i, function(klass) {
+            iterateClasses( klasses, i, klasses.length, function(klass) {
                 dom.classList.remove( klass );
             } )
 
@@ -897,56 +897,119 @@ window['bb'] = (function() {
          * @param onAddition Optional, a function called if the class gets added.
          * @param onRemoval Optional, a function called if the class gets removed.
          */
-        bb.toggle = function() {
-            return this.toggleArray( arguments );
-        },
+        bb.toggleClass = function( dom ) {
+            return toggleClassArray( dom, arguments, 1, false );
+        }
 
-        bb.toggleArray = function( args ) {
-            var argsLen   = args.length;
+        bb.toggleClassInv = function( dom ) {
+            return toggleClassArray( dom, arguments, 1, true );
+        }
 
-            var dom        = this.get( args[0], true ),
-                klass      = args[1],
-                onAddition = args[2],
-                onRemoval  = args[3];
+        bb.toggleClassArray = function( dom, args, startI ) {
+            return toggleClassArray( dom, args, startI, false );
+        }
 
-            if ( argsLen < 1 ) {
-                logError( "not enough arguments provided" );
+        bb.toggleClassInvArray = function( dom, args, startI ) {
+            return toggleClassArray( dom, args, startI, true );
+        }
+
+        var toggleClassArray = function( dom, args, startI, inv ) {
+            if ( startI === undefined ) {
+                startI = 0;
+            }
+
+            var argsLen = args.length;
+            var endI = argsLen;
+
+            assert( startI < argsLen, "no arguments provided" );
+
+            var arg = args[startI];
+            var onRemove = args[ argsLen-1 ],
+                onAdd;
+            if ( isFunction(onRemove) ) {
+                assert( startI < argsLen-1, "not enough arguments provided" );
+
+                onAdd = args[ argsLen-2 ];
+
+                if ( isFunction(onAdd) ) {
+                    endI -= 2;
+                } else {
+                    onAdd = onRemove;
+                    onRemove = null;
+
+                    endI -= 1;
+                }
             } else {
-                var wasAdded = dom.classList.toggle( klass );
+                onAdd = null;
+                onRemove = null;
+            }
+             
+            if ( arg === true || (inv && arg === false) ) {
+                assert( startI+1 < endI, "no classes provided" );
 
-                if ( argsLen === 3 && wasAdded ) {
-                    onAddition( dom );
-                } else if ( argsLen === 4 ) {
-                    if ( wasAdded ) {
-                        onAddition( dom );
-                    } else {
-                        onRemoval( dom );
+                iterateClasses( args, startI+1, endI, function(klass) {
+                    dom.classList.add( klass );
+                } );
+
+                if ( onAdd !== null ) {
+                    onAdd.call( dom, true );
+                }
+            } else if ( arg === false || (inv && arg === true) ) {
+                assert( startI+1 < endI, "no classes provided" );
+
+                iterateClasses( args, startI+1, endI, function(klass) {
+                    dom.classList.remove( klass );
+                } );
+
+                if ( onRemove !== null ) {
+                    onRemove.call( dom, false );
+                }
+            } else {
+                var lastArg = args[args.length-1];
+
+                if ( lastArg === true || (inv && lastArg === false) ) {
+                    assert( startI < endI-1, "no classes provided" );
+
+                    iterateClasses( args, startI, endI-1, function(klass) {
+                        dom.classList.add( klass );
+                    } );
+                } else if ( lastArg === false || (inv && lastArg === true) ) {
+                    assert( startI < endI-1, "no classes provided" );
+
+                    iterateClasses( args, startI, endI-1, function(klass) {
+                        dom.classList.remove( klass );
+                    } );
+                } else {
+                    var hasRemove = false,
+                        hasAdd = false;
+
+                    iterateClasses( args, startI, endI, function(klass) {
+                        if ( dom.classList.contains(klass) ) {
+                            dom.classList.remove(klass);
+                            hasRemove = true;
+                        } else {
+                            dom.classList.add(klass);
+                            hasAdd = true;
+                        }
+                    } );
+
+                    if ( onAdd !== null ) {
+                        if ( onRemove !== null ) {
+                            if ( hasAdd ) {
+                                onAdd.call( dom, true );
+                            }
+                            if ( hasRemove ) {
+                                onRemove.call( dom, true );
+                            }
+                        } else {
+                            onAdd.call( dom, hasAdd );
+                        }
                     }
                 }
             }
 
             return dom;
-        },
-
-        bb.toggleClass = function( dom, arg ) {
-            if ( arg === true ) {
-                this.addClassArray( dom, arguments, 2 );
-            } else if ( arg === false ) {
-                this.removeClassArray( dom, arguments, 2 );
-            } else {
-                assert( arguments.length > 1, "not enough arguments given" );
-
-                iterateClasses( arguments, 1, function(klass) {
-                    if ( dom.classList.contains(klass) ) {
-                        dom.classList.remove(klass);
-                    } else {
-                        dom.classList.add(klass);
-                    }
-                } );
-            }
-
-            return dom;
-        },
+        }
 
         bb.addClass = function( dom ) {
             if ( arguments.length === 2 ) {
@@ -963,7 +1026,7 @@ window['bb'] = (function() {
                 i = 0;
             }
 
-            iterateClasses( args, i, function(klass) {
+            iterateClasses( args, i, args.length, function(klass) {
                 dom.classList.add( klass );
             } )
 
@@ -1010,7 +1073,7 @@ window['bb'] = (function() {
             }
 
             var str = '';
-            iterateClasses( args, i, function(klass) {
+            iterateClasses( args, i, args.length, function(klass) {
                 str += ' ' + klass;
             } )
 
@@ -1208,6 +1271,13 @@ window['bb'] = (function() {
             }
 
             return addArray( bb, this.get(dom, true), args, startI );
+        }
+
+        bb.addOne = function( dom, dest ) {
+            return addOne( this,
+                    bb.get( dom ),
+                    dest
+            );
         }
 
         /**
