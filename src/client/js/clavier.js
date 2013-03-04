@@ -301,15 +301,10 @@ window['Clavier'] = (function() {
 
         this.input = null;
 
-        this.left  = new KeyPane( 'symbols' );
-        this.right = new KeyPane( 'symbols', 'numpad' );
+        this.left  = new KeyPane( 'symbols' ).addClass( 'clavier-left clavier-background' );
+        this.right = new KeyPane( 'symbols', 'numpad' ).addClass( 'clavier-right clavier-background' );
 
-        BBGun.call( this, 'clavier',
-                {
-                    '.clavier-right clavier-background' : this.right,
-                    '.clavier-left  clavier-background' : this.left
-                }
-        )
+        BBGun.call( this, 'clavier', this.left, this.right );
 
         this.lastPosition = DEFAULT_POSITION;
 

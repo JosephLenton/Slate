@@ -528,12 +528,44 @@ window['bb'] = (function() {
                         var klasses = arg.split( ' ' );
 
                         for ( var j = 0; j < klasses.length; j++ ) {
-                            if ( fun(arg) === false ) {
-                                break;
+                            var klass = klasses[j];
+
+                            if ( klass !== '' ) {
+                                var dotI = klass.indexOf( '.' );
+                                if ( dotI === 0 ) {
+                                    klass = klass.substring(1);
+                                }
+
+                                if ( klass.indexOf('.') !== -1 ) {
+                                    var klassParts = klass.split('.');
+
+                                    for ( var k = 0; k < klassParts.length; i++ ) {
+                                        if ( fun(klassParts[k]) === false ) {
+                                            return;
+                                        }
+                                    }
+                                } else if ( fun(klass) === false ) {
+                                    return;
+                                }
                             }
                         }
                     } else {
-                        fun( arg );
+                        var dotI = arg.indexOf( '.' );
+                        if ( dotI === 0 ) {
+                            arg = arg.substring(1);
+                        }
+
+                        if ( arg.indexOf('.') !== -1 ) {
+                            var argParts = arg.split('.');
+
+                            for ( var k = 0; k < argParts.length; i++ ) {
+                                if ( fun(argParts[k]) === false ) {
+                                    return;
+                                }
+                            }
+                        } else if ( fun(arg) === false ) {
+                            return;
+                        }
                     }
                 } else if ( isArray(arg) ) {
                     iterateClasses( arg, 0, arg.length, fun );
@@ -1399,22 +1431,28 @@ window['bb'] = (function() {
             assert( k.length > 1, "empty description given" );
 
             var className = k.substring(dotI+1);
+            var domType = ( dotI > 0 ) ?
+                        k.substring( 0, dotI ) :
+                        'div'                  ;
+
             var newDom;
 
-            if ( dotI === 0 ) {
-                if ( val instanceof Element ) {
-                    newDom = val;
-                } else if ( val.__isBBGun ) {
-                    newDom = val.dom();
-                } else {
-                    newDom = createOne( bb, val );
-                }
+            if ( isObject(val) ) {
+                assert( bb.setup.isElement(domType), "invalid element type given, " + domType );
+                val[TYPE_NAME_PROPERTY] = domType;
+
+                newDom = createObj( bb, null, val );
             } else {
-                var domType = k.substring( 0, dotI );
+                newDom = bb.createElement( domType );
+                bb.addClassOne( newDom, className );
 
-                if ( isArray(val) ) {
-                    bb.createElement( domType );
-
+                if ( val instanceof Element ) {
+                    newDom.appendChild( val );
+                } else if ( val.__isBBGun ) {
+                    newDom.appendChild( val.dom() );
+                } else if ( isString(val) ) {
+                    newDom.innerHTML = val;
+                } else if ( isArray(val) ) {
                     applyArray(
                             this,
                             null,
@@ -1422,17 +1460,10 @@ window['bb'] = (function() {
                             val,
                             0
                     )
-                } else if ( isObject(val) ) {
-                    assert( bb.setup.isElement(domType), "invalid element type given, " + domType );
-                    val[TYPE_NAME_PROPERTY] = domType;
-
-                    newDom = bb.createObj( val );
                 } else {
                     logError( "invalid object description given for, " + k, k );
                 }
             }
-
-            bb.addClassOne( newDom, className );
 
             dom.appendChild( newDom );
         }
