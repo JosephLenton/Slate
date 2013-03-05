@@ -65,6 +65,21 @@
     var jsx = require( './lib/jsx.js' ).jsx;
 
     rockServer.mime({
+            wav     : function(req, res, data) {
+                    res.status( 200, 'audio/wav' ).
+                        header( 'Transfer-Encoding: chunked' ).
+                        header( 'icy-br: ##' ).
+                        header( 'ice-audio-info:bitrate=##;samplerate=#####' ).
+                        header( 'icy-description:Some Name' ).
+                        header( 'icy-genre:Alternative' ).
+                        header( 'icy-name:Name' ).
+                        header( 'icy-pub:0' ).
+                        header( 'Server:Whatever you want' ).
+                        header( 'Cache-Control: no-cache' ).
+                        header( 'Connection: Keep-Alive' ).
+                        write( data.toString('base64') ).
+                        end();
+            },
             html    : 'text/html',
             gif     : 'image/gif',
             jpg     : 'image/jpg',

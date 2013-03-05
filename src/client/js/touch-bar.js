@@ -1452,12 +1452,18 @@ window.slate.TouchBar = (function() {
                 this.onInput = new Events( this );
 
                 this.input = bb.input( {
+                        readonly: 'true',
+
                         type: type,
 
                         autocapitalize: 'off',
                         autocorrect   : 'off',
 
                         value: defaultVal,
+
+                        focus: function(ev) {
+                            ev.preventDefault();
+                        },
 
                         keyup: function(ev) {
                             // enter key
@@ -1479,8 +1485,21 @@ window.slate.TouchBar = (function() {
 
                 this.resizeInput();
 
-                this.click(function() {
-                    self.input.focus();
+/*
+                this.dom().addEventListener( 'focus', function(ev) {
+                    ev.stopPropagation();
+                    ev.preventDefault();
+
+                    setTimeout( function() {
+                        self.input.focus();
+                    } );
+                }, true );
+*/
+
+                this.click(function(ev) {
+                    setTimeout( function() {
+                        self.input.focus();
+                    } );
                 })
 
                 this.replace( function(other) {
@@ -1511,7 +1530,11 @@ window.slate.TouchBar = (function() {
 
                     onEverySelect: function() {
                         this.resizeInput();
-                        this.input.focus();
+                        var self = this;
+
+                        setTimeout( function() {
+                            self.input.focus();
+                        }, 0 );
                     },
 
                     /**
@@ -2715,19 +2738,25 @@ window.slate.TouchBar = (function() {
          * Setup opening / closing this pane.
          */
 
-        document.body.addEventListener( 'mousedown', closeThis );
+        document.body.addEventListener( 'click', closeThis, false );
+        document.body.addEventListener( 'touchend', closeThis, false );
 
         this.isOpen = false;
         var self = this;
         var openThis = function( ev ) {
-            if ( ! this.isOpen ) {
-                ev.stopPropagation();
-                ev.preventDefault();
+            ev.stopPropagation();
+            ev.preventDefault();
 
+            if ( ! this.isOpen ) {
                 self.open();
             }
         }
-        this.barWrap.addEventListener( 'mousedown', openThis, true );
+
+        this.barWrap.addEventListener( 'mouseup', openThis, false );
+        this.barWrap.addEventListener( 'focus', openThis, false );
+        this.barWrap.addEventListener( 'dblclick', openThis, false );
+        this.barWrap.addEventListener( 'touchend', openThis, false );
+        this.barWrap.addEventListener( 'click', openThis, false );
 
         /**
          * Add the initial commands

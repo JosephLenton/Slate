@@ -12,6 +12,19 @@
     font-family: "Oxygen Mono";
     font-size: 21px;
     font-weight: 900;
+
+    -webkit-transition: background 100ms linear, color 100ms linear;
+    -moz-transition: background 100ms linear, color 100ms linear;
+    transition: background 100ms linear, color 100ms linear;
+}
+.touch-bar-wrap .clavier-key.highlight {
+    background: #fff;
+    color: #444;
+}
+
+.touch-bar-wrap .clavier-key.highlight-border {
+    background: #666;
+    color: #fff;
 }
 .touch-bar-wrap .clavier-key.right,
 .touch-bar-wrap .clavier-key.left,
@@ -24,6 +37,17 @@
     color: #666;
 
     font-weight: 400;
+
+    border: 1px solid #1a1a1a;
+    border-radius: 2px;
+
+    -webkit-transition: border 30ms linear, background 30ms linear, color 30ms linear;
+    -moz-transition: border 30ms linear, background 30ms linear, color 30ms linear;
+    transition: border 30ms linear, background 30ms linear, color 30ms linear;
+}
+.touch-bar-wrap .clavier-key.control.highlight {
+    border-color: #fff;
+    color: #fff;
 }
 
 .touch-bar-wrap {
@@ -121,12 +145,13 @@
         left: 9px;
         height: 30px;
 
+/*
         opacity: 0;
         visibility: hidden;
 
-        -webkit-transition: opacity 150ms linear, visibility 0ms linear 150ms;
-        -moz-transition: opacity 150ms linear, visibility 0ms linear 150ms;
-        transition: opacity 150ms linear, visibility 0ms linear 150ms;
+        -webkit-transition: visibility 0ms linear 150ms;
+        -moz-transition: visibility 0ms linear 150ms;
+        transition: visibility 0ms linear 150ms;
     }
     .touch-bar-wrap.open .touch-shift {
         opacity: 1;
@@ -135,6 +160,11 @@
         -webkit-transition: opacity 150ms linear, visibility 150ms linear 0s;
         -moz-transition: opacity 150ms linear, visibility 150ms linear 0s;
         transition: opacity 150ms linear, visibility 150ms linear 0s;
+
+        -webkit-transition: visibility 150ms linear 0s;
+        -moz-transition: visibility 150ms linear 0s;
+        transition: visibility 150ms linear 0s;
+        */
     }
         .touch-shift-button {
             display: inline-block;

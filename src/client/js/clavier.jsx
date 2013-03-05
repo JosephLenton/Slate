@@ -5,6 +5,8 @@
 
 -------------------------------------------------------------------------------
 
+    var AUDIO_KEYBOARD_CLICK_SRC = '/keyboard-click.wav';
+
     var DEFAULT_POSITION = '300px';
 
     var KeyPaneInner = (function(klass) {
@@ -41,6 +43,7 @@
             }
 
             var key = bb.a('clavier-key', klass, { html: html, click: fun } );
+
             bb.add( row, key );
 
             return key;
@@ -93,6 +96,28 @@
 
 -------------------------------------------------------------------------------
 
+    var highlightKey = function( key ) {
+        highlightKeyInner( key, 'highlight' );
+    }
+
+    var highlightKeyInner = function( key, klass ) {
+        if ( ! key.classList.contains(klass) ) {
+            key.classList.add( klass );
+
+            setTimeout( function() {
+                key.classList.remove( klass )
+            }, 100 );
+        }
+    }
+
+    var highlightKeyPane = function( pane ) {
+        var keys = pane.dom().querySelectorAll( '.clavier-key' );
+
+        for ( var i = 0; i < keys.length; i++ ) {
+            highlightKeyInner( keys[i], 'highlight-border' );
+        }
+    }
+
     var KeyPane = (function() {
         BBGun.call( this, 'clavier-keys' );
 
@@ -140,13 +165,46 @@
             };
 
             return {
-                    showMain : newMainAltMethod(    'addClass', 'removeClass' ),
-                    showAlt  : newMainAltMethod( 'removeClass', 'addClass'    ),
+                    //showMain: newMainAltMethod(    'addClass', 'removeClass' ),
+                    showMain : function( klass ) {
+                        this.mainPane.addClass('show');
+                        highlightKeyPane( this.mainPane );
+
+                        return this.alts.each( this, function(alt) {
+                            alt.removeClass( 'show' )
+                        } );
+                    },
+
+                    //showalt: newMainAltMethod( 'removeClass', 'addClass'    ),
+                    showAlt  : function( klass ) {
+                        return this.alts.each( this, function(alt) {
+                            if ( alt.hasClass(klass) ) {
+                                if ( ! alt.hasClass('show') ) {
+                                    alt.addClass('show');
+                                    this.mainPane.removeClass('show');
+
+                                    highlightKeyPane( alt );
+                                }
+                            } else {
+                                alt.removeClass( 'show' )
+                            }
+                        } );
+                    },
+
                     toggleAlt: function( klass ) {
                         return this.alts.each( this, function(alt) {
                             if ( alt.hasClass(klass) ) {
-                                alt.toggleClass( 'show',
-                                        this.mainPane.method('toggleClassInv', 'show') );
+                                if ( alt.hasClass('show') ) {
+                                    alt.removeClass('show');
+                                    this.mainPane.addClass('show');
+
+                                    highlightKeyPane( this.mainPane );
+                                } else {
+                                    alt.addClass('show');
+                                    this.mainPane.removeClass('show');
+
+                                    highlightKeyPane( alt );
+                                }
                             } else {
                                 alt.removeClass( 'show' )
                             }
@@ -402,16 +460,22 @@ Artificial focus, closes the iOS keyboard.
         var isDoubleFocusing = false;
 
         return function(ev) {
+            var self = this;
+
             if ( isDoubleFocusing ) {
                 isDoubleFocusing = false;
                 return;
             } else {
-                this.blur();
                 var self = this;
 
                 setTimeout( function() {
+                    document.activeElement.blur();
+                    document.body.focus();
+
                     isDoubleFocusing = true;
-                    self.focus();
+                    setTimeout(function() {
+                        self.focus();
+                    });
                 }, 0 );
             }
         }
@@ -427,6 +491,10 @@ This is the keyboard it's self, and what the outside world interacts with.
 
     var Clavier = (function(options) {
         assertObject( options, "no options provided" );
+
+        var audio = new Audio();
+        audio.loop = false;
+        audio.src = AUDIO_KEYBOARD_CLICK_SRC;
 
         this.input = null;
 
@@ -449,6 +517,23 @@ This is the keyboard it's self, and what the outside world interacts with.
         setupRightSymbols( this, this.right.alt( 'symbols' ), options );
 
         this.focusEvent = newDoubleFocusEvent();
+
+        this.on( 'dblclick', function(ev) {
+            ev.preventDefault();
+        } );
+        
+        var onButtonClick = function(ev) {
+            if ( ev.target.classList.contains('clavier-key') ) {
+                highlightKey( ev.target );
+                
+                audio.play();
+            }
+
+            ev.preventDefault();
+        };
+
+        this.on( 'touchend', onButtonClick );
+        this.on( 'mouseup', onButtonClick );
     }).
     extend( BBGun, {
 

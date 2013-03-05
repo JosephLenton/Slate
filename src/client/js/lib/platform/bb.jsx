@@ -1734,8 +1734,14 @@ is pre-provided.
                     || !!('onmsgesturechange' in window); // works on IE 10
 
         if ( IS_TOUCH ) {
+            var doOnce = true;
             bb.setup.event({
                     click: function( el, fun ) {
+                        el.addEventListener( 'click', function(ev) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                        } );
+
                         window.jester( el ).tap( fun );
                     },
 

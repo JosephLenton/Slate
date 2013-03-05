@@ -240,6 +240,7 @@ exports.Server = (function() {
                                     var mime = self.fileMimeTypes[ ext ] || 'text/plain';
 
                                     console.log( '   file ' + req.url );
+                                    console.log( data.length );
 
                                     if ( typeof mime === 'function' || mime instanceof Function ) {
                                         mime( req, res, data, path );

@@ -42,6 +42,7 @@
 
     position: absolute;
 }
+
 .clavier.fixed {
     position: fixed;
 
@@ -58,8 +59,6 @@
         bottom: 0;
 
         width: 340px;
-
-        border-radius: 3px;
     }
     .clavier-left {
         left: 0;
@@ -125,13 +124,18 @@
                     .clavier-key:active,
                     .clavier-key:focus,
                     .clavier-key:visited {
-                        border-radius: 1px;
                         text-decoration: none;
                     }
                     .clavier-key {
                         font-family: "segoe ui light", "helvetica";
                         font-weight: 900;
                         font-size: 18px;
+
+                        -webkit-touch-callout: none !important;
+                        -webkit-user-select: none !important;
+                         -khtml-user-select: none !important;
+                           -moz-user-select: none !important;
+                                user-select: none !important;
 
                         -webkit-transition:
                                 background 150ms linear, 
@@ -163,7 +167,6 @@
                     .clavier-key.control:active,
                     .clavier-key.control:focus,
                     .clavier-key.control:visited {
-                        border-radius: 0;
                     }
                     .clavier-key.left-node,
                     .clavier-key.right-node,
