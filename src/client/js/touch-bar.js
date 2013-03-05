@@ -2581,6 +2581,7 @@ window.slate.TouchBar = (function() {
 
                     selectNodeMove: function( dir ) {
                         var node = this.current.selectNode( dir );
+
                         if ( node ) {
                             this.setCurrent( node );
                         }

@@ -241,15 +241,19 @@ exports.Server = (function() {
 
                                     console.log( '   file ' + req.url );
 
-                                    res.
-                                            status( 200, mime ).
-                                            write( data );
+                                    if ( typeof mime === 'function' || mime instanceof Function ) {
+                                        mime( req, res, data, path );
+                                    } else {
+                                        res.
+                                                status( 200, mime ).
+                                                write( data );
 
-                                    if ( success ) {
-                                        success( req, res );
+                                        if ( success ) {
+                                            success( req, res );
+                                        }
+
+                                        res.end();
                                     }
-
-                                    res.end();
                                 }
                             } );
                         } else {

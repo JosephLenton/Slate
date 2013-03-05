@@ -1,6 +1,10 @@
-"use strict";
 
-window['Clavier'] = (function() {
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
+
     var DEFAULT_POSITION = '300px';
 
     var KeyPaneInner = (function(klass) {
@@ -13,6 +17,13 @@ window['Clavier'] = (function() {
                 this.bottom = bb('clavier-keys-row bottom')
         )
     }).extend( BBGun, {
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
         addRow: function( row, args ) {
             var html,
                 fun,
@@ -35,20 +46,52 @@ window['Clavier'] = (function() {
             return key;
         },
 
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
         addSuperTop: function( html, klass, fun ) {
             return this.addRow( this.superTop, arguments );
         },
 
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
         addTop: function( html, klass, fun ) {
             return this.addRow(this.top, arguments);
         },
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
         addMiddle: function( html, fun ) {
             return this.addRow(this.middle, arguments);
         },
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
         addBottom: function( html, fun ) {
             return this.addRow(this.bottom, arguments);
         }
     })
+
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
 
     var KeyPane = (function() {
         BBGun.call( this, 'clavier-keys' );
@@ -112,9 +155,22 @@ window['Clavier'] = (function() {
             }
         })(),
         {
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
                 main: function() {
                     return this.mainPane;
                 },
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
 
                 alt: function( klass ) {
                     assert( klass, "no klass name provided" );
@@ -129,6 +185,12 @@ window['Clavier'] = (function() {
                 }
         }
     )
+
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
 
     var setupTextMoveControlButtons = function( clavier ) {
         clavier.
@@ -150,11 +212,23 @@ window['Clavier'] = (function() {
         ;
     }
 
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
+
     var newKeyPress = function( self ) {
         return function() {
             self.inputCharacter( this.textContent );
         }
     }
+
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
 
     var setupButtonKeys = function( self, pane ) {
         var buttons = [];
@@ -185,6 +259,12 @@ window['Clavier'] = (function() {
         return buttons;
     }
 
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
+
     var setupLeftKeys = function( self, pane, options ) {
         setupLeftLower( self, pane, options );
 
@@ -196,6 +276,12 @@ window['Clavier'] = (function() {
 
         return buttons;
     }
+
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
 
     var setupLeftLower = function( self, pane, options ) {
         pane.addSuperTop( '&#x21d0;', 'control left-node' , self.method('controlMove', 'left' ) );
@@ -212,6 +298,12 @@ window['Clavier'] = (function() {
         pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
     }
 
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
+
     var setupRightKeys = function( self, pane, options ) {
         var buttons = setupButtonKeys( self, pane,
                 [ 'y', 'u', 'i', 'o', 'p' ],
@@ -224,6 +316,12 @@ window['Clavier'] = (function() {
         return buttons;
     }
 
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
+
     var setupLeftSymbols = function( self, pane, options ) {
         setupLeftLower( self, pane, options );
 
@@ -233,6 +331,12 @@ window['Clavier'] = (function() {
                 [ '\\', '~', '#', '|', '$' ]
         )
     }
+
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
 
     // missing: %
     var setupRightSymbols = function( self, pane, options ) {
@@ -245,6 +349,12 @@ window['Clavier'] = (function() {
         setupRightLower( self, pane, options );
     }
 
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
+
     var setupRightNumpad = function( self, pane, options ) {
         setupButtonKeys( self, pane,
                 [ '7', '8', '9', '-', '*' ],
@@ -254,6 +364,12 @@ window['Clavier'] = (function() {
 
         setupRightLower( self, pane, options );
     }
+
+-------------------------------------------------------------------------------
+
+##
+
+-------------------------------------------------------------------------------
 
     var setupRightLower = function( self, pane, options ) {
         pane.addSuperTop( '&#x25C4;', 'control left' , self.method('inputLeft') );
@@ -271,12 +387,17 @@ window['Clavier'] = (function() {
         pane.addBottom( '&#x25Be;', 'control close', options.onClose );
     }
 
-    /*
-     * This 'double-focus', is to lose and then regain
-     * focus artificially.
-     *
-     * Artificial focus, closes the iOS keyboard.
-     */
+-------------------------------------------------------------------------------
+
+## newDoubleFocusEvent
+
+This 'double-focus', is to lose and then regain
+focus artificially.
+
+Artificial focus, closes the iOS keyboard.
+
+-------------------------------------------------------------------------------
+
     var newDoubleFocusEvent = function() {
         var isDoubleFocusing = false;
 
@@ -295,6 +416,14 @@ window['Clavier'] = (function() {
             }
         }
     }
+
+-------------------------------------------------------------------------------
+
+## Clavier 
+
+This is the keyboard it's self, and what the outside world interacts with.
+
+-------------------------------------------------------------------------------
 
     var Clavier = (function(options) {
         assertObject( options, "no options provided" );
@@ -322,6 +451,15 @@ window['Clavier'] = (function() {
         this.focusEvent = newDoubleFocusEvent();
     }).
     extend( BBGun, {
+
+-------------------------------------------------------------------------------
+
+### Clavier.toggleShift()
+
+Turns the shift keys on and off.
+
+-------------------------------------------------------------------------------
+
         toggleShift: function() {
             this.shiftDown = ! this.shiftDown;
 
@@ -334,6 +472,12 @@ window['Clavier'] = (function() {
             }
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.
+
+-------------------------------------------------------------------------------
+
         inputLeft: function() {
             var input = this.input;
 
@@ -344,6 +488,12 @@ window['Clavier'] = (function() {
             }
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.
+
+-------------------------------------------------------------------------------
+
         inputRight: function() {
             var input = this.input;
 
@@ -353,6 +503,14 @@ window['Clavier'] = (function() {
                                 Math.max( 0, input.selectionStart+1 );
             }
         },
+
+-------------------------------------------------------------------------------
+
+### Clavier.inputBackspace()
+
+Deletes text from the input, as though you hit backspace.
+
+-------------------------------------------------------------------------------
 
         inputBackspace: function() {
             var input = this.input;
@@ -386,6 +544,17 @@ window['Clavier'] = (function() {
             }
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.inputCharacter( String )
+
+Sets a new string to the end of the input. If the input has an area selected,
+then it will be replaced with the string given.
+
+The string is inserted, after the current cursor position.
+
+-------------------------------------------------------------------------------
+
         inputCharacter: function( char ) {
             assert( char !== undefined, "undefined character given" );
 
@@ -414,6 +583,17 @@ window['Clavier'] = (function() {
             }
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.informInput()
+
+Sends an event to the HTMLInput current set to this Clavier, to tell it that
+it's value has been updated.
+
+This is a HTMLEvent of type 'input'.
+
+-------------------------------------------------------------------------------
+
         informInput: function() {
             if ( this.input ) {
                 var event = document.createEvent("HTMLEvents");
@@ -422,11 +602,33 @@ window['Clavier'] = (function() {
             }
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.clearInput()
+
+Removes the HTMLInput currently stored, so this will no longer interact with
+any input.
+
+A new input would need to be set using 'setInput'.
+
+-------------------------------------------------------------------------------
+
         clearInput: function() {
             this.input = null;
 
             return this;
         },
+
+-------------------------------------------------------------------------------
+
+### Clavier.setInput( HTMLInput )
+
+Sets the input object the Clavier object will insert characters into.
+
+@param input The new input object.
+
+-------------------------------------------------------------------------------
+
         setInput: function( input ) {
             assert( input instanceof Element );
 
@@ -441,6 +643,20 @@ window['Clavier'] = (function() {
             return this;
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.controlMove( "up" | "down" | "left" | "right" )
+
+Calls the currently set control move function, with the direction given. The
+direction signifies which button was pressed.
+
+### Clavier.controlMove( fun )
+
+Allows you to set the callback, for the movement buttons on the left side of
+the clavier keyboard.
+
+-------------------------------------------------------------------------------
+
         controlMove: function( fun ) {
             if ( isFunction(fun) ) {
                 this.controlMoveFun = fun;
@@ -451,18 +667,42 @@ window['Clavier'] = (function() {
             return this;
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.fixed()
+
+When called, this makes the Clavier a fixed component, on top of the rest of 
+the HTML.
+
+-------------------------------------------------------------------------------
+
         fixed: function() {
             this.addClass( 'fixed' );
         },
 
+-------------------------------------------------------------------------------
+
+### Clavier.open()
+
+-------------------------------------------------------------------------------
+
         open: function() {
             this.style('top', this.lastPosition);
         },
+
+-------------------------------------------------------------------------------
+
+### Clavier.close()
+
+-------------------------------------------------------------------------------
 
         close: function() {
             this.style('top', '100%');
         }
     })
 
-    return Clavier;
-})()
+Finally, make the Clavier public.
+
+
+    window['Clavier'] = Clavier;
+

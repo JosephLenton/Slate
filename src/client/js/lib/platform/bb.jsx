@@ -1,24 +1,23 @@
-"use strict";
 
-/**
- *      bb.js
- *
- * @author Joseph Lenton
- * 
- * This is a set of dom creation, and interaction, functions.
- * It aims to provide a more rich API than the standard
- * document API, with very little overhead added on top.
- * 
- * This does no DOM wrapping, or other functionality like that,
- * it mostly takes information to create a dom element which
- * is returned, or alter a given dom element.
- */
+===============================================================================
 
-window['bb'] = (function() {
-    /**
-     * When the type of an element is not declared,
-     * it will be of this type by default.
-     */
+# bb.js
+
+@author Joseph Lenton
+
+This is a set of dom creation, and interaction, functions.
+It aims to provide a more rich API than the standard
+document API, with very little overhead added on top.
+
+This does no DOM wrapping, or other functionality like that,
+it mostly takes information to create a dom element which
+is returned, or alter a given dom element.
+
+When the type of an element is not declared,
+it will be of this type by default.
+
+===============================================================================
+
     var DEFAULT_ELEMENT = 'div';
 
     var TYPE_NAME_PROPERTY = 'nodeName';
@@ -149,6 +148,14 @@ window['bb'] = (function() {
             'wbr'
     )
 
+-------------------------------------------------------------------------------
+
+## HTML Events
+
+All of the HTML events available.
+
+-------------------------------------------------------------------------------
+
     var HTML_EVENTS = listToMap(
             /* CSS Events */
 
@@ -249,12 +256,21 @@ window['bb'] = (function() {
     }
 
     var newBB = function( args ) {
-        /**
-         * Runs 'createArray' with the values given,
-         * and then returns the result.
-         * 
-         * This is shorthand for creating new DOM elements.
-         */
+
+-------------------------------------------------------------------------------
+
+## bb()
+
+Runs 'createArray' with the values given,
+and then returns the result.
+
+This is shorthand for creating new DOM elements.
+
+bb also has a tonne of methods added on top, like jQuery, it is both a library
+and a function.
+
+-------------------------------------------------------------------------------
+
         var bb = function() {
             if (
                     this !== undefined && 
@@ -465,6 +481,17 @@ window['bb'] = (function() {
                         }
                 );
 
+-------------------------------------------------------------------------------
+
+# bb.util
+
+Utiliity fucntions available for use.
+
+ * bb.util.htmlToElement()
+ * bb.util.htmlToText()
+
+-------------------------------------------------------------------------------
+
         bb.util = (function() {
                 var element = document.createElement( 'div' );
 
@@ -593,20 +620,31 @@ window['bb'] = (function() {
             return klass;
         }
 
-        /**
-         * Sets events to be run on this element.
-         *
-         * # Examples
-         *
-         *      on( dom, "click"                        , fun, true  )
-         *      on( dom, "click"                        , fun        )
-         *
-         *      on( dom, ["mouseup", "mousedown"]       , fun, false )
-         *      on( dom, ["mouseup", "mousedown"]       , fun        )
-         *
-         *      on( dom, { click: fun, mousedown: fun } , true       )
-         *      on( dom, { click: fun, mousedown: fun }              )
-         */
+-------------------------------------------------------------------------------
+
+## bb.on
+
+Sets events to be run on this element.
+
+These events include:
+
+ * custom events
+ * HTML Events
+
+### Examples
+
+```
+    on( dom, "click"                        , fun, true  )
+    on( dom, "click"                        , fun        )
+    
+    on( dom, ["mouseup", "mousedown"]       , fun, false )
+    on( dom, ["mouseup", "mousedown"]       , fun        )
+    
+    on( dom, { click: fun, mousedown: fun } , true       )
+    on( dom, { click: fun, mousedown: fun }              )
+
+-------------------------------------------------------------------------------
+
         bb.on = function( dom, name, fun, useCapture ) {
             var argsLen = arguments.length;
 
@@ -640,17 +678,31 @@ window['bb'] = (function() {
             return this.on( don, name, funWrap, useCapture );
         }
 
-        /**
-         *      bb.create( html-element,
-         *              info1,
-         *              info2,
-         *              info3,
-         *              info4 ...
-         *      )
-         */
+-------------------------------------------------------------------------------
+
+## bb.create
+
+Used as the standard way to 
+
+```
+      bb.create( html-element,
+              info1,
+              info2,
+              info3,
+              info4 ...
+      )
+
+-------------------------------------------------------------------------------
+
         bb.create = function() {
             return this.createArray( arguments[0], arguments, 1 );
         }
+
+-------------------------------------------------------------------------------
+
+## bb.createBBGun
+
+-------------------------------------------------------------------------------
 
         bb.createBBGun = function(bbGun, obj, args, i) {
             if ( i === undefined ) {
@@ -740,17 +792,22 @@ window['bb'] = (function() {
             return dom
         }
 
-        /**
-         * Just describes the dom, based on the object given,
-         * and nothing more.
-         * 
-         * This is mostly for internal use, where I *only*
-         * want to describe a dom. I don't want any of the
-         * arguments-add-class stuff.
-         * 
-         * @param obj A JavaScript object literal describing an object to create.
-         * @return A Element based on the object given.
-         */
+-------------------------------------------------------------------------------
+
+## bb.createOne
+
+Just describes the dom, based on the object given,
+and nothing more.
+
+This is mostly for internal use, where I *only*
+want to describe a dom. I don't want any of the
+arguments-add-class stuff.
+
+@param obj A JavaScript object literal describing an object to create.
+@return A Element based on the object given.
+
+-------------------------------------------------------------------------------
+
         bb.createOne = function( obj ) {
             return createOne( this, obj );
         }
@@ -826,6 +883,12 @@ window['bb'] = (function() {
             return dom;
         }
 
+-------------------------------------------------------------------------------
+
+## bb.createString
+
+-------------------------------------------------------------------------------
+
         bb.createString = function( obj ) {
             return createString( this, obj );
         }
@@ -855,16 +918,21 @@ window['bb'] = (function() {
             }
         }
 
-        /**
-         * Creates just an element, of the given name.
-         * 
-         * What makes this special is that it also hooks into
-         * the provided names, such as 'button' as shorthand
-         * the input with type button.
-         * 
-         * @param name The name of the component to create.
-         * @return A Element for the name given.
-         */
+-------------------------------------------------------------------------------
+
+## bb.createElement()
+
+Creates just an element, of the given name.
+
+What makes this special is that it also hooks into
+the provided names, such as 'button' as shorthand
+the input with type button.
+ 
+@param name The name of the component to create.
+@return A Element for the name given.
+
+-------------------------------------------------------------------------------
+
         bb.createElement = function( name ) {
             if ( arguments.length === 0 ) {
                 name = DEFAULT_ELEMENT;
@@ -923,12 +991,52 @@ window['bb'] = (function() {
             return dom;
         }
 
-        /**
-         * @param dom The element to add or remove the class from.
-         * @param klass The klass to toggle.
-         * @param onAddition Optional, a function called if the class gets added.
-         * @param onRemoval Optional, a function called if the class gets removed.
-         */
+-------------------------------------------------------------------------------
+## bb.toggleClass()
+
+A class can be toggled on or off ...
+
+```
+     bb.toggleClass( dom, 'show' );
+
+You can also toggle multiple classes on or off ...
+
+```
+     bb.toggleClass( dom, 'foobar', 'bar' );
+
+A function can be provided for 
+
+```
+     bb.toggleClass( dom, 'show', function( isAdded ) {
+         if ( isAdded ) {
+             // show was added
+         } else {
+             // show was removed
+         }
+     } );
+
+Two funcitons can also be provided, for add or removed.
+Note that the 'isAdded' parameter is still supplied, for
+uniformity. It is just always true for the added fun, and
+false for the removed fun.
+
+```
+     bb.toggleClass( dom, 'show', 
+             function( isAdded ) {
+                 // show was added
+             },
+             funciton( isAdded ) {
+                 // show was removed
+             }
+     )
+
+@param dom The element to add or remove the class from.
+@param klass The klass to toggle.
+@param onAddition Optional, a function called if the class gets added.
+@param onRemoval Optional, a function called if the class gets removed.
+
+-------------------------------------------------------------------------------
+
         bb.toggleClass = function( dom ) {
             return toggleClassArray( dom, arguments, 1, false );
         }
@@ -1312,9 +1420,10 @@ window['bb'] = (function() {
             );
         }
 
-        /**
-         * Sets the HTML content within this element.
-         */
+## bb.html
+
+Sets the HTML content within this element.
+
         bb.html = function( dom ) {
             return this.htmlArray( dom, arguments, 1 );
         }
@@ -1384,10 +1493,11 @@ window['bb'] = (function() {
             return dom;
         }
 
-        /**
-         * Sets the text content within this dom,
-         * to the text values given.
-         */
+## bb.text
+
+Sets the text content within this dom,
+to the text values given.
+
         bb.text = function( dom ) {
             return this.textArray( dom, arguments, 1 );
         }
@@ -1444,7 +1554,6 @@ window['bb'] = (function() {
                 newDom = createObj( bb, null, val );
             } else {
                 newDom = bb.createElement( domType );
-                bb.addClassOne( newDom, className );
 
                 if ( val instanceof Element ) {
                     newDom.appendChild( val );
@@ -1464,6 +1573,8 @@ window['bb'] = (function() {
                     logError( "invalid object description given for, " + k, k );
                 }
             }
+
+            bb.addClassOne( newDom, className );
 
             dom.appendChild( newDom );
         }
@@ -1552,16 +1663,17 @@ window['bb'] = (function() {
             }
         }
 
-        /**
-         * # Special Properties
-         *
-         *  - on, events
-         *  - className
-         *  - id
-         *  - style
-         *  - html
-         *  - text
-         */
+## bb.attr
+
+### Special Properties
+
+ - on, events
+ - className
+ - id
+ - style
+ - html
+ - text
+
         bb.attr = function( dom, obj, val ) {
             if ( arguments.length === 2 ) {
                 if ( isString(obj) ) {
@@ -1611,9 +1723,12 @@ window['bb'] = (function() {
             }
         }
 
-        /*
-         *      Pre-provided Touch Events
-         */
+
+Pre-provided Touch Events
+-------------------------
+
+Events for click, and hold, under touch interface,
+is pre-provided.
 
         var IS_TOUCH = !! ('ontouchstart' in window)  // works on most browsers 
                     || !!('onmsgesturechange' in window); // works on IE 10
@@ -1667,5 +1782,4 @@ window['bb'] = (function() {
         return bb;
     }
 
-    return newBB();
-})();
+    window['bb'] = newBB();

@@ -62,6 +62,8 @@
 
     var rockServer  = new rockwall.Server()
 
+    var jsx = require( './lib/jsx.js' ).jsx;
+
     rockServer.mime({
             html    : 'text/html',
             gif     : 'image/gif',
@@ -69,7 +71,13 @@
             jpeg    : 'image/jpg',
             qb      : 'text/qb',
             js      : 'application/javascript',
-            css     : 'text/css'
+            css     : 'text/css',
+            jsx     : function(req, res, data) {
+                res.
+                        status( 200, 'application/javascript' ).
+                        write( jsx(data.toString()) ).
+                        end();
+            }
     })
 
     rockServer.pageNotFound( function(url, req, res) {
