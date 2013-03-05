@@ -196,7 +196,7 @@ exports.Server = (function() {
             if ( typeof arg === 'object' ) {
                 for ( var k in arg ) {
                     if ( arg.hasOwnProperty(k) ) {
-                        f.call( obj, k, url[k] );
+                        f.call( obj, k, arg[k] );
                     }
                 }
             } else {
