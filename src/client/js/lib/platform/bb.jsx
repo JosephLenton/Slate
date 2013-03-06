@@ -1663,6 +1663,8 @@ to the text values given.
             }
         }
 
+-------------------------------------------------------------------------------
+
 ## bb.attr
 
 ### Special Properties
@@ -1673,6 +1675,8 @@ to the text values given.
  - style
  - html
  - text
+
+-------------------------------------------------------------------------------
 
         bb.attr = function( dom, obj, val ) {
             if ( arguments.length === 2 ) {
