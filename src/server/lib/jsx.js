@@ -69,6 +69,10 @@ exports.jsx = (function() {
 
         var code = [ '"use strict";(function() {' ];
 
+        var isDoubleComment = false;
+        var inDoubleString = false;
+        var inSingleString = false;
+
         for ( var i = 0; i < lines.length; i++ ) {
             var line = lines[i];
 
@@ -130,25 +134,122 @@ exports.jsx = (function() {
              * Now actually build the new line.
              */
             
-            var codeLine = '';
-
             if ( isMarkdown ) {
+                var codeLine;
+
                 if ( ! commentStarted ) {
-                    codeLine += " /* ";
+                    codeLine = " /* ";
                     commentStarted = true;
+                } else {
+                    codeLine = '';
                 }
 
-                line = line.replace( /\*\//g, "* /" ) 
+                code.push( codeLine + line.replace( /\*\//g, "* /" ) )
             } else {
                 // end the 'previous' line
                 if ( commentStarted ) {
                     code[i-1] += " */";
                     commentStarted = false;
                 }
-            }
 
-            codeLine += line;
-            code.push( codeLine );
+                for ( ; i < lines.length; i++ ) {
+                    var l = lines[i];
+
+                    /*
+                     * we chomp till we reach markdown,
+                     * so when we reach it, back up (with i--),
+                     * and deal with the markdown on the next outer loop.
+                     */
+                    if ( 
+                            l.trim().length > 0 &&
+                            (
+                                l.charAt(0) !== ' ' ||
+                                l.charAt(1) !== ' ' ||
+                                l.charAt(2) !== ' ' ||
+                                l.charAt(3) !== ' '
+                            )
+                    ) {
+                        isMarkdown = true;
+                        i--;
+                        break;
+                    }
+
+                    for ( var k = 0; k < l.length; k++ ) {
+                        var c = l.charAt(k);
+
+                        // these are in order of precedence
+                        if ( inDoubleString ) {
+                            if (
+                                                c === '"' &&
+                                    l.charAt(k-1) !== '\\'
+                            ) {
+                                inDoubleString = false;
+                            }
+                        } else if ( inSingleString ) {
+                            if (
+                                                c === "'" &&
+                                    l.charAt(k-1) !== '\\'
+                            ) {
+                                inSingleString = false;
+                            }
+                        } else if ( isDoubleComment ) {
+                            if (
+                                                c === '*' &&
+                                    l.charAt(k+1) === '/'
+                            ) {
+                                isDoubleComment = false;
+
+                                // +1 so we include this character too
+
+                                k++;
+                            }
+                        } else {
+                            /*
+                             * Look to enter a new type of block,
+                             * such as comments, strings, inlined-JS code.
+                             */
+
+                            // multi-line comment
+                            if (
+                                    c === '/' &&
+                                    l.charAt(k+1) === '*'
+                            ) {
+                                k++;
+
+                                isDoubleComment = true;
+                            } else if (
+                                    c === '/' &&
+                                    l.charAt(k+1) === '/'
+                            ) {
+                                /* skip the rest of the line for parsing */
+                                break;
+
+                                // look for strings
+                            } else if ( c === '"' ) {
+                                inDoubleString = true;
+                            } else if ( c === "'" ) {
+                                inSingleString = true;
+                            } else if ( c === '/' ) {
+                                // todo
+                                // replace with '#' for ecmascript 6
+                                
+                            // ?? -> arguments[arguments.i = ++arguments.i || 0]
+                            } else if (
+                                                c === '?' &&
+                                    l.charAt(k+1) === '?' &&
+                                    l.charAt(k-1) !== '?' &&
+                                    l.charAt(k+2) !== '?'
+                            ) {
+                                var newString = '(arguments[arguments.i = ++arguments.i||0])';
+                                l = l.substring( 0, k ) + newString + l.substring( k+2 );
+                                k += newString.length + 1;
+                            }
+                        }
+                    } // for c in line
+
+                    code.push( l );
+                }
+            }
         }
 
         code.push( '})()' );
