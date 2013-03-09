@@ -624,8 +624,8 @@ Variables inside f will be ...
 
                             assert( startI <= argsLen, "not enough arguments given" );
 
-                            for ( ; startI < argsLen; i++ ) {
-                                combinedArgs.push( arguments[i] );
+                            while ( startI < argsLen ) {
+                                combinedArgs.push( arguments[startI++] );
                             }
                         }
                     }
