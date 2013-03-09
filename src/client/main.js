@@ -287,7 +287,6 @@
         } else {
             new window.slate.TerminalBar(
                     document.getElementsByClassName( 'slate-input' )[0],
-                    inputDom,
                     executor,
                     slate.data.languages,
                     window.slate.getLanguage()
