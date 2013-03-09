@@ -1,15 +1,68 @@
 
--------------------------------------------------------------------------------
+# Clavier
+@author Joseph Lenton
 
-##
+A virtual keyboard for tablets, with a few extra programming centric additions.
+These include
 
--------------------------------------------------------------------------------
+ - a numpad
+ - more symbols
+ - symbols are in blocks (similar to a numpad)
+ - move left/right on text
+
+===============================================================================
 
     var AUDIO_KEYBOARD_CLICK_SRC = '/keyboard-click.wav';
-
     var DEFAULT_POSITION = '300px';
 
-    var KeyPaneInner = (function(klass) {
+
+
+-------------------------------------------------------------------------------
+
+### addRow
+
+A helper function; given an array, this will create a new button, and add it to
+that row.
+
+-------------------------------------------------------------------------------
+
+    var addRow = function( row, args ) {
+        var html,
+            fun,
+            klass = '';
+
+        if ( args.length === 2 ) {
+            html  = args[0];
+            fun   = args[1];
+        } else if ( args.length === 3 ) {
+            html  = args[0];
+            klass = args[1];
+            fun   = args[2];
+        } else {
+            logError( "invalid parameters", args );
+        }
+
+        var key = bb.a('clavier-key', klass, { html: html, click: fun } );
+
+        bb.add( row, key );
+
+        return key;
+    }
+
+
+
+-------------------------------------------------------------------------------
+
+## Inner Key Pane
+
+Inside the left/right key panes, there are a set of rows, holding the keys.
+This is that set of rows.
+
+@param klass An extra, optional css class, for this pane.
+
+-------------------------------------------------------------------------------
+
+    var InnerKeyPane = (function(klass) {
         BBGun.call(this, 'clavier-keys-inner', klass || '');
 
         this.add(
@@ -20,34 +73,7 @@
         )
     }).extend( BBGun, {
 
--------------------------------------------------------------------------------
 
-### 
-
--------------------------------------------------------------------------------
-
-        addRow: function( row, args ) {
-            var html,
-                fun,
-                klass = '';
-
-            if ( args.length === 2 ) {
-                html  = args[0];
-                fun   = args[1];
-            } else if ( args.length === 3 ) {
-                html  = args[0];
-                klass = args[1];
-                fun   = args[2];
-            } else {
-                logError( "invalid parameters", args );
-            }
-
-            var key = bb.a('clavier-key', klass, { html: html, click: fun } );
-
-            bb.add( row, key );
-
-            return key;
-        },
 
 -------------------------------------------------------------------------------
 
@@ -56,8 +82,10 @@
 -------------------------------------------------------------------------------
 
         addSuperTop: function( html, klass, fun ) {
-            return this.addRow( this.superTop, arguments );
+            return addRow( this.superTop, arguments );
         },
+
+
 
 -------------------------------------------------------------------------------
 
@@ -66,8 +94,10 @@
 -------------------------------------------------------------------------------
 
         addTop: function( html, klass, fun ) {
-            return this.addRow(this.top, arguments);
+            return addRow(this.top, arguments);
         },
+
+
 
 -------------------------------------------------------------------------------
 
@@ -76,8 +106,10 @@
 -------------------------------------------------------------------------------
 
         addMiddle: function( html, fun ) {
-            return this.addRow(this.middle, arguments);
+            return addRow(this.middle, arguments);
         },
+
+
 
 -------------------------------------------------------------------------------
 
@@ -86,9 +118,11 @@
 -------------------------------------------------------------------------------
 
         addBottom: function( html, fun ) {
-            return this.addRow(this.bottom, arguments);
+            return addRow(this.bottom, arguments);
         }
     })
+
+
 
 -------------------------------------------------------------------------------
 
@@ -123,13 +157,13 @@
 
         this.add( 
                 this.mainPane =
-                        new KeyPaneInner( 'main' )
+                        new InnerKeyPane( 'main' )
         );
 
         var alts = [];
         for ( var i = 0; i < arguments.length; i++ ) {
             alts.push(
-                    new KeyPaneInner( arguments[i] ).
+                    new InnerKeyPane( arguments[i] ).
                             addTo( this )
             )
         }
@@ -213,6 +247,8 @@
             }
         })(),
         {
+
+
 
 -------------------------------------------------------------------------------
 
@@ -785,6 +821,7 @@ the HTML.
             this.style('top', '100%');
         }
     })
+
 
 Finally, make the Clavier public.
 

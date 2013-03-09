@@ -37,6 +37,8 @@ In the example, the parameter left out is exactly defined, using the underscore.
 
     window['_'] = Lazy;
 
+
+
 -------------------------------------------------------------------------------
 
 ## Function.create
@@ -85,6 +87,8 @@ you can then bind and pass it around.
         }
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.bind
@@ -105,6 +109,8 @@ other function methods, for adding in extras on top.
 
         return newFun;
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -149,6 +155,8 @@ they will be executed in turn.
                 }).proto( this );
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.eventFields
@@ -167,6 +175,8 @@ they will be executed in turn.
 
         return this;
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -227,6 +237,8 @@ they will be executed in turn.
         return obj;
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.clone
@@ -255,6 +267,8 @@ However we still have to check, incase it was called manually.
         }
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.proto
@@ -280,6 +294,8 @@ Duplicates this function, and sets a new prototype for it.
 
         return this;
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -333,6 +349,8 @@ as a prototype instead of a funtion.
         }
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.override
@@ -349,6 +367,8 @@ This allows you to have a sanity check.
                 return ( dest[k] !== undefined )
             }
     )
+
+
 
 -------------------------------------------------------------------------------
 
@@ -368,6 +388,8 @@ This allows you to have a sanity check.
             }
     )
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.after
@@ -386,6 +408,8 @@ This allows you to have a sanity check.
             }
     )
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.extend
@@ -403,6 +427,8 @@ This is used as a sanity check.
                 return ( dest[k] === undefined )
             }
     )
+
+
 
 -------------------------------------------------------------------------------
 
@@ -423,6 +449,8 @@ This is used as a sanity check.
                 }
             }
     )
+
+
 
 -------------------------------------------------------------------------------
 
@@ -445,6 +473,8 @@ when the function is called.
                 }).proto( this );
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.curry
@@ -461,6 +491,8 @@ to also change the target as well.
         return newPartial( this, undefined, arguments, 0, false );
                 proto( self );
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -515,6 +547,8 @@ Variables inside f will be ...
         return newPartial( this, undefined, arguments, 0, true );
                 proto( self );
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -600,6 +634,8 @@ Variables inside f will be ...
                 });
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.preSub
@@ -622,6 +658,8 @@ but makes a copy first.
                 }).
                 proto( this );
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -661,6 +699,8 @@ So parameters start from index 1, not 0.
                 }).
                 proto( this );
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -708,6 +748,8 @@ but makes a copy first.
         });
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ### addFun
@@ -726,6 +768,8 @@ it allows you to chain method calls.
                 bound.methodApply( method, args, 1 )
         )
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -773,6 +817,8 @@ i.e.
             }
         }
     }
+
+
 
 -------------------------------------------------------------------------------
 
@@ -834,6 +880,8 @@ Time Functions
         }
     }
 
+
+
 -------------------------------------------------------------------------------
 
 ## function.applyLater
@@ -852,6 +900,8 @@ Time Functions
             self.apply( target, args );
         }, 0 );
     }
+
+
 
 -------------------------------------------------------------------------------
 
