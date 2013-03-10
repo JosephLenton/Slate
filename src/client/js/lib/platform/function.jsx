@@ -241,36 +241,6 @@ they will be executed in turn.
 
 -------------------------------------------------------------------------------
 
-## function.clone
-
-If this is being called, then it cannot be a wrapped fun,
-because it replaces the clone method.
-
-However we still have to check, incase it was called manually.
-
-@return A function with the same properties set as this function, like a shallow copy.
-
--------------------------------------------------------------------------------
-
-    Function.prototype.clone = function() {
-        if ( false && this.isWrapped && this.hasOwnProperty('clone') ) {
-            return this.clone();
-        } else {
-            var self = this;
-            var fun = function() {
-                self.apply( this, arguments );
-            }
-
-            fun.prototype = this.prototype;
-
-            return this;
-        }
-    }
-
-
-
--------------------------------------------------------------------------------
-
 ## function.proto
 
 Duplicates this function, and sets a new prototype for it.
@@ -345,7 +315,13 @@ as a prototype instead of a funtion.
                 throw new Error( errMsg + "\n    " + errors.join(', ') );
             }
 
-            return this.clone().proto( proto );
+            var self = this;
+            var fun = function() {
+                self.apply( this, arguments );
+            }
+
+            fun.prototype = proto;
+            return fun;
         }
     }
 

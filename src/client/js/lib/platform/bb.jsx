@@ -249,13 +249,658 @@ All of the HTML events available.
             'DOMSubtreeModified'
     )
 
-    var ensureParent = function( dom ) {
-        var parentNode = dom.parentNode;
-        assert( parentNode !== null, "dom is not in the document; it doesn't have a parentNode" );
-        return parentNode;
+-------------------------------------------------------------------------------
+
+### assertParent( dom:Element )
+
+Throws an error, if the given dom element does not have a parent node.
+
+-------------------------------------------------------------------------------
+
+    var assertParent = function( dom ) {
+        assert( dom.parentNode !== null, "dom is not in the document; it doesn't have a parentNode" );
     }
 
-    var newBB = function( args ) {
+-------------------------------------------------------------------------------
+
+### newRegisterMethod
+
+Generates a register method.
+
+We generate it, so we can avoid the cost of passing
+in a callback method.
+
+@param methodName The name of this method (for internal recursive calls).
+@param methodNameOne The name of the callback to perform, on this object.
+
+-------------------------------------------------------------------------------
+
+    var newRegisterMethod = function( methodName, methodNameOne ) {
+        return new Function( "name", "fun", [
+                        '    var argsLen = arguments.length;',
+                        '    ',
+                        '    if ( argsLen === 1 ) {',
+                        '        assertObject( name, "non-object given for registering" );',
+                        '        ',
+                        '        for ( var k in name ) {',
+                        '            if ( name.hasOwnProperty(k) ) {',
+                        '                this.' + methodName + '( k, name[k] );',
+                        '            }',
+                        '        }',
+                        '    } else if ( argsLen === 2 ) {',
+                        '        if ( name instanceof Array ) {',
+                        '            for ( var i = 0; i < name.length; i++ ) {',
+                        '                this.' + methodName + '( name[i], fun );',
+                        '            }',
+                        '        } else {',
+                        '            assertString( name, "non-string given for name" );',
+                        '            assertFunction( fun, "non-function given for function" );',
+                        '            ',
+                        '            this.' + methodNameOne + '( name, fun );',
+                        '        }',
+                        '    } else if ( argsLen === 0 ) {',
+                        '        logError( "no parameters given" )',
+                        '    } else {',
+                        '        var names = new Array( argsLen-1 );',
+                        '        fun = arguments[ argsLen-1 ];',
+                        '        ',
+                        '        for ( var i = 0; i < argsLen-1; i++ ) {',
+                        '            names[i] = arguments[i];',
+                        '        }',
+                        '        ',
+                        '        this.' + methodName + '( names, fun );',
+                        '    }',
+                        '    ',
+                        '    return this;'
+                ].join("\n")
+        )
+    }
+
+    /**
+     * Helper Methods, before, bb it's self!
+     */
+
+    var setOnObject = function( events, dom, obj, useCapture ) {
+        assert( dom, "null or undefined dom given", dom );
+
+        for ( var k in obj ) {
+            if ( obj.hasOwnProperty(k) ) {
+                setOn( events, dom, k, obj[k], useCapture )
+            }
+        }
+    }
+
+    var setOn = function( events, dom, name, fun, useCapture ) {
+        assert( dom, "null or undefined dom given", dom );
+
+        if ( name instanceof Array ) {
+            for ( var i = 0; i < name.length; i++ ) {
+                setOn( events, dom, name, fun, useCapture );
+            }
+        } else {
+            if ( dom instanceof Element ) {
+                if ( events.hasOwnProperty(name) ) {
+                    events[name](dom, fun, useCapture);
+                } else {
+                    dom.addEventListener( name, fun, useCapture )
+                }
+            } else if ( dom instanceof Array ) {
+                for ( var i = 0; i < dom.length; i++ ) {
+                    setOn( events, dom[i], name, fun, useCapture );
+                }
+            }
+        }
+    }
+
+    var iterateClasses = function( args, i, endI, fun ) {
+        for ( ; i < endI; i++ ) {
+            var arg = args[i];
+
+            if ( isString(arg) ) {
+                assertString( arg, "expected string for add DOM class" );
+
+                if ( arg.indexOf(' ') !== -1 ) {
+                    var klasses = arg.split( ' ' );
+
+                    for ( var j = 0; j < klasses.length; j++ ) {
+                        var klass = klasses[j];
+
+                        if ( klass !== '' ) {
+                            var dotI = klass.indexOf( '.' );
+                            if ( dotI === 0 ) {
+                                klass = klass.substring(1);
+                            }
+
+                            if ( klass.indexOf('.') !== -1 ) {
+                                var klassParts = klass.split('.');
+
+                                for ( var k = 0; k < klassParts.length; i++ ) {
+                                    if ( fun(klassParts[k]) === false ) {
+                                        return;
+                                    }
+                                }
+                            } else if ( fun(klass) === false ) {
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    var dotI = arg.indexOf( '.' );
+                    if ( dotI === 0 ) {
+                        arg = arg.substring(1);
+                    }
+
+                    if ( arg.indexOf('.') !== -1 ) {
+                        var argParts = arg.split('.');
+
+                        for ( var k = 0; k < argParts.length; i++ ) {
+                            if ( fun(argParts[k]) === false ) {
+                                return;
+                            }
+                        }
+                    } else if ( fun(arg) === false ) {
+                        return;
+                    }
+                }
+            } else if ( isArray(arg) ) {
+                iterateClasses( arg, 0, arg.length, fun );
+            } else {
+                logError( "invalid parameter", arg, args, i, endI );
+            }
+        }
+    }
+
+    var parseClassArray = function( arr, startI ) {
+        var klass = '';
+
+        for ( var i = startI; i < arr.length; i++ ) {
+            var c = arr[i];
+
+            if ( isString(c) ) {
+                klass += ' ' + c;
+            } else if ( c instanceof Array ) {
+                klass += parseClassArray( c, 0 );
+            } else {
+                logError( 'unknown class given', c );
+            }
+        }
+
+        return klass;
+    }
+
+    var applyArray = function(bb, bbGun, dom, args, startI) {
+        var argsLen = args.length;
+
+        for (var i = startI; i < argsLen; i++) {
+            applyOne(bb, bbGun, dom, args[i], false);
+        }
+
+        return dom;
+    }
+
+    var applyOne = function(bb, bbGun, dom, arg, stringsAreContent) {
+        if (arg instanceof Array) {
+            applyArray( bb, bbGun, dom, arg, 0 );
+        } else if ( arg instanceof Element ) {
+            dom.appendChild( arg );
+        } else if ( arg.__isBBGun ) {
+            dom.appendChild( arg.dom() );
+        /*
+         * - html
+         * - class names
+         */
+        } else if ( isString(arg) ) {
+            if ( stringsAreContent || arg.trim().charAt(0) === '<' ) {
+                dom.insertAdjacentHTML( 'beforeend', arg );
+            } else {
+                bb.addClassOne( dom, arg );
+            }
+        } else if ( isObject(arg) ) {
+            attrObj( bb, bbGun, dom, arg, true );
+        } else {
+            logError( "invalid argument given", arg );
+        }
+
+        return dom
+    }
+
+    var createOneBBGun = function( bb, bbgun, obj ) {
+        if ( isObject(obj) ) {
+            return createObj( bb, bbgun, obj );
+        } else {
+            var dom = createOne( bb, obj );
+            assert( ! dom.__isBBGun, "BBGun given as basis for new BBGun" );
+            bbgun.dom( dom );
+        }
+
+        return dom;
+    }
+
+    var createOne = function( bb, obj ) {
+        /*
+         * A String ...
+         *  <html element="description"></html>
+         *  .class-name
+         *  element-name
+         *  '' (defaults to a div)
+         */
+        if ( isString(obj) ) {
+            return createString( bb, obj );
+            
+        /*
+         * An array of classes.
+         */
+        } else if ( obj instanceof Array ) {
+            if ( obj.length > 0 ) {
+                if ( obj[0].charAt(0) === '.' ) {
+                    return createString( bb, obj.join(' ') );
+                } else {
+                    return createString( bb, '.' + obj.join(' ') );
+                }
+            } else {
+                return bb.createElement();
+            }
+        } else if ( obj instanceof Element ) {
+            return obj;
+        } else if ( obj.__isBBGun ) {
+            return obj;
+        } else if ( isObject(obj) ) {
+            return createObj( bb, null, obj );
+        } else {
+            logError( "unknown parameter given", obj );
+        }
+    }
+
+    var createObj = function( bb, bbGun, obj ) {
+        var dom = obj.hasOwnProperty(TYPE_NAME_PROPERTY)      ?
+                bb.createElement( obj[TYPE_NAME_PROPERTY] ) :
+                bb.createElement()                          ;
+
+        if ( bbGun !== null ) {
+            bbGun.dom( dom );
+        }
+
+        for ( var k in obj ) {
+            if ( obj.hasOwnProperty(k) ) {
+                attrOne( bb, bbGun, dom, k, obj[k], false );
+            }
+        }
+
+        return dom;
+    }
+
+    var createString = function( bb, obj ) {
+        obj = obj.trim();
+
+        /*
+         * It's a HTML element.
+         */
+        if ( obj.charAt(0) === '<' ) {
+            var dom = htmlToElement( obj );
+
+            if ( dom === undefined ) {
+                logError( "invalid html given", obj );
+            } else {
+                return dom;
+            }
+        } else if ( obj.charAt(0) === '.' ) {
+            var dom = bb.createElement();
+            dom.className = obj.substring(1)
+            return dom;
+        } else if ( obj === '' ) {
+            return bb.createElement();
+        } else {
+            return bb.createElement( obj )
+        }
+    }
+
+    var toggleClassArray = function( dom, args, startI, inv ) {
+        if ( startI === undefined ) {
+            startI = 0;
+        }
+
+        var argsLen = args.length;
+        var endI = argsLen;
+
+        assert( startI < argsLen, "no arguments provided" );
+
+        var arg = args[startI];
+        var onRemove = args[ argsLen-1 ],
+            onAdd;
+        if ( isFunction(onRemove) ) {
+            assert( startI < argsLen-1, "not enough arguments provided" );
+
+            onAdd = args[ argsLen-2 ];
+
+            if ( isFunction(onAdd) ) {
+                endI -= 2;
+            } else {
+                onAdd = onRemove;
+                onRemove = null;
+
+                endI -= 1;
+            }
+        } else {
+            onAdd = null;
+            onRemove = null;
+        }
+         
+        if ( arg === true || (inv && arg === false) ) {
+            assert( startI+1 < endI, "no classes provided" );
+
+            iterateClasses( args, startI+1, endI, function(klass) {
+                dom.classList.add( klass );
+            } );
+
+            if ( onAdd !== null ) {
+                onAdd.call( dom, true );
+            }
+        } else if ( arg === false || (inv && arg === true) ) {
+            assert( startI+1 < endI, "no classes provided" );
+
+            iterateClasses( args, startI+1, endI, function(klass) {
+                dom.classList.remove( klass );
+            } );
+
+            if ( onRemove !== null ) {
+                onRemove.call( dom, false );
+            }
+        } else {
+            var lastArg = args[args.length-1];
+
+            if ( lastArg === true || (inv && lastArg === false) ) {
+                assert( startI < endI-1, "no classes provided" );
+
+                iterateClasses( args, startI, endI-1, function(klass) {
+                    dom.classList.add( klass );
+                } );
+            } else if ( lastArg === false || (inv && lastArg === true) ) {
+                assert( startI < endI-1, "no classes provided" );
+
+                iterateClasses( args, startI, endI-1, function(klass) {
+                    dom.classList.remove( klass );
+                } );
+            } else {
+                var hasRemove = false,
+                    hasAdd = false;
+
+                iterateClasses( args, startI, endI, function(klass) {
+                    if ( dom.classList.contains(klass) ) {
+                        dom.classList.remove(klass);
+                        hasRemove = true;
+                    } else {
+                        dom.classList.add(klass);
+                        hasAdd = true;
+                    }
+                } );
+
+                if ( onAdd !== null ) {
+                    if ( onRemove !== null ) {
+                        if ( hasAdd ) {
+                            onAdd.call( dom, true );
+                        }
+                        if ( hasRemove ) {
+                            onRemove.call( dom, true );
+                        }
+                    } else {
+                        onAdd.call( dom, hasAdd );
+                    }
+                }
+            }
+        }
+
+        return dom;
+    }
+
+    var beforeOne = function( bb, parentDom, dom, arg ) {
+        if ( dom !== null ) {
+            if ( arg instanceof Array ) {
+                for ( var i = 0; i < arg.length; i++ ) {
+                    beforeOne( bb, parentDom, dom, arg[i] );
+                }
+            } else if ( arg instanceof Element ) {
+                parentDom.insertBefore( arg, dom );
+            } else if ( arg.__isBBGun ) {
+                parentDom.insertBefore( arg.dom(), dom );
+            } else if ( isString(arg) ) {
+                dom.insertAdjacentHTML( 'beforebegin', arg );
+            } else if ( isObject(arg) ) {
+                parentDom.insertBefore( createObj(bb, null, arg), dom );
+            } else {
+                logError( "invalid argument given", arg );
+            }
+        }
+
+        return dom;
+    }
+
+    var afterOne = function( bb, parentDom, dom, arg ) {
+        if ( dom !== null ) {
+            if ( arg instanceof Array ) {
+                for ( var i = 0; i < arg.length; i++ ) {
+                    afterOne( bb, parentDom, dom, arg[i] );
+                }
+            } else if ( arg instanceof Element ) {
+                parentDom.insertAfter( arg, dom );
+            } else if ( arg.__isBBGun ) {
+                parentDom.insertAfter( arg.dom(), dom );
+            } else if ( isString(arg) ) {
+                dom.insertAdjacentHTML( 'afterend', arg );
+            } else if ( isObject(arg) ) {
+                parentDom.insertAfter( createObj(bb, null, arg), dom );
+            } else {
+                logError( "invalid argument given", arg );
+            }
+        }
+
+        return dom;
+    }
+
+    var addOne = function( bb, dom, arg ) {
+        if ( dom !== null ) {
+            if ( arg instanceof Array ) {
+                for ( var i = 0; i < arg.length; i++ ) {
+                    addOne( bb, dom, arg[i] );
+                }
+            } else if ( arg instanceof Element ) {
+                assert( arg.parentNode === null, "adding element, which already has a parent" );
+                dom.appendChild( arg );
+            } else if ( arg.__isBBGun ) {
+                var argDom = arg.dom();
+                assert( argDom.parentNode === null, "adding element, which already has a parent" );
+                dom.appendChild( argDom );
+            } else if ( isString(arg) ) {
+                dom.insertAdjacentHTML( 'beforeend', arg );
+            } else if ( isObject(arg) ) {
+                dom.appendChild( createObj(bb, null, arg) );
+            } else {
+                logError( "invalid argument given", arg );
+            }
+        }
+
+        return dom;
+    }
+
+    var addArray = function( bb, dom, args, startI ) {
+        if ( dom !== null ) {
+            for ( var i = startI; i < args.length; i++ ) {
+                addOne( bb, dom, args[i] );
+            }
+        }
+
+        return dom;
+    }
+
+    /**
+     * If there is a '.' in an attribute name,
+     * then this will be called.
+     *
+     * These handle attributes in the form:
+     *
+     *      'div.classFoo whatever'
+     *      'div.className'
+     *      '.className'
+     *
+     */
+    var attrOneNewChild = function( bb, bbGun, dom, k, val, dotI ) {
+        assert( k.length > 1, "empty description given" );
+
+        var className = k.substring(dotI+1);
+        var domType = ( dotI > 0 ) ?
+                    k.substring( 0, dotI ) :
+                    'div'                  ;
+
+        var newDom = newOneNewChildInner( bb, bbGun, dom, domType, val, k );
+
+        bb.addClassOne( newDom, className );
+    }
+
+    var newOneNewChildInner = function( bb, bbGun, dom, domType, val, debugVal ) {
+        var newDom;
+
+        if ( isObject(val) ) {
+            assert( bb.setup.isElement(domType), "invalid element type given, " + domType );
+            val[TYPE_NAME_PROPERTY] = domType;
+
+            newDom = createObj( bb, null, val );
+        } else {
+            newDom = bb.createElement( domType );
+
+            if ( val instanceof Element ) {
+                newDom.appendChild( val );
+            } else if ( val.__isBBGun ) {
+                newDom.appendChild( val.dom() );
+            } else if ( isString(val) ) {
+                newDom.innerHTML = val;
+            } else if ( isArray(val) ) {
+                applyArray(
+                        this,
+                        null,
+                        newDom,
+                        val,
+                        0
+                )
+            } else {
+                logError( "invalid object description given for, " + debugVal, debugVal );
+            }
+        }
+
+        dom.appendChild( newDom );
+
+        return newDom;
+    }
+
+    var attrOne = function(bb, bbGun, dom, k, val, isApply) {
+        var dotI = k.indexOf( '.' );
+
+        if ( dotI !== -1 ) {
+            attrOneNewChild( bb, bbGun, dom, k, val, dotI );
+        } else if ( k === TYPE_NAME_PROPERTY ) {
+            /* do nothing */
+        } else if ( k === 'className' ) {
+            if ( isApply ) {
+                bb.addClass( dom, val );
+            } else {
+                bb.setClass( dom, val );
+            }
+        } else if ( k === 'stop' ) {
+            bb.stop( dom, val );
+        } else if ( k === 'on' ) {
+            bb.on( dom, val );
+        } else if ( k === 'once' ) {
+            bb.once( dom, val );
+        } else if ( k === 'id' ) {
+            dom.id = val
+        } else if ( k === 'style' ) {
+            if ( isString(val) ) {
+                dom.setAttribute( val );
+            } else {
+                bb.style( dom, val );
+            }
+        } else if ( k === 'text' ) {
+            bb.textOne( dom, val );
+        } else if ( k === 'html' ) {
+            bb.htmlOne( dom, val );
+        } else if ( k === 'value' ) {
+            if ( val === undefined || val === null ) {
+                dom.value = '';
+            } else {
+                dom.value = val
+            }
+
+        } else if ( k === 'self' || k === 'this' ) {
+            assertFunction( val, "none function given for 'self' attribute" );
+
+            if ( bbGun !== null ) {
+                val.call( bbGun, dom );
+            } else {
+                val.call( dom, dom );
+            }
+
+        /* Events */
+
+        /* custom HTML event */
+        } else if ( bb.setup.data.events.hasOwnProperty(k) ) {
+            if ( bbGun !== null ) {
+                bbGun.on( k, val );
+            } else {
+                bb.setup.data.events[k]( dom, val );
+            }
+        /* standard HTML event */
+        } else if ( HTML_EVENTS.hasOwnProperty(k) ) {
+            if ( bbGun !== null ) {
+                bbGun.on( k, val );
+            } else {
+                dom.addEventListener( k, val, false )
+            }
+        /* custom BBGun Event */
+        } else if ( bbGun !== null && bbGun.__proto__.__eventList[k] === true ) {
+            bbGun.on( k, val );
+
+        /* new objet creation */
+        } else if ( bb.setup.isElement(k) ) {
+            newOneNewChildInner( bb, bbGun, dom, k, val, k );
+
+        /* Arribute */
+        } else {
+            assertLiteral( val, "setting an object to a DOM attribute (probably a bug)," + k, k, val )
+            dom.setAttribute( k, val );
+        }
+    }
+
+    var attrObj = function(bb, bbGun, dom, obj, isApply) {
+        var hasHTMLText = false;
+
+        for ( var k in obj ) {
+            if ( obj.hasOwnProperty(k) ) {
+                if ( k === 'text' || k === 'html' ) {
+                    if ( hasHTMLText ) {
+                        logError( "cannot use text and html at the same time", obj );
+                    } else {
+                        hasHTMLText = true;
+                    }
+                }
+
+                attrOne( bb, bbGun, dom, k, obj[k], isApply );
+            }
+        }
+    }
+
+===============================================================================
+
+newBB
+-----
+
+Factory method for creating the bb module it's self. It's here for:
+
+ - emphasize what bb actually declares as public (everything in here).
+ - allow creating copies of bb through bb.clone().
+ - if cloned, it avoids re-creating the helper methods used within (as they are
+   defined above this, outside).
+
+===============================================================================
+
+    var newBB = function() {
 
 -------------------------------------------------------------------------------
 
@@ -272,68 +917,23 @@ and a function.
 -------------------------------------------------------------------------------
 
         var bb = function() {
-            if (
-                    this !== undefined && 
-                    this !== null && 
-                    this.__hasConstructed !== true &&
-                    this instanceof bb
-            ) {
+            if ( this instanceof bb ) {
                 return newBB( arguments );
             } else {
                 return bb.createArray( arguments[0], arguments, 1 );
             }
         }
 
-        bb.__hasConstructor = true;
+-------------------------------------------------------------------------------
 
-        /**
-         * Generates a register method.
-         *
-         * We generate it, so we can avoid the cost of passing
-         * in a callback method.
-         *
-         * @param methodName The name of this method (for internal recursive calls).
-         * @param methodNameOne The name of the callback to perform, on this object.
-         */
-        var newRegisterMethod = function( methodName, methodNameOne ) {
-            return new Function( "name", "fun", [
-                            '    var argsLen = arguments.length;',
-                            '    ',
-                            '    if ( argsLen === 1 ) {',
-                            '        assertObject( name, "non-object given for registering" );',
-                            '        ',
-                            '        for ( var k in name ) {',
-                            '            if ( name.hasOwnProperty(k) ) {',
-                            '                this.' + methodName + '( k, name[k] );',
-                            '            }',
-                            '        }',
-                            '    } else if ( argsLen === 2 ) {',
-                            '        if ( name instanceof Array ) {',
-                            '            for ( var i = 0; i < name.length; i++ ) {',
-                            '                this.' + methodName + '( name[i], fun );',
-                            '            }',
-                            '        } else {',
-                            '            assertString( name, "non-string given for name" );',
-                            '            assertFunction( fun, "non-function given for function" );',
-                            '            ',
-                            '            this.' + methodNameOne + '( name, fun );',
-                            '        }',
-                            '    } else if ( argsLen === 0 ) {',
-                            '        logError( "no parameters given" )',
-                            '    } else {',
-                            '        var names = new Array( argsLen-1 );',
-                            '        fun = arguments[ argsLen-1 ];',
-                            '        ',
-                            '        for ( var i = 0; i < argsLen-1; i++ ) {',
-                            '            names[i] = arguments[i];',
-                            '        }',
-                            '        ',
-                            '        this.' + methodName + '( names, fun );',
-                            '    }',
-                            '    ',
-                            '    return this;'
-                    ].join("\n")
-            )
+## bb.clone()
+
+Clones the bb module, giving you a fresh copy.
+
+-------------------------------------------------------------------------------
+
+        bb.clone = function() {
+            return newBB();
         }
 
         /**
@@ -508,118 +1108,6 @@ Utiliity fucntions available for use.
                 }
         })();
 
-        /**
-         * Helper Methods, before, bb it's self!
-         */
-
-        var setOnObject = function( events, dom, obj, useCapture ) {
-            assert( dom, "null or undefined dom given", dom );
-
-            for ( var k in obj ) {
-                if ( obj.hasOwnProperty(k) ) {
-                    setOn( events, dom, k, obj[k], useCapture )
-                }
-            }
-        }
-
-        var setOn = function( events, dom, name, fun, useCapture ) {
-            assert( dom, "null or undefined dom given", dom );
-
-            if ( name instanceof Array ) {
-                for ( var i = 0; i < name.length; i++ ) {
-                    setOn( events, dom, name, fun, useCapture );
-                }
-            } else {
-                if ( dom instanceof Element ) {
-                    if ( events.hasOwnProperty(name) ) {
-                        events[name](dom, fun, useCapture);
-                    } else {
-                        dom.addEventListener( name, fun, useCapture )
-                    }
-                } else if ( dom instanceof Array ) {
-                    for ( var i = 0; i < dom.length; i++ ) {
-                        setOn( events, dom[i], name, fun, useCapture );
-                    }
-                }
-            }
-        }
-
-        var iterateClasses = function( args, i, endI, fun ) {
-            for ( ; i < endI; i++ ) {
-                var arg = args[i];
-
-                if ( isString(arg) ) {
-                    assertString( arg, "expected string for add DOM class" );
-
-                    if ( arg.indexOf(' ') !== -1 ) {
-                        var klasses = arg.split( ' ' );
-
-                        for ( var j = 0; j < klasses.length; j++ ) {
-                            var klass = klasses[j];
-
-                            if ( klass !== '' ) {
-                                var dotI = klass.indexOf( '.' );
-                                if ( dotI === 0 ) {
-                                    klass = klass.substring(1);
-                                }
-
-                                if ( klass.indexOf('.') !== -1 ) {
-                                    var klassParts = klass.split('.');
-
-                                    for ( var k = 0; k < klassParts.length; i++ ) {
-                                        if ( fun(klassParts[k]) === false ) {
-                                            return;
-                                        }
-                                    }
-                                } else if ( fun(klass) === false ) {
-                                    return;
-                                }
-                            }
-                        }
-                    } else {
-                        var dotI = arg.indexOf( '.' );
-                        if ( dotI === 0 ) {
-                            arg = arg.substring(1);
-                        }
-
-                        if ( arg.indexOf('.') !== -1 ) {
-                            var argParts = arg.split('.');
-
-                            for ( var k = 0; k < argParts.length; i++ ) {
-                                if ( fun(argParts[k]) === false ) {
-                                    return;
-                                }
-                            }
-                        } else if ( fun(arg) === false ) {
-                            return;
-                        }
-                    }
-                } else if ( isArray(arg) ) {
-                    iterateClasses( arg, 0, arg.length, fun );
-                } else {
-                    logError( "invalid parameter", arg, args, i, endI );
-                }
-            }
-        }
-
-        var parseClassArray = function( arr, startI ) {
-            var klass = '';
-
-            for ( var i = startI; i < arr.length; i++ ) {
-                var c = arr[i];
-
-                if ( isString(c) ) {
-                    klass += ' ' + c;
-                } else if ( c instanceof Array ) {
-                    klass += parseClassArray( c, 0 );
-                } else {
-                    logError( 'unknown class given', c );
-                }
-            }
-
-            return klass;
-        }
-
 -------------------------------------------------------------------------------
 
 ## bb.on
@@ -718,6 +1206,18 @@ Used as the standard way to
             )
         }
 
+        bb.initBBGun = function( bbGun ) {
+            var dom = bbGun.dom();
+
+            return applyArray(
+                    this,
+                    bbGun,
+                    bbGun.dom(),
+                    arguments,
+                    1
+            );
+        }
+
         bb.createArray = function( obj, args, i ) {
             if ( i === undefined ) {
                 i = 0
@@ -756,42 +1256,6 @@ Used as the standard way to
             )
         }
 
-        var applyArray = function(bb, bbGun, dom, args, startI) {
-            var argsLen = args.length;
-
-            for (var i = startI; i < argsLen; i++) {
-                applyOne(bb, bbGun, dom, args[i], false);
-            }
-
-            return dom;
-        }
-
-        var applyOne = function(bb, bbGun, dom, arg, stringsAreContent) {
-            if (arg instanceof Array) {
-                applyArray( bb, bbGun, dom, arg, 0 );
-            } else if ( arg instanceof Element ) {
-                dom.appendChild( arg );
-            } else if ( arg.__isBBGun ) {
-                dom.appendChild( arg.dom() );
-            /*
-             * - html
-             * - class names
-             */
-            } else if ( isString(arg) ) {
-                if ( stringsAreContent || arg.trim().charAt(0) === '<' ) {
-                    dom.insertAdjacentHTML( 'beforeend', arg );
-                } else {
-                    bb.addClassOne( dom, arg );
-                }
-            } else if ( isObject(arg) ) {
-                attrObj( bb, bbGun, dom, arg );
-            } else {
-                logError( "invalid argument given", arg );
-            }
-
-            return dom
-        }
-
 -------------------------------------------------------------------------------
 
 ## bb.createOne
@@ -812,75 +1276,10 @@ arguments-add-class stuff.
             return createOne( this, obj );
         }
 
-        var createOneBBGun = function( bb, bbgun, obj ) {
-            if ( isObject(obj) ) {
-                return createObj( bb, bbgun, obj );
-            } else {
-                var dom = createOne( bb, obj );
-                assert( ! dom.__isBBGun, "BBGun given as basis for new BBGun" );
-                bbgun.dom( dom );
-            }
-
-            return dom;
-        }
-
-        var createOne = function( bb, obj ) {
-            /*
-             * A String ...
-             *  <html element="description"></html>
-             *  .class-name
-             *  element-name
-             *  '' (defaults to a div)
-             */
-            if ( isString(obj) ) {
-                return createString( bb, obj );
-                
-            /*
-             * An array of classes.
-             */
-            } else if ( obj instanceof Array ) {
-                if ( obj.length > 0 ) {
-                    if ( obj[0].charAt(0) === '.' ) {
-                        return createString( bb, obj.join(' ') );
-                    } else {
-                        return createString( bb, '.' + obj.join(' ') );
-                    }
-                } else {
-                    return bb.createElement();
-                }
-            } else if ( obj instanceof Element ) {
-                return obj;
-            } else if ( obj.__isBBGun ) {
-                return obj;
-            } else if ( isObject(obj) ) {
-                return createObj( bb, null, obj );
-            } else {
-                logError( "unknown parameter given", obj );
-            }
-        }
-
         bb.createObj = function( obj ) {
             assertObject( obj );
 
             return createObj( this, null, obj );
-        }
-
-        var createObj = function( bb, bbGun, obj ) {
-            var dom = obj.hasOwnProperty(TYPE_NAME_PROPERTY)      ?
-                    bb.createElement( obj[TYPE_NAME_PROPERTY] ) :
-                    bb.createElement()                          ;
-
-            if ( bbGun !== null ) {
-                bbGun.dom( dom );
-            }
-
-            for ( var k in obj ) {
-                if ( obj.hasOwnProperty(k) ) {
-                    attrOne( bb, bbGun, dom, k, obj[k] );
-                }
-            }
-
-            return dom;
         }
 
 -------------------------------------------------------------------------------
@@ -891,31 +1290,6 @@ arguments-add-class stuff.
 
         bb.createString = function( obj ) {
             return createString( this, obj );
-        }
-
-        var createString = function( bb, obj ) {
-            obj = obj.trim();
-
-            /*
-             * It's a HTML element.
-             */
-            if ( obj.charAt(0) === '<' ) {
-                var dom = htmlToElement( obj );
-
-                if ( dom === undefined ) {
-                    logError( "invalid html given", obj );
-                } else {
-                    return dom;
-                }
-            } else if ( obj.charAt(0) === '.' ) {
-                var dom = bb.createElement();
-                dom.className = obj.substring(1)
-                return dom;
-            } else if ( obj === '' ) {
-                return bb.createElement();
-            } else {
-                return bb.createElement( obj )
-            }
         }
 
 -------------------------------------------------------------------------------
@@ -942,7 +1316,15 @@ the input with type button.
             }
 
             if ( this.setup.data.elements.hasOwnProperty(name) ) {
-                return this.setup.data.elements[name]( name );
+                var dom = this.setup.data.elements[name]( name );
+
+                if ( dom.__isBBGun ) {
+                    return dom.dom();
+                }  else {
+                    assert( dom instanceof Element, "htmlToElement must return a HTML Element, or BBGun", dom );
+
+                    return dom;
+                }
             } else if ( HTML_ELEMENTS.hasOwnProperty(name) ) {
                 return document.createElement( name );
             } else {
@@ -1051,104 +1433,6 @@ false for the removed fun.
 
         bb.toggleClassInvArray = function( dom, args, startI ) {
             return toggleClassArray( dom, args, startI, true );
-        }
-
-        var toggleClassArray = function( dom, args, startI, inv ) {
-            if ( startI === undefined ) {
-                startI = 0;
-            }
-
-            var argsLen = args.length;
-            var endI = argsLen;
-
-            assert( startI < argsLen, "no arguments provided" );
-
-            var arg = args[startI];
-            var onRemove = args[ argsLen-1 ],
-                onAdd;
-            if ( isFunction(onRemove) ) {
-                assert( startI < argsLen-1, "not enough arguments provided" );
-
-                onAdd = args[ argsLen-2 ];
-
-                if ( isFunction(onAdd) ) {
-                    endI -= 2;
-                } else {
-                    onAdd = onRemove;
-                    onRemove = null;
-
-                    endI -= 1;
-                }
-            } else {
-                onAdd = null;
-                onRemove = null;
-            }
-             
-            if ( arg === true || (inv && arg === false) ) {
-                assert( startI+1 < endI, "no classes provided" );
-
-                iterateClasses( args, startI+1, endI, function(klass) {
-                    dom.classList.add( klass );
-                } );
-
-                if ( onAdd !== null ) {
-                    onAdd.call( dom, true );
-                }
-            } else if ( arg === false || (inv && arg === true) ) {
-                assert( startI+1 < endI, "no classes provided" );
-
-                iterateClasses( args, startI+1, endI, function(klass) {
-                    dom.classList.remove( klass );
-                } );
-
-                if ( onRemove !== null ) {
-                    onRemove.call( dom, false );
-                }
-            } else {
-                var lastArg = args[args.length-1];
-
-                if ( lastArg === true || (inv && lastArg === false) ) {
-                    assert( startI < endI-1, "no classes provided" );
-
-                    iterateClasses( args, startI, endI-1, function(klass) {
-                        dom.classList.add( klass );
-                    } );
-                } else if ( lastArg === false || (inv && lastArg === true) ) {
-                    assert( startI < endI-1, "no classes provided" );
-
-                    iterateClasses( args, startI, endI-1, function(klass) {
-                        dom.classList.remove( klass );
-                    } );
-                } else {
-                    var hasRemove = false,
-                        hasAdd = false;
-
-                    iterateClasses( args, startI, endI, function(klass) {
-                        if ( dom.classList.contains(klass) ) {
-                            dom.classList.remove(klass);
-                            hasRemove = true;
-                        } else {
-                            dom.classList.add(klass);
-                            hasAdd = true;
-                        }
-                    } );
-
-                    if ( onAdd !== null ) {
-                        if ( onRemove !== null ) {
-                            if ( hasAdd ) {
-                                onAdd.call( dom, true );
-                            }
-                            if ( hasRemove ) {
-                                onRemove.call( dom, true );
-                            }
-                        } else {
-                            onAdd.call( dom, hasAdd );
-                        }
-                    }
-                }
-            }
-
-            return dom;
         }
 
         bb.addClass = function( dom ) {
@@ -1266,62 +1550,18 @@ false for the removed fun.
             }
         }
 
-        var beforeOne = function( bb, parentDom, dom, arg ) {
-            if ( dom !== null ) {
-                if ( arg instanceof Array ) {
-                    for ( var i = 0; i < arg.length; i++ ) {
-                        beforeOne( bb, parentDom, dom, arg[i] );
-                    }
-                } else if ( arg instanceof Element ) {
-                    parentDom.insertBefore( arg, dom );
-                } else if ( arg.__isBBGun ) {
-                    parentDom.insertBefore( arg.dom(), dom );
-                } else if ( isString(arg) ) {
-                    dom.insertAdjacentHTML( 'beforebegin', arg );
-                } else if ( isObject(arg) ) {
-                    parentDom.insertBefore( createObj(bb, null, arg), dom );
-                } else {
-                    logError( "invalid argument given", arg );
-                }
-            }
-
-            return dom;
-        }
-
-        var afterOne = function( bb, parentDom, dom, arg ) {
-            if ( dom !== null ) {
-                if ( arg instanceof Array ) {
-                    for ( var i = 0; i < arg.length; i++ ) {
-                        afterOne( bb, parentDom, dom, arg[i] );
-                    }
-                } else if ( arg instanceof Element ) {
-                    parentDom.insertAfter( arg, dom );
-                } else if ( arg.__isBBGun ) {
-                    parentDom.insertAfter( arg.dom(), dom );
-                } else if ( isString(arg) ) {
-                    dom.insertAdjacentHTML( 'afterend', arg );
-                } else if ( isObject(arg) ) {
-                    parentDom.insertAfter( createObj(bb, null, arg), dom );
-                } else {
-                    logError( "invalid argument given", arg );
-                }
-            }
-
-            return dom;
-        }
-
         bb.beforeOne = function( dom, node ) {
             var dom = bb.get( dom, true );
-            var parentDom = ensureParent( dom );
+            assertParent( dom );
 
-            return beforeOne( this, parentDom, dom, node );
+            return beforeOne( this, dom.parentNode, dom, node );
         }
 
         bb.afterOne = function( dom, node ) {
             var dom = bb.get( dom, true );
-            var parentDom = ensureParent( dom );
+            assertParent( dom );
 
-            return afterOne( this, parentDom, dom, node );
+            return afterOne( this, dom.parentNode, dom, node );
         }
 
         bb.beforeArray = function( dom, args, i ) {
@@ -1330,7 +1570,8 @@ false for the removed fun.
             }
 
             var dom = bb.get( dom, true );
-            var parentDom = ensureParent( dom );
+            assertParent( dom );
+            var parentDom = dom.parentNode;
 
             for ( ; i < args.length; i++ ) {
                 beforeOne( this, parentDom, dom, args[i] );
@@ -1345,7 +1586,8 @@ false for the removed fun.
             }
 
             var dom = bb.get( dom, true );
-            var parentDom = ensureParent( dom );
+            assertParent( dom );
+            var parentDom = dom.parentNode;
 
             for ( ; i < args.length; i++ ) {
                 afterOne( this, parentDom, dom, node );
@@ -1360,41 +1602,6 @@ false for the removed fun.
 
         bb.after = function( dom ) {
             return this.afterArray( dom, arguments, 1 );
-        }
-
-        var addOne = function( bb, dom, arg ) {
-            if ( dom !== null ) {
-                if ( arg instanceof Array ) {
-                    for ( var i = 0; i < arg.length; i++ ) {
-                        addOne( bb, dom, arg[i] );
-                    }
-                } else if ( arg instanceof Element ) {
-                    assert( arg.parentNode === null, "adding element, which already has a parent" );
-                    dom.appendChild( arg );
-                } else if ( arg.__isBBGun ) {
-                    var argDom = arg.dom();
-                    assert( argDom.parentNode === null, "adding element, which already has a parent" );
-                    dom.appendChild( argDom );
-                } else if ( isString(arg) ) {
-                    dom.insertAdjacentHTML( 'beforeend', arg );
-                } else if ( isObject(arg) ) {
-                    dom.appendChild( createObj(bb, null, arg) );
-                } else {
-                    logError( "invalid argument given", arg );
-                }
-            }
-
-            return dom;
-        }
-
-        var addArray = function( bb, dom, args, startI ) {
-            if ( dom !== null ) {
-                for ( var i = startI; i < args.length; i++ ) {
-                    addOne( bb, dom, args[i] );
-                }
-            }
-
-            return dom;
         }
 
         bb.add = function( dom ) {
@@ -1420,9 +1627,13 @@ false for the removed fun.
             );
         }
 
+-------------------------------------------------------------------------------
+
 ## bb.html
 
 Sets the HTML content within this element.
+
+-------------------------------------------------------------------------------
 
         bb.html = function( dom ) {
             return this.htmlArray( dom, arguments, 1 );
@@ -1493,14 +1704,24 @@ Sets the HTML content within this element.
             return dom;
         }
 
+-------------------------------------------------------------------------------
+
 ## bb.text
 
 Sets the text content within this dom,
 to the text values given.
 
+-------------------------------------------------------------------------------
+
         bb.text = function( dom ) {
             return this.textArray( dom, arguments, 1 );
         }
+
+-------------------------------------------------------------------------------
+
+## bb.textOne
+
+-------------------------------------------------------------------------------
 
         bb.textOne = function( dom, text ) {
             if ( text instanceof Array ) {
@@ -1514,6 +1735,12 @@ to the text values given.
             return dom;
         }
 
+-------------------------------------------------------------------------------
+
+## bb.textArray
+
+-------------------------------------------------------------------------------
+
         bb.textArray = function( dom, args, startI ) {
             if ( startI === undefined ) {
                 startI = 0;
@@ -1524,143 +1751,6 @@ to the text values given.
             }
 
             return dom;
-        }
-
-        /**
-         * If there is a '.' in an attribute name,
-         * then this will be called.
-         *
-         * These handle attributes in the form:
-         *
-         *      'div.classFoo whatever'
-         *      'div.className'
-         *      '.className'
-         *
-         */
-        var attrOneNewChild = function( bb, bbGun, dom, k, val, dotI ) {
-            assert( k.length > 1, "empty description given" );
-
-            var className = k.substring(dotI+1);
-            var domType = ( dotI > 0 ) ?
-                        k.substring( 0, dotI ) :
-                        'div'                  ;
-
-            var newDom;
-
-            if ( isObject(val) ) {
-                assert( bb.setup.isElement(domType), "invalid element type given, " + domType );
-                val[TYPE_NAME_PROPERTY] = domType;
-
-                newDom = createObj( bb, null, val );
-            } else {
-                newDom = bb.createElement( domType );
-
-                if ( val instanceof Element ) {
-                    newDom.appendChild( val );
-                } else if ( val.__isBBGun ) {
-                    newDom.appendChild( val.dom() );
-                } else if ( isString(val) ) {
-                    newDom.innerHTML = val;
-                } else if ( isArray(val) ) {
-                    applyArray(
-                            this,
-                            null,
-                            newDom,
-                            val,
-                            0
-                    )
-                } else {
-                    logError( "invalid object description given for, " + k, k );
-                }
-            }
-
-            bb.addClassOne( newDom, className );
-
-            dom.appendChild( newDom );
-        }
-
-        var attrOne = function(bb, bbGun, dom, k, val) {
-            var dotI = k.indexOf( '.' );
-
-            if ( dotI !== -1 ) {
-                attrOneNewChild( bb, bbGun, dom, k, val, dotI );
-            } else if ( k === TYPE_NAME_PROPERTY ) {
-                /* do nothing */
-            } else if ( k === 'className' ) {
-                bb.setClass( dom, val );
-            } else if ( k === 'stop' ) {
-                bb.stop( dom, val );
-            } else if ( k === 'on' ) {
-                bb.on( dom, val );
-            } else if ( k === 'once' ) {
-                bb.once( dom, val );
-            } else if ( k === 'id' ) {
-                dom.id = val
-            } else if ( k === 'style' ) {
-                bb.style( dom, val );
-            } else if ( k === 'text' ) {
-                bb.textOne( dom, val );
-            } else if ( k === 'html' ) {
-                bb.htmlOne( dom, val );
-            } else if ( k === 'value' ) {
-                if ( val === undefined || val === null ) {
-                    dom.value = '';
-                } else {
-                    dom.value = val
-                }
-
-            } else if ( k === 'self' || k === 'this' ) {
-                assertFunction( val, "none function given for 'self' attribute" );
-
-                if ( bbGun !== null ) {
-                    val.call( bbGun, dom );
-                } else {
-                    val.call( dom, dom );
-                }
-
-            /* Events */
-
-            /* custom HTML event */
-            } else if ( bb.setup.data.events.hasOwnProperty(k) ) {
-                if ( bbGun !== null ) {
-                    bbGun.on( k, val );
-                } else {
-                    bb.setup.data.events[k]( dom, val );
-                }
-            /* standard HTML event */
-            } else if ( HTML_EVENTS.hasOwnProperty(k) ) {
-                if ( bbGun !== null ) {
-                    bbGun.on( k, val );
-                } else {
-                    dom.addEventListener( k, val, false )
-                }
-            /* custom BBGun Event */
-            } else if ( bbGun !== null && bbGun.__proto__.__eventList[k] === true ) {
-                bbGun.on( k, val );
-
-            /* Arribute */
-            } else {
-                assertLiteral( val, "setting an object to a DOM attribute (probably a bug)," + k, k, val )
-                dom.setAttribute( k, val );
-            }
-        }
-
-        var attrObj = function(bb, bbGun, dom, obj) {
-            var hasHTMLText = false;
-
-            for ( var k in obj ) {
-                if ( obj.hasOwnProperty(k) ) {
-                    if ( k === 'text' || k === 'html' ) {
-                        if ( hasHTMLText ) {
-                            logError( "cannot use text and html at the same time", obj );
-                        } else {
-                            hasHTMLText = true;
-                        }
-                    }
-
-                    attrOne( bb, bbGun, dom, k, obj[k] );
-                }
-            }
         }
 
 -------------------------------------------------------------------------------
@@ -1699,13 +1789,13 @@ to the text values given.
                         return dom.getAttribute( obj );
                     }
                 } else if ( isObject(obj) ) {
-                    attrObj( this, null, dom, obj );
+                    attrObj( this, null, dom, obj, false );
                 } else {
                     logError( "invalid parameter given", obj );
                 }
             } else if ( arguments.length === 3 ) {
                 assertString( obj, "non-string given as key for attr", obj );
-                attrOne( this, null, dom, obj, val );
+                attrOne( this, null, dom, obj, val, false );
             } else {
                 if ( arguments.length < 2 ) {
                     throw new Error( "not enough parameters given" );
@@ -1727,12 +1817,15 @@ to the text values given.
             }
         }
 
+===============================================================================
 
 Pre-provided Touch Events
 -------------------------
 
 Events for click, and hold, under touch interface,
 is pre-provided.
+
+===============================================================================
 
         var IS_TOUCH = !! ('ontouchstart' in window)  // works on most browsers 
                     || !!('onmsgesturechange' in window); // works on IE 10
@@ -1793,3 +1886,4 @@ is pre-provided.
     }
 
     window['bb'] = newBB();
+
