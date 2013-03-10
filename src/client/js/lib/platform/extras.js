@@ -84,7 +84,7 @@
 
                     if ( startI === 0 ) {
                         newArgs = new Array( args.length + 1 );
-                        newArgs[0] = args[i];
+                        newArgs[0] = this;
 
                         for ( var i = 0; i < args.length; i++ ) {
                             newArgs[i+1] = args[i];
@@ -94,12 +94,16 @@
                         newArgs[0] = this;
 
                         for ( var i = startI; i < args.length; i++ ) {
-                            newArgs[(i-startI)+1] = newArgs[i];
+                            newArgs[(i-startI)+1] = args[i];
                         }
                     }
 
                     return fun.bind.apply( fun, newArgs );
                 }
+            },
+
+            has: function( name ) {
+                return this.hasOwnProperty( name );
             }
     } );
 
