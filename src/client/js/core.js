@@ -276,35 +276,23 @@
      */
     slate.IGNORE_RESULT = { ignore: true };
 
-    slate.commandEach = function( name, fun ) {
-        if ( arguments.length === 1 ) {
-            slate.commands.addEach( name );
-        } else {
-            slate.commands.addEach( name, fun );
-        }
-
-        return slate;
+    var commandsBuilder = function( methodName ) {
+        return new Function( "a", "b", [
+                "if ( arguments.length === 1 ) {",
+                "    slate.commandsStore." + methodName + "( a );",
+                "} else {",
+                "    slate.commandsStore." + methodName + "( a, b );",
+                "}",
+                "",
+                "return slate;"
+        ].join("\n"));
     }
 
-    slate.commandValues = function( name, fun ) {
-        if ( arguments.length === 1 ) {
-            slate.commands.addValues( name );
-        } else {
-            slate.commands.addValues( name, fun );
-        }
-
-        return slate;
-    }
-
-    slate.command = function( name, fun ) {
-        if ( arguments.length === 1 ) {
-            slate.commands.add( name );
-        } else {
-            slate.commands.add( name, fun );
-        }
-
-        return slate;
-    }
+    slate.commandsEach  = commandsBuilder( 'addMultipleEach' );
+    slate.commandEach   = commandsBuilder( 'addEach'         );
+    slate.commandValues = commandsBuilder( 'addValues'       );
+    slate.command       = commandsBuilder( 'add'             );
+    slate.commands      = commandsBuilder( 'addCommands'     );
 
     /**
      * Example usage:

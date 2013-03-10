@@ -58,14 +58,12 @@
         }
     }
 
-    slate.command({
+    slate.commands({
             cd : cd,
             cwd: cwd
     })
 
-    slate.commandEach({
-            ls: ls
-    })
+    slate.commandEach( 'ls', ls );
     
     slate.html({
             type: slate.fs.File,

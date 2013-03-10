@@ -181,7 +181,7 @@
         }
     }
 
-    slate.commandEach({
+    slate.commandsEach({
             load: load,
             head: head,
             get : get

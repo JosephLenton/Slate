@@ -24,6 +24,14 @@
          * @param whenDone Optional, a callback to call when all scripts have been loaded.
          */
         loadExtensions: function( root, each, whenDone ) {
+            this.loadExtensionsInner( root, 'js', each, function() {
+                this.loadExtensionsInner( root, 'jsx', each, whenDone );
+            } );
+        },
+
+        loadExtensionsInner: function( root, fileExtension, each, whenDone ) {
+            var self = this;
+
             if ( ! root ) {
                 root = (slate.constants.clientRoot || '.') + '/extensions';
             }
@@ -41,7 +49,7 @@
                 count--;
 
                 if ( count === 0 && whenDone ) {
-                    whenDone( errors );
+                    whenDone.call( self, errors );
                 }
             }
 
@@ -49,6 +57,8 @@
              * Get the file contents, check it, and then validate.
              */
             var loadScript = function(file) {
+                count++;
+
                 file.contents( function(js) {
                     if ( js instanceof Error ) {
                         if ( each ) {
@@ -89,6 +99,7 @@
                     }
                 } )
             }
+
             var errorLoaded = function( url, file ) {
                 var err = new Error( "failed to load extension " + url );
 
@@ -102,13 +113,11 @@
             // load in the extension files
             fs.filesRecursive( root,
                     function(file) {
-                        count++;
-
-                        file.isFile && file.extension( 'js', loadScript );
+                        file.isFile && file.extension( fileExtension, loadScript );
                     },
                     function() {
                         if ( whenDone && count === 0 ) {
-                            whenDone( errors );
+                            whenDone.call( self, errors );
                         }
                     }
             )
@@ -180,16 +189,17 @@
     }
 
     var initialize = function( errors ) {
-        slate.commands.remove( 'get', 'head', 'ignore', 'sleep' );
-        //slate.commands.remove( 'describe' );
-        slate.commands.remove( 'help', 'first', 'last', 'log', 'filter' );
-        slate.commands.remove( 'reload', 'reloadCSS', 'reloadExtensions' );
-        slate.commands.remove( 'ifDev', 'dev' );
-        slate.commands.remove( 'sum' );
+        slate.commandsStore.remove(
+                'get', 'head', 'ignore', 'sleep',
+//                'describe',
+                'help', 'first', 'last', 'log', 'filter',
+                'reload', 'reloadCSS', 'reloadExtensions',
+                'ifDev', 'dev',
 
-        slate.commands.remove( 'load' );
-        slate.commands.remove( 'cls' );
-        slate.commands.remove( 'exit' );
+                'load',
+                'cls',
+                'exit'
+        );
 
         if ( slate.constants.cwd ) {
             slate.fs.FileSystem.setCWD( slate.constants.cwd );
@@ -257,7 +267,7 @@
          * Create and setup the command for use.
          */
 
-        window.slate.commands.bindCommands(
+        window.slate.commandsStore.bindCommands(
                 clear,
                 function( r ) {
                     window.slate.executor.setLastDisplay( r );
@@ -275,7 +285,7 @@
             var touchBar = new window.slate.TouchBar(
                     body,
                     executor,
-                    window.slate.commands.listCommands(),
+                    window.slate.commandsStore.listCommands(),
                     options.tron ?
                             'tron' :
                             ''

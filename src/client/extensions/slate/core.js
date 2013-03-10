@@ -1,7 +1,7 @@
 "use strict";
 
 (function() {
-    slate.command({
+    slate.commands({
             exit: function(a, display) {
                 window.close();
             },

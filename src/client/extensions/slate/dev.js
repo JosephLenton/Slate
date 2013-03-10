@@ -24,7 +24,7 @@
         return params;
     }
 
-    slate.command({
+    slate.commands({
             reloadCSS: reloadCSS,
             reloadExtensions: reloadExtensions,
             reload: reload,

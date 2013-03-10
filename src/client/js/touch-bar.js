@@ -2,6 +2,13 @@
 
 window.slate = window.slate || {};
 window.slate.TouchBar = (function() {
+    var bb = window.bb.clone();
+    bb.setup.element( 'ast', function() {
+        return new ast.Empty();
+    } );
+
+    var BBGun = window.BBGun.clone( bb );
+            
     var COMMAND_TO_SYMBOL = {
             'sqrt' : String.fromCharCode( 8730 ),
             'sum'  : String.fromCharCode( 8721 )
@@ -200,16 +207,21 @@ window.slate.TouchBar = (function() {
 
     var ast = {};
 
-    ast.Node = BBGun.params('touch-ast', {
-                    click: function() {
-                        if ( ! this.isSelected() ) {
-                            this.getView().setCurrent( this );
+    var nodeClick = function() {
+        if ( ! this.isSelected() ) {
+            this.getView().setCurrent( this );
 
-                            return false;
-                        }
-                    }
-            }).
-            sub(function() {
+            return false;
+        }
+    }
+
+    ast.Node = (function( desc ) {
+                BBGun.call( this, 'touch-ast', { click: nodeClick } );
+
+                if ( arguments.length !== 0 ) {
+                    bb.initBBGun( this, desc );
+                }
+
                 this.up   = null;
                 this.view = null;
 
@@ -247,6 +259,7 @@ window.slate.TouchBar = (function() {
                     }
                 } )
             }).
+            extend( BBGun ).
 
             /*
              * Blank, but required, methods.
@@ -1425,6 +1438,47 @@ window.slate.TouchBar = (function() {
         }
     })();
 
+    ast.GenericCommand =
+            (function(desc) {
+                assert( desc.visual );
+
+                ast.Node.call( this, desc.visual );
+                this.addClass( 'touch-ast-generic' );
+
+                this.commandName = desc.name;
+            }).
+            extend( ast.Node ).
+            override({
+                validate: function( onError ) {
+                    throw new Error( "todo, implement validate" );
+
+                    if ( !this.emptyAllowed && this.input.value === '' ) {
+                        onError( this, "this is missing a value" );
+                        
+                        return false;
+                    } else {
+                        return true;
+                    }
+                },
+
+                evaluate: function() {
+                    throw new Error( "no evaluate function provided!" );
+                },
+
+                onSelect: function() {
+                    // todo
+                },
+
+                getEmpty: function() {
+                    return this.child( 'touch-ast-empty' ) || null ;
+                }
+            }).
+            extend({
+                getName: function() {
+                    return this.commandName;
+                }
+            });
+
     /**
      * The addFun is used primarily as a way of injecting extra nodes
      * into this AST node. If provided, it is called when the input
@@ -1869,18 +1923,6 @@ window.slate.TouchBar = (function() {
                 }
             }).
             override({
-                    getInputValue: function() {
-                        var val = ast.Input.prototype.getInputValue.call( this );
-                        var alt = SYMBOL_TO_COMMAND[val];
-
-                        if ( alt ) {
-                            return alt;
-                        } else {
-                            return val;
-                        }
-                    }
-            }).
-            override({
                     findPipeReceiver: function( callback ) {
                         return callback( this );
                     },
@@ -2251,6 +2293,11 @@ window.slate.TouchBar = (function() {
                 if ( isDouble ) {
                     this.isDouble = true;
                 }
+
+                var self = this;
+                this.callCallback = function() {
+                    self.callback.call( self, this.textContent, self );
+                }
             }).extend( BBGun, {
                 show: function() {
                     this.dom().classList.add( 'show' )
@@ -2338,6 +2385,8 @@ window.slate.TouchBar = (function() {
                 /* finally, setup! */
                 this.add( this.bar, this.errorDom ).
                          setAST( new ast.Empty() );
+
+                this.commandsMap = {};
 
                 var self = this;
                 this.viewInput = bb('text', {
@@ -2651,6 +2700,8 @@ window.slate.TouchBar = (function() {
 
         document.getElementsByTagName('body')[0].addEventListener( 'keydown', function( ev ) {
             if ( ev.which === key ) {
+                ev.preventDefault();
+
                 button.classList.add( 'highlight' )
                 fun( true );
             }
@@ -2658,6 +2709,8 @@ window.slate.TouchBar = (function() {
 
         document.getElementsByTagName('body')[0].addEventListener( 'keyup', function( ev ) {
             if ( ev.which === key ) {
+                ev.preventDefault();
+
                 button.classList.remove( 'highlight' )
                 fun( false )
             }
@@ -2677,10 +2730,10 @@ window.slate.TouchBar = (function() {
                         'touch-shift',
                         newShiftButton( function(isDown) {
                                     self.hasLeft = isDown;
-                                }, 81),
+                                }, 112),
                         newShiftButton( function(isDown) {
                                     self.hasReplace = isDown;
-                                }, 87)
+                                }, 113)
                 )
             }).
             extend( BBGun, {
@@ -2699,6 +2752,29 @@ window.slate.TouchBar = (function() {
      * This is the top component, and the public facing API.
      */
     var TouchBar = function( parentDom, execute, commands, wrapKlass ) {
+        var self = this;
+
+        var types = {};
+        var allCommands = [];
+
+        for ( var i = 0; i < commands.length; i++ ) {
+            var cmd = commands[i];
+
+            if ( cmd.has('type') ) {
+                var type = cmd.type;
+
+                if ( type === 'all' ) {
+                    allCommands.push( types );
+                } else if ( types.has(type) ) {
+                    types[type].push( cmd );
+                } else {
+                    types[type] = [ cmd ];
+                }
+            } else {
+                allCommands.push( cmd );
+            }
+        }
+
         this.executeFun = execute;
 
         this.row   = null;
@@ -2742,7 +2818,6 @@ window.slate.TouchBar = (function() {
         document.body.addEventListener( 'touchend', closeThis, false );
 
         this.isOpen = false;
-        var self = this;
         var openThis = function( ev ) {
             ev.stopPropagation();
             ev.preventDefault();
@@ -2758,15 +2833,73 @@ window.slate.TouchBar = (function() {
         this.barWrap.addEventListener( 'touchend', openThis, false );
         this.barWrap.addEventListener( 'click', openThis, false );
 
+        var singleAddToRow = function( row, fun, first, second, third ) {
+            if ( second ) {
+                if ( third ) {
+                    row.append(
+                            first.symbol  || first.name , function() { fun(first ) },
+                            second.symbol || second.name, function() { fun(second) },
+                            third.symbol  || third.name , function() { fun(third ) }
+                    )
+                } else {
+                    row.append(
+                            first.symbol  || first.name , function() { fun(first) },
+                            second.symbol || second.name, function() { fun(second) },
+                            null
+                    )
+                }
+            } else {
+                row.append(
+                        first.symbol || first.name, function() { fun(first) },
+                        null,
+                        null
+                )
+            }
+        }
+
+        var multiAddToRow = function( cs, row, fun ) {
+            for ( var i = 0; i < cs.length; i += 3 ) {
+                var args = [];
+
+                singleAddToRow( row, fun,
+                        cs[i],
+                        i+1 < cs.length ? cs[i+1] : null,
+                        i+2 < cs.length ? cs[i+2] : null
+                );
+            }
+        }
+
+        var insert = this.insert.bind( this );
+
+        var sectionsRow = new TouchRow();
+
+        /**
+         * @param sectionsRow This is the row that shows the buttons, to display the row made.
+         * @param rowParent This is the element the row will be added to.
+         */
+        var addTypeRow = function( sectionsRow, rowParent, k, commands ) {
+            var row = new TouchRow( true );
+
+            multiAddToRow( commands, row, function(e) {
+                if ( e.has('visual') ) {
+                    insert( new ast.GenericCommand(e) );
+                } else {
+                    insert( new ast.Command(e.name) );
+                }
+            });
+
+            sectionsRow.append( k, function() { self.showRow(row) } );
+            bb.add( rowParent, row )
+
+            return row;
+        }
+
         /**
          * Add the initial commands
          */
 
-        var insert = this.insert.bind( this );
-
-        var commandsRow = new TouchRow( true );
+        var commandsRow = addTypeRow( sectionsRow, this.upper, 'commands', allCommands );
         var pipeDescriptor = descMappings['pipe']
-
         commandsRow.append(
                 SMALL_EMPTY,
                 function() {
@@ -2780,71 +2913,12 @@ window.slate.TouchBar = (function() {
 
                 null
         )
+        commandsRow.show();
 
-        commands = commands.sort();
-        for ( var i = 0; i < commands.length-2; i += 3 ) {
-            (function(top, middle, bottom) {
-                var topAlt    = COMMAND_TO_SYMBOL[top];
-                var middleAlt = COMMAND_TO_SYMBOL[middle];
-                var bottomAlt = COMMAND_TO_SYMBOL[bottom];
-
-                commandsRow.append(
-                        ( topAlt ? topAlt : top ),
-                        function() {
-                            insert( new ast.Command(top, topAlt) );
-                        },
-
-                        ( middleAlt ? middleAlt : middle ),
-                        function() {
-                            insert( new ast.Command(middle, middleAlt) );
-                        },
-
-                        ( bottomAlt ? bottomAlt : bottom ),
-                        function() {
-                            insert( new ast.Command(bottom, bottomAlt) );
-                        }
-                )
-            })(
-                    commands[i],
-                    commands[i+1],
-                    commands[i+2]
-            );
-        }
-
-        var commandsRest = ( commands.length % 3 );
-        if ( commandsRest === 1 ) {
-            var top = commands[commands.length-1];
-            var topAlt    = COMMAND_TO_SYMBOL[top];
-
-            commandsRow.append(
-                    ( topAlt ? topAlt : top ),
-                    function() {
-                        insert( new ast.Command(top, topAlt) );
-                    },
-
-                    null,
-                    null
-            )
-        } else if ( commandsRest === 2 ) {
-            var top = commands[commands.length-2],
-                middle = commands[commands.length-1];
-
-            var topAlt    = COMMAND_TO_SYMBOL[top];
-            var middleAlt = COMMAND_TO_SYMBOL[middle];
-
-            commandsRow.append(
-                    ( topAlt ? topAlt : top ),
-                    function() {
-                        insert( new ast.Command(top, topAlt) );
-                    },
-
-                    ( middleAlt ? middleAlt : middle ),
-                    function() {
-                        insert( new ast.Command(middle, middleAlt) );
-                    },
-
-                    null
-            )
+        for ( var k in types ) {
+            if ( types.has(k) ) {
+                addTypeRow( sectionsRow, this.upper, k, types[k] )
+            }
         }
 
         /**
@@ -2852,6 +2926,8 @@ window.slate.TouchBar = (function() {
          */
 
         var valuesRow = new TouchRow( true );
+        sectionsRow.append( 'values', this.method('showRow', valuesRow) );
+        bb.add( this.upper, valuesRow );
 
         valuesRow.append(
                 'var', function() {
@@ -2970,19 +3046,12 @@ window.slate.TouchBar = (function() {
         appendDescriptor( 'bitwise and'         , 'bitwise or'  , null );
         appendDescriptor( 'left shift'          , 'right shift' , null );
 
-        bb.add( this.upper, commandsRow, valuesRow, opsRow )
-
         /*
          * Lower Row
          */
 
-        bb.add( this.lower,
-                new TouchRow().
-                        append( 'command'  , this.method('showRow', commandsRow) ).
-                        append( 'values'   , this.method('showRow',   valuesRow) ).
-                        append( 'operators', this.method('showRow',      opsRow) ).
-                        show()
-        );
+        bb.add( this.lower, sectionsRow );
+        sectionsRow.show();
 
         this.showRow( commandsRow );
     }

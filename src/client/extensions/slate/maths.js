@@ -1,14 +1,42 @@
 "use strict";
 
+/*
+===============================================================================
+# Maths
+
+Common maths functions, for both JS, and the visual language.
+
+===============================================================================
+*/
+
 (function() {
-    slate.command(
-            /**
-             * Sqrt
-             *
-             * unicode 8730
-             */
-            'sqrt',
-            function( val, onDisplay ) {
+
+/*
+-------------------------------------------------------------------------------
+
+## Sqrt
+
+
+-------------------------------------------------------------------------------
+*/
+
+    slate.command({
+            name: 'sqrt',
+
+            symbol: '&#x0221a',
+
+            type: 'maths',
+
+            visual: {
+                className : 'maths',
+                html: '&#x0221a',
+
+                ast : {
+                        style: { marginBottom: '-20px' }
+                }
+            },
+
+            fun: function( val, onDisplay ) {
                 var n;
                 if ( isArray(n) ) {
                     n = val[0];
@@ -38,16 +66,23 @@
                     return r;
                 }
             }
-    )
+    });
 
-    slate.command(
-            /**
-             * Sum, the 'E' epsilon symbol 
-             *
-             * unicode 8721
-             */
-            'sum',
-            function( val, onDisplay ) {
+/*
+-------------------------------------------------------------------------------
+
+## Sum, the 'E' epsilon symbol 
+
+-------------------------------------------------------------------------------
+*/
+
+    slate.command({
+            name: 'sum',
+            symbol: '&#x02211;', // the epsilon sum symbol
+
+            type: 'maths',
+
+            fun: function( val, onDisplay ) {
                 var n = val[0];
                 if ( n === undefined ) {
                     throw new Error("no value given for summing");
@@ -76,5 +111,7 @@
                     return r;
                 }
             }
-    )
-})()
+    })
+})();
+
+
