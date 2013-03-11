@@ -12,7 +12,7 @@
      */
 
     var SERVER_ROOT = __dirname.replace( /\\/g, '/'),
-        CLIENT_ROOT = __dirname.replace( /\\/g, '/') + '/../client';
+        CLIENT_ROOT = SERVER_ROOT + '/../client';
 
     /*
      * ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -46,10 +46,10 @@
                     },
 
                     password: {
-                            'default': '',
                             'short'  : 'x',
                             'value'  : true,
-                            'action' : function( app, val ) {
+                            'action' : function( app, password ) {
+                                console.log( '###', password, '###' );
                                 var user = new rockwall.Sessions();
 
                                 app.server().preRoute( [ '', 'proxy/file'], function(url, req, res) {
@@ -58,7 +58,7 @@
                                     if ( ! session.isLoggedIn ) {
                                         req.post( function(err, obj) {
                                             if ( obj.password ) {
-                                                if ( !err && obj.password === options.password ) {
+                                                if ( !err && obj.password === password ) {
                                                     session.isLoggedIn = true
 
                                                     rockServer.handleRequest( url, req, res )

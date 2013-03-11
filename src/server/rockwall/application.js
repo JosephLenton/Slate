@@ -101,6 +101,12 @@ exports.Application = (function() {
             return this;
         },
 
+        /**
+         * Sets the root folder for any public assets.
+         * By default, this is set to the '.' folder, whatever that may be.
+         *
+         * @param dir The directory to use as the root public folder.
+         */
         root: function( dir ) {
             this.rootDir = dir;
 
@@ -160,12 +166,12 @@ exports.Application = (function() {
                     } );
                 }
 
-                for ( var k in this.optionsDesc ) {
+                for ( var k in options ) {
                     if ( this.optionsDesc.hasOwnProperty(k) ) {
-                        var option = this.optionsDesc[k];
+                        var optionDesc = this.optionsDesc[k];
 
-                        if ( option.hasOwnProperty('action') ) {
-                            option.action.call( this, this, options[k] );
+                        if ( optionDesc.hasOwnProperty('action') ) {
+                            optionDesc.action.call( this, this, options[k] );
                         }
                     }
                 }
