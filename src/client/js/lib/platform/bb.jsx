@@ -2027,7 +2027,6 @@ is pre-provided.
                                         ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
                                           dist < SLOW_CLICK_DIST
                                 ) {
-                                    ev.type = 'click';
                                     callback.call( el, ev );
                                     ev.preventDefault();
                                 }
