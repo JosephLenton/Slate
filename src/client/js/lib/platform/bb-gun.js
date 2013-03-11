@@ -30,14 +30,6 @@ window['BBGun'] = (function() {
         var EventsManager = function( xe ) {
             this.xe = xe;
             this.events = {};
-
-            var self = this;
-            this.handleEvent = function( ev ) {
-                self.fireDomEvent(
-                        bb.setup.normalizeEventName( ev.type || ev.name ),
-                        ev
-                );
-            }
         }
 
         EventsManager.prototype = {
@@ -59,7 +51,11 @@ window['BBGun'] = (function() {
                         this.events[bbGunName].push( f );
                     } else {
                         if ( bb.setup.isEvent(name) ) {
-                            bb.on( this.xe.dom(), name, this.handleEvent );
+                            var self = this;
+
+                            bb.on( this.xe.dom(), name, function(ev) {
+                                self.fireDomEvent( bbGunName, ev );
+                            });
                         }
 
                         this.events[bbGunName] = [ f ];

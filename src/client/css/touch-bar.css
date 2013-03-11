@@ -57,14 +57,16 @@
     height: 460px;
 
     position: fixed;
-    bottom: -390px;
+    bottom: 0;
+
+    -webkit-transform: translate3d( 0, 390px, 0 );
 
     font-weight: 100;
     font-family: "Oxygen Mono", "segoe ui light", 'helvetica', 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
 
-    -webkit-transition: bottom 200ms ease-out;
-    -moz-transition: bottom 200ms ease-out;
-    transition: bottom 200ms ease-out;
+    -webkit-transition: -webkit-transform 250ms ease-out;
+    -moz-transition: -webkit-transform 250ms ease-out;
+    transition: -webkit-transform 250ms ease-out;
 }
 
 
@@ -145,26 +147,7 @@
         left: 9px;
         height: 30px;
 
-/*
-        opacity: 0;
-        visibility: hidden;
-
-        -webkit-transition: visibility 0ms linear 150ms;
-        -moz-transition: visibility 0ms linear 150ms;
-        transition: visibility 0ms linear 150ms;
-    }
-    .touch-bar-wrap.open .touch-shift {
-        opacity: 1;
-        visibility: visible;
-
-        -webkit-transition: opacity 150ms linear, visibility 150ms linear 0s;
-        -moz-transition: opacity 150ms linear, visibility 150ms linear 0s;
-        transition: opacity 150ms linear, visibility 150ms linear 0s;
-
-        -webkit-transition: visibility 150ms linear 0s;
-        -moz-transition: visibility 150ms linear 0s;
-        transition: visibility 150ms linear 0s;
-        */
+        z-index: 101;
     }
         .touch-shift-button {
             display: inline-block;
@@ -417,6 +400,11 @@
 
                 z-index: 1001;
             }
+    .touch-ast,
+    .touch-ast-input > input,
+    .touch-ast-text {
+        z-index: 99;
+    }
     .touch-input-measure-div,
     .touch-ast,
     .touch-ast-input > input,

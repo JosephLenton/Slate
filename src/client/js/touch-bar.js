@@ -198,7 +198,9 @@ window.slate.TouchBar = (function() {
     }
 
     ast.Node = (function( desc ) {
-                BBGun.call( this, 'touch-ast', { click: nodeClick } );
+                BBGun.call( this, 'touch-ast', {
+                    click: nodeClick
+                } );
 
                 if ( arguments.length !== 0 ) {
                     bb.initBBGun( this, desc );
@@ -742,30 +744,33 @@ window.slate.TouchBar = (function() {
                 var menuItems = [];
                 var metaIndex = 0,
                     countIndex = true;
-                for ( var i = 0; i < metas.length; i++ ) {
-                    var temp = metas[i];
 
-                    if ( countIndex ) {
-                        if ( temp === meta ) {
-                            countIndex = false;
-                        } else {
-                            metaIndex++;
+                if ( metas.length > 0 ) {
+                    for ( var i = 0; i < metas.length; i++ ) {
+                        var temp = metas[i];
+
+                        if ( countIndex ) {
+                            if ( temp === meta ) {
+                                countIndex = false;
+                            } else {
+                                metaIndex++;
+                            }
                         }
+
+                        menuItems.push({
+                                html: temp.html,
+                                css : 'touch-ast-op-text',
+                                fun : (function(m) {
+                                    return function() {
+                                        self.setMeta( m );
+                                    }
+                                })(temp)
+                        })
                     }
 
-                    menuItems.push({
-                            html: temp.html,
-                            css : 'touch-ast-op-text',
-                            fun : (function(m) {
-                                return function() {
-                                    self.setMeta( m );
-                                }
-                            })(temp)
-                    })
+                    //this.text = new TransientMenu( menuItems, metaIndex );
+                    //this.text.dom().classList.add( 'touch-ast-text' );
                 }
-
-                //this.text = new TransientMenu( menuItems, metaIndex );
-                //this.text.dom().classList.add( 'touch-ast-text' );
                 
                 this.preText  = astText( '', 'touch-ast-op-text' );
                 this.text     = astText( '', 'touch-ast-op-text' );
@@ -1082,6 +1087,27 @@ window.slate.TouchBar = (function() {
                     }
                 }
             } );
+
+    ast.Range = ast.DoubleOp.params({
+            name    : 'range',
+            alt     : 'range',
+             
+            preHtml : '[',
+            html    : ', ',
+            postHtml: ')',
+
+            toJS: function( left, right ) {
+                return 'new slate.Range(' + left.toJS() + ', ' + right.toJS() + ') ';
+            },
+
+            evaluate: function( left, right ) {
+                return new slate.Range( left.evaluate(), right.evaluate() );
+            },
+
+            isAssignable: function() {
+                return false;
+            }
+    });
 
     var descriptors = (function() {
         var newOps = function( name, alt, sym, print, fun ) {
@@ -2504,6 +2530,9 @@ window.slate.TouchBar = (function() {
                             if ( item === null ) {
                                 item = '&nbsp;';
                                 callback = function(ev) { /* do nothing */ };
+                            } else if ( item.has('html') && item.has('fun') ) {
+                                callback = item.fun;
+                                item = item.html;
                             } else {
                                 callback = arguments[i+1]
 
@@ -2536,6 +2565,9 @@ var viewCount = 1;
             params( 'touch-bar-view' ).
             sub(function( touchBar ) {
                 this.viewCounter = viewCount++;
+
+                this.isLeftDown    = false;
+                this.isReplaceDown = false;
 
                 this.touchBar    = touchBar;
                 this.current     = null;
@@ -2573,11 +2605,7 @@ var viewCount = 1;
                         newAST.setInputValue( this.value );
                         this.value = '';
 
-                        if ( self.current.isEmpty() ) {
-                            self.replaceCurrent( newAST );
-                        } else {
-                            self.insertRight( newAST );
-                        }
+                        self.insert( newAST );
                     }
                 })
             }).
@@ -2755,9 +2783,9 @@ var viewCount = 1;
                     insertLeftRight: function( node, isLeft ) {
                         var current = this.getCurrent();
 
-                        current.isEmpty() && current.parentAST( function(p) {
+                        current.isEmpty() && node.replaceRight !== undefined && current.parentAST( function(p) {
                             current = p
-                        } )
+                        } );
 
                         current.replaceWith( node, true ); // true -> force the replacement, no matter what
                         node.setView( this );
@@ -2771,16 +2799,8 @@ var viewCount = 1;
                              */
                             if ( isLeft ) {
                                 var empty = node.replaceRight( current );
-
-                                if ( current.replaceLeft ) {
-                                    current.replaceLeft( empty )
-                                }
                             } else {
                                 var empty = node.replaceLeft( current );
-
-                                if ( current.replaceRight ) {
-                                    current.replaceRight( empty )
-                                }
                             }
                         }
 
@@ -2812,6 +2832,23 @@ var viewCount = 1;
                         this.selectEmpty( node );
 
                         this.storeChange();
+                    },
+
+                    setLeftDown: function( down ) {
+                        this.isLeftDown = down;
+                    },
+                    setReplaceDown: function( down ) {
+                        this.isReplaceDown = down;
+                    },
+
+                    insert: function( node ) {
+                        if ( this.isLeftDown === this.isReplaceDown ) {
+                            this.insertRight( node );
+                        } else if ( this.isLeftDown ) {
+                            this.insertLeft( node );
+                        } else if ( this.isReplaceDown ) {
+                            this.replaceCurrent( node );
+                        }
                     },
 
                     selectEmpty: function( node, findEmptyVal ) {
@@ -2896,28 +2933,31 @@ var viewCount = 1;
             (function() {
                 var self = this;
 
-                this.hasLeft  = false;
-                this.hasReplace = false;
+                this.leftFun = null;
+                this.replaceFun = null;
 
                 BBGun.call( this,
                         'touch-shift',
                         newShiftButton( function(isDown) {
-                                    self.hasLeft = isDown;
+                                    self.leftFun( isDown );
                                 }, 112),
                         newShiftButton( function(isDown) {
-                                    self.hasReplace = isDown;
+                                    self.replaceFun( isDown );
                                 }, 113)
                 )
             }).
             extend( BBGun, {
-                isLeft: function() {
-                    return this.hasLeft;
-                },
+                onLeft: function(fun) {
+                    this.leftFun = fun;
 
-                isReplace: function() {
-                    return this.hasReplace;
+                    return this;
+                },
+                onReplace: function(fun) {
+                    this.replaceFun = fun;
+
+                    return this;
                 }
-            } )
+            } );
 
     /**
      * The actual bar it's self.
@@ -2995,7 +3035,7 @@ var viewCount = 1;
             ev.stopPropagation();
             ev.preventDefault();
 
-            if ( ! this.isOpen ) {
+            if ( ! self.isOpen ) {
                 self.open();
             }
         }
@@ -3006,40 +3046,53 @@ var viewCount = 1;
         this.barWrap.addEventListener( 'touchend', openThis, false );
         this.barWrap.addEventListener( 'click', openThis, false );
 
-        var singleAddToRow = function( row, fun, first, second, third ) {
-            if ( second ) {
-                if ( third ) {
-                    row.append(
-                            first.symbol  || first.name , function() { fun(first ) },
-                            second.symbol || second.name, function() { fun(second) },
-                            third.symbol  || third.name , function() { fun(third ) }
-                    )
-                } else {
-                    row.append(
-                            first.symbol  || first.name , function() { fun(first) },
-                            second.symbol || second.name, function() { fun(second) },
-                            null
-                    )
+        var commandDescriptionToButton = function( cmd, fun ) {
+            if ( cmd ) {
+                return {
+                        html: cmd.symbol || cmd.name,
+                        fun: function() { fun(cmd) }
                 }
             } else {
-                row.append(
-                        first.symbol || first.name, function() { fun(first) },
-                        null,
-                        null
-                )
+                return null;
             }
         }
 
         var multiAddToRow = function( cs, row, fun ) {
             for ( var i = 0; i < cs.length; i += 3 ) {
-                var args = [];
-
-                singleAddToRow( row, fun,
-                        cs[i],
-                        i+1 < cs.length ? cs[i+1] : null,
-                        i+2 < cs.length ? cs[i+2] : null
-                );
+                row.append(
+                        commandDescriptionToButton( cs[i]  , fun ),
+                        commandDescriptionToButton( cs[i+1], fun ),
+                        commandDescriptionToButton( cs[i+2], fun )
+                )
             }
+        }
+
+        var descriptorNameToNode = function( arg ) {
+            if ( arg !== null ) {
+                var desc = descMappings[arg];
+                assert( desc, "descriptor not found, " + arg );
+
+                return {
+                    html: descriptorHTML(desc),
+                    fun: (function(desc) {
+                        return (function() {
+                            insert(new ast.DoubleOp(desc, descriptors));
+                        });
+                    })(desc)
+                };
+            } else {
+                return null;
+            }
+        }
+
+        var appendDescriptor = function(row) {
+            var ds = [];
+
+            for ( var i = 1; i < arguments.length; i++ ) {
+                ds.push( descriptorNameToNode(arguments[i]) );
+            }
+
+            row.append.apply( opsRow, ds );
         }
 
         var insert = this.insert.bind( this );
@@ -3074,18 +3127,23 @@ var viewCount = 1;
         var commandsRow = addTypeRow( sectionsRow, this.upper, 'commands', allCommands );
         var pipeDescriptor = descMappings['pipe']
         commandsRow.append(
-                SMALL_EMPTY,
-                function() {
-                    insert( new ast.Command() )
+                {
+                    html: SMALL_EMPTY,
+                    fun: function() {
+                        insert( new ast.Command() )
+                    }
                 },
 
-                descriptorHTML( pipeDescriptor ),
-                function() {
-                    insert( new ast.DoubleOp(pipeDescriptor, descriptors) );
+                {
+                    html: descriptorHTML( pipeDescriptor ),
+                    fun: function() {
+                        insert( new ast.DoubleOp(pipeDescriptor, descriptors) );
+                    }
                 },
 
                 null
-        )
+        );
+
         commandsRow.show();
 
         for ( var k in types ) {
@@ -3103,9 +3161,8 @@ var viewCount = 1;
         bb.add( this.upper, valuesRow );
 
         valuesRow.append(
-                'val', function() {
-                    insert( new ast.VariableInput() );
-                },
+                'val',
+                function() { insert( new ast.VariableInput() ); },
 
                 '123',
                 function() { insert( new ast.NumberInput() ); }
@@ -3126,7 +3183,7 @@ var viewCount = 1;
                 function() { insert( new ast.FalseLiteral() ); },
 
                 null
-        )
+        );
 
         valuesRow.append(
                 'null',
@@ -3136,16 +3193,17 @@ var viewCount = 1;
                 function() { insert( new ast.UndefinedLiteral() ); },
 
                 null
-        )
+        );
 
         valuesRow.append(
                 '/ ' + SMALL_EMPTY + ' /',
                 function() { insert( new ast.RegExpInput() ); },
 
-                null,
+                '[ ' + SMALL_EMPTY + ', ' + SMALL_EMPTY + ' )',
+                function() { insert( new ast.Range() ); },
 
                 null
-        )
+        );
 
         valuesRow.append(
                 '&pi;',
@@ -3153,7 +3211,7 @@ var viewCount = 1;
 
                 null,
                 null
-        )
+        );
 
 /*
         valuesRow.append(
@@ -3175,46 +3233,23 @@ var viewCount = 1;
 
         var opsRow = new TouchRow( true );
 
-        var appendDescriptor = function() {
-            var ds = [];
-            for ( var i = 0; i < arguments.length; i++ ) {
-                var arg = arguments[i];
-
-                if ( arg !== null ) {
-                    var desc = descMappings[arg];
-                    assert( desc, "descriptor not found, " + arg );
-
-                    ds.push( descriptorHTML(desc) );
-                    ds.push( (function(desc) {
-                        return (function() {
-                            insert(new ast.DoubleOp(desc, descriptors));
-                        })
-                    })(desc) );
-                } else {
-                    ds.push( null );
-                }
-            }
-
-            opsRow.append.apply( opsRow, ds );
-        }
-
-        appendDescriptor( 'assignment'          , 'property access'     , 'array access' );
+        appendDescriptor( opsRow, 'assignment'          , 'property access'     , 'array access' );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( 'add'                 , 'subtract'    , null );
-        appendDescriptor( 'multiply'            , 'divide'      , null );
+        appendDescriptor( opsRow, 'add'                 , 'subtract'    , null );
+        appendDescriptor( opsRow, 'multiply'            , 'divide'      , null );
 
         opsRow.appendSeperator();
 
-        appendDescriptor( 'equal'               , 'less than equal'     , 'less than'   );
-        appendDescriptor( 'not equal'           , 'greater than equal'  , 'greater than');
+        appendDescriptor( opsRow, 'equal'               , 'less than equal'     , 'less than'   );
+        appendDescriptor( opsRow, 'not equal'           , 'greater than equal'  , 'greater than');
 
         opsRow.appendSeperator();
 
-        appendDescriptor( 'and'                 , 'or'          , null );
-        appendDescriptor( 'bitwise and'         , 'bitwise or'  , null );
-        appendDescriptor( 'left shift'          , 'right shift' , null );
+        appendDescriptor( opsRow, 'and'                 , 'or'          , null );
+        appendDescriptor( opsRow, 'bitwise and'         , 'bitwise or'  , null );
+        appendDescriptor( opsRow, 'left shift'          , 'right shift' , null );
 
         sectionsRow.append( 'operators', this.method('showRow', opsRow) );
         bb.add( this.upper, opsRow );
@@ -3234,15 +3269,23 @@ var viewCount = 1;
                 if ( ! this.isOpen ) {
                     this.isOpen = true;
                     this.barWrap.classList.add( 'open' );
-                    this.barWrap.style.bottom = '20px';
+
+                    var style = this.barWrap.style;
+                    style.webkitTransform =
+                            style.MozTransform =
+                            style.transform = 'translate3d( 0, -20px, 0 )' ;
                 }
             },
 
-            close: function() {
+            close: function(ev) {
                 if ( this.isOpen ) {
                     this.isOpen = false;
                     this.barWrap.classList.remove('open');
-                    this.barWrap.style.bottom = '-390px';
+
+                    var style = this.barWrap.style;
+                    style.webkitTransform =
+                    style.MozTransform =
+                    style.transform = 'translate3d( 0, 390px, 0 )' ;
                 }
             },
 
@@ -3293,16 +3336,7 @@ var viewCount = 1;
              * left    -> insert towards the left
              */
             insert: function( node ) {
-                var buttons = this.buttons,
-                    view = this.view;
-
-                if ( buttons.isLeft() === buttons.isReplace() ) {
-                    view.insertRight( node );
-                } else if ( buttons.isLeft() ) {
-                    view.insertLeft( node );
-                } else if ( buttons.isReplace() ) {
-                    view.replaceCurrent( node );
-                }
+                this.view.insert( node );
             },
 
             execute: function() {
@@ -3342,6 +3376,10 @@ var viewCount = 1;
                         clearRedos().
                         onUndo( this.view.method('undo') ).
                         onRedo( this.view.method('redo') );
+
+                this.buttons.
+                        onLeft( this.view.method('setLeftDown') ).
+                        onReplace( this.view.method('setReplaceDown') );
             },
 
             showRow: function( row ) {
