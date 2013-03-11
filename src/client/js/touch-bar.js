@@ -961,7 +961,7 @@ window.slate.TouchBar = (function() {
                     var self = this;
 
                     left.once( 'replace', function( newLeft ) {
-                        self.left = newLeft;
+                        self.setLeft( newLeft );
                     } )
 
                     this.left = left;
@@ -972,7 +972,7 @@ window.slate.TouchBar = (function() {
                     var self = this;
 
                     right.once( 'replace', function( newRight ) {
-                        self.right = newRight;
+                        self.setRight( newRight );
                     } )
 
                     this.right = right;
@@ -1747,20 +1747,23 @@ window.slate.TouchBar = (function() {
     }
 
     var newValidation = function( css, isAssignable, test, toJS, toJSObj ) {
+        var testStr = test;
         if ( isString(test) ) {
             if ( test.charAt(0) !== '^' ) {
                 test = '^' + test;
             }
             if ( test.charAt(test.length-1) !== '$' ) {
-                test = '$' + test;
+                test = test + '$';
             }
 
             test = new RegExp( test );
         }
 
         if ( test instanceof RegExp ) {
+            var testRegexp = test;
+
             test = function( str ) {
-                return ( str.search(test) === 0 );
+                return ( str.search(testRegexp) === 0 );
             }
         }
 
@@ -1789,7 +1792,7 @@ window.slate.TouchBar = (function() {
                     null,
                     null
             ),
-            newValidation( 'string'  , false, '[a-zA-Z_]+[a-zA-Z_0-9]*',
+            newValidation( 'string'  , false, function() { return true },
 
                     /*
                      * The value returned includes quotes on either side of the value,
@@ -2435,7 +2438,7 @@ window.slate.TouchBar = (function() {
                     var empty = new ast.Empty();
 
                     var self = this;
-                    empty.once('replace', function(newNode) {
+                    empty.once( 'replace', function(newNode) {
                         self.replaceChild( this, newNode );
                     } );
 
@@ -2525,12 +2528,15 @@ window.slate.TouchBar = (function() {
         return bb.a( 'touch-bar-button', { html: item, click: callback } );
     }
 
+var viewCount = 1;
     /**
      * The area that displays the AST.
      */
     var TouchView = BBGun.
             params( 'touch-bar-view' ).
             sub(function( touchBar ) {
+                this.viewCounter = viewCount++;
+
                 this.touchBar    = touchBar;
                 this.current     = null;
                 this.selectLater = null;
@@ -3210,6 +3216,9 @@ window.slate.TouchBar = (function() {
         appendDescriptor( 'bitwise and'         , 'bitwise or'  , null );
         appendDescriptor( 'left shift'          , 'right shift' , null );
 
+        sectionsRow.append( 'operators', this.method('showRow', opsRow) );
+        bb.add( this.upper, opsRow );
+
         /*
          * Lower Row
          */
@@ -3298,6 +3307,7 @@ window.slate.TouchBar = (function() {
 
             execute: function() {
                 var self = this;
+
                 this.view.validate( function() {
                     if ( false ) {
                         self.view.evaluate( function(r) {
