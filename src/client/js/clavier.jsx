@@ -530,6 +530,7 @@ This is the keyboard it's self, and what the outside world interacts with.
 
         var audio = new Audio();
         audio.loop = false;
+        audio.preload = 'auto';
         audio.src = AUDIO_KEYBOARD_CLICK_SRC;
 
         this.input = null;
@@ -560,9 +561,9 @@ This is the keyboard it's self, and what the outside world interacts with.
         
         var onButtonClick = function(ev) {
             if ( ev.target.classList.contains('clavier-key') ) {
-                highlightKey( ev.target );
-                
                 audio.play();
+
+                highlightKey( ev.target );
             }
 
             ev.preventDefault();
