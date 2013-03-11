@@ -9,24 +9,6 @@ window.slate.TouchBar = (function() {
 
     var BBGun = window.BBGun.clone( bb );
             
-    var COMMAND_TO_SYMBOL = {
-            'sqrt' : String.fromCharCode( 8730 ),
-            'sum'  : String.fromCharCode( 8721 )
-    }
-
-    var SYMBOL_TO_COMMAND = (function() {
-        var symToCmd = {};
-
-        for ( var cmd in COMMAND_TO_SYMBOL ) {
-            if ( COMMAND_TO_SYMBOL.hasOwnProperty(cmd) ) {
-                var sym = COMMAND_TO_SYMBOL[cmd];
-                symToCmd[ sym ] = cmd;
-            }
-        }
-
-        return symToCmd;
-    })();
-
     var SMALL_EMPTY = '<span class="touch-small">&#x25cf;</span>';
 
     var INPUT_WIDTH_PADDING = 4;
@@ -1756,22 +1738,196 @@ window.slate.TouchBar = (function() {
                     }
             })
 
+    var emptyToJS = function( str ) {
+        return str;
+    }
+
+    var emptyToJSObj = function( obj, str ) {
+        return obj + '[' + str + ']' ;
+    }
+
+    var newValidation = function( css, isAssignable, test, toJS, toJSObj ) {
+        if ( isString(test) ) {
+            if ( test.charAt(0) !== '^' ) {
+                test = '^' + test;
+            }
+            if ( test.charAt(test.length-1) !== '$' ) {
+                test = '$' + test;
+            }
+
+            test = new RegExp( test );
+        }
+
+        if ( test instanceof RegExp ) {
+            test = function( str ) {
+                return ( str.search(test) === 0 );
+            }
+        }
+
+        return {
+                css             : css,
+                isAssignable    : isAssignable,
+                test            : test,
+                toJS            : toJS      || emptyToJS,
+                toJSObj         : toJSObj   || emptyToJSObj
+        }
+    }
+
+
+    var inputValidations = [
+            newValidation( 'variable', true , '[a-zA-Z_]+[a-zA-Z_0-9]*',
+                    null,
+                    function( obj, str ) {
+                        return obj + '.' + str;
+                    }
+            ),
+            newValidation( 'number'  , false, '[0-9]+(\.[0-9]+)?',
+                    null,
+                    null
+            ),
+            newValidation( 'regex'   , false, '\/.*\/',
+                    null,
+                    null
+            ),
+            newValidation( 'string'  , false, '[a-zA-Z_]+[a-zA-Z_0-9]*',
+
+                    /*
+                     * The value returned includes quotes on either side of the value,
+                     * and it also escapes any quotes used inside.
+                     *
+                     * The result uses double quotes, so \n, will be an end of line.
+                     *
+                     * @return The value of this input, as a JavaScript string.
+                     */
+
+                    function( val ) {
+                        if ( val.charAt(0) === ' ' && val.length > 1 ) {
+                            val = val.substring( 1 );
+                        }
+
+                        return '"' + val.replace('"', '\\"') + '"';
+                    },
+
+                    function( obj, str ) {
+                        return obj + '[' + this.toJS(str) + ']';
+                    }
+            )
+    ];
+
+    ast.DynamicInput = ast.Input.
+            params(
+                    'text',
+                    '',
+                    '',
+                    false
+            ).
+            sub(function() {
+                this.lastValidation = null;
+
+                this.setDynamicValidation( inputValidations[0] );
+
+                this.onInput( function() {
+                    var val = this.getInputValue();
+
+                    if ( val === '' ) {
+                        this.replace( new ast.Empty() );
+                    } else {
+                        this.updateDynamicValidation( val );
+                    }
+                } );
+            }).
+            override( ast.Input, {
+                    setInputValue: function( str ) {
+                        this.updateDynamicValidation( str );
+                        ast.Input.prototype.setInputValue.call( this, str );
+                    },
+                    validate: function( onError ) {
+                        var str = this.getInputValue()
+
+                        if ( str.length === 0 ) {
+                            return onError( this, "no variable name provided" )
+                        } else {
+                            return true
+                        }
+                    },
+
+                    toJS: function() {
+                        return this.lastValidation.toJS( this.getInputValue() );
+                    },
+
+                    evaluate: function() {
+                        return window[ this.getInputValue() ]
+                    },
+
+                    isAssignable: function() {
+                        return this.lastValidation.isAssignable;
+                    }
+            }).
+            extend({
+                    updateDynamicValidation: function( str ) {
+                        for ( var i = 0; i < inputValidations.length; i++ ) {
+                            if ( inputValidations[i].test( str ) ) {
+                                this.setDynamicValidation( inputValidations[i] );
+                                return;
+                            }
+                        }
+                    },
+                    setDynamicValidation: function( v ) {
+                        if ( this.lastValidation !== v ) {
+                            if ( this.lastValidation !== null ) {
+                                this.removeClass( this.lastValidation.css );
+                            }
+
+                            this.addClass( v.css );
+
+                            this.lastValidation = v;
+                        }
+                    },
+
+                    toJSObj: function( obj ) {
+                        return this.lastValidation.toJSObj( obj, this.getInputValue() );
+                    },
+
+                    toJSAssignment: function( obj, expr ) {
+                        return this.getInputValue() + ' = ' + expr;
+                    },
+
+                    toJSObjAssignment: function( obj, expr ) {
+                        return obj + '.' + this.getInputValue() + ' = ' + expr;
+                    },
+
+                    evaluateObj: function( obj ) {
+                        if ( this.isString() ) {
+                            return this.getInputValue();
+                        } else {
+                            return obj[ this.getInputValue() ];
+                        }
+                    },
+
+                    evaluateAssignment: function( expr ) {
+                        window[ this.getInputValue() ] = expr
+                    },
+
+                    evaluateObjAssignment: function( obj, expr ) {
+                        assignHelper( obj, this.getInputValue(), expr );
+                    }
+            })
+       
+
     ast.VariableInput = ast.Input.
             params(
                     'text',
-                    'touch-ast-variable',
+                    'variable',
                     '',
                     false
             ).
             sub(function() {
                 this.onInput( function() {
-                    var val = this.getInputValue();
-
-                    if ( isValidIdentifier(val) ) {
-                        this.removeError()
-                    } else {
-                        this.setError()
-                    }
+                     if ( isValidIdentifier(val) ) {
+                         this.removeError()
+                     } else {
+                         this.setError()
+                     }
                 } )
             }).
             override( ast.Input, {
@@ -1780,15 +1936,15 @@ window.slate.TouchBar = (function() {
 
                         if ( str.length === 0 ) {
                             return onError( this, "no variable name provided" )
-                        } else if ( ! isValidIdentifier(str) ) {
-                            return onError( this, "invalid variable name given" )
+                         } else if ( ! isValidIdentifier(str) ) {
+                             return onError( this, "invalid variable name given" )
                         } else {
                             return true
                         }
                     },
 
                     toJS: function() {
-                        return this.getInputValue()
+                        return this.getInputValue();
                     },
 
                     evaluate: function() {
@@ -1796,12 +1952,25 @@ window.slate.TouchBar = (function() {
                     },
 
                     isAssignable: function() {
-                        return true
+                        return true;
                     }
             }).
             extend({
+                    /**
+                     * The value returned includes quotes on either side of the value,
+                     * and it also escapes any quotes used inside.
+                     *
+                     * The result uses double quotes, so \n, will be an end of line.
+                     *
+                     * @return The value of this input, as a JavaScript string.
+                     */
+
+                    getJSStringValue: function() {
+                        return '"' + this.toInputString() + '"';
+                    },
+
                     toJSObj: function( obj ) {
-                        return obj + '.' + this.getInputValue()
+                        return obj + '.' + this.getInputValue();
                     },
 
                     toJSAssignment: function( obj, expr ) {
@@ -2393,9 +2562,7 @@ window.slate.TouchBar = (function() {
                     input: function(ev) {
                         ev.preventDefault();
 
-                        var newAST = isNumeric(this.value) ?
-                                new ast.NumberInput() :
-                                new ast.VariableInput() ;
+                        var newAST = new ast.DynamicInput();
 
                         newAST.setInputValue( this.value );
                         this.value = '';
@@ -2930,15 +3097,12 @@ window.slate.TouchBar = (function() {
         bb.add( this.upper, valuesRow );
 
         valuesRow.append(
-                'var', function() {
+                'val', function() {
                     insert( new ast.VariableInput() );
                 },
 
                 '123',
-                function() { insert( new ast.NumberInput() ); },
-
-                '"text"',
-                function() { insert( new ast.StringInput() ); }
+                function() { insert( new ast.NumberInput() ); }
         )
 
 /*

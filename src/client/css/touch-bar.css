@@ -647,44 +647,44 @@
         }
     .touch-ast-op.select {
     }
-        .slate.content-item-contents .touch-ast-number >  input,
-        .slate.content-item-contents .touch-ast-number > .touch-ast-text,
-        .touch-ast.select > .touch-ast-number         >  input,
-        .touch-ast.select > .touch-ast-number         > .touch-ast-text,
-                            .touch-ast-number.select  >  input,
-                            .touch-ast-number.select  > .touch-ast-text
+        .slate.content-item-contents .touch-ast-input.variable >  input,
+        .slate.content-item-contents .touch-ast-input.variable > .touch-ast-text,
+        .touch-ast.select > .touch-ast-input.variable         >  input,
+        .touch-ast.select > .touch-ast-input.variable         > .touch-ast-text,
+                            .touch-ast-input.variable.select  >  input,
+                            .touch-ast-input.variable.select  > .touch-ast-text
+        {
+            color: #52CC97;
+        }
+        .slate.content-item-contents .touch-ast-input.number >  input,
+        .slate.content-item-contents .touch-ast-input.number > .touch-ast-text,
+        .touch-ast.select > .touch-ast-input.number         >  input,
+        .touch-ast.select > .touch-ast-input.number         > .touch-ast-text,
+                            .touch-ast-input.number.select  >  input,
+                            .touch-ast-input.number.select  > .touch-ast-text
         {
             color: #b51;
         }
         .slate.content-item-contents .touch-ast-literal >  input,
         .slate.content-item-contents .touch-ast-literal > .touch-ast-text,
-        .slate.content-item-contents .touch-ast-string >  input,
-        .slate.content-item-contents .touch-ast-string > .touch-ast-text,
+        .slate.content-item-contents .touch-ast-input.string >  input,
+        .slate.content-item-contents .touch-ast-input.string > .touch-ast-text,
                             .touch-ast-literal.select > .touch-ast-text,
-        .touch-ast.select > .touch-ast-string         >  input,
-        .touch-ast.select > .touch-ast-string         > .touch-ast-text,
-                            .touch-ast-string.select  >  input,
-                            .touch-ast-string.select  > .touch-ast-text
+        .touch-ast.select > .touch-ast-input.string         >  input,
+        .touch-ast.select > .touch-ast-input.string         > .touch-ast-text,
+                            .touch-ast-input.string.select  >  input,
+                            .touch-ast-input.string.select  > .touch-ast-text
         {
             color: #18AD18;
         }
-        .slate.content-item-contents .touch-ast-regexp >  input,
-        .slate.content-item-contents .touch-ast-regexp > .touch-ast-text,
-        .touch-ast.select > .touch-ast-regexp         >  input,
-        .touch-ast.select > .touch-ast-regexp         > .touch-ast-text,
-                            .touch-ast-regexp.select  >  input,
-                            .touch-ast-regexp.select  > .touch-ast-text
+        .slate.content-item-contents .touch-ast-input.regexp >  input,
+        .slate.content-item-contents .touch-ast-input.regexp > .touch-ast-text,
+        .touch-ast.select > .touch-ast-input.regexp         >  input,
+        .touch-ast.select > .touch-ast-input.regexp         > .touch-ast-text,
+                            .touch-ast-input.regexp.select  >  input,
+                            .touch-ast-input.regexp.select  > .touch-ast-text
         {
             color: #8E40B8;
-        }
-        .slate.content-item-contents .touch-ast-variable >  input,
-        .slate.content-item-contents .touch-ast-variable > .touch-ast-text,
-        .touch-ast.select > .touch-ast-variable         >  input,
-        .touch-ast.select > .touch-ast-variable         > .touch-ast-text,
-                            .touch-ast-variable.select  >  input,
-                            .touch-ast-variable.select  > .touch-ast-text
-        {
-            color: #52CC97;
         }
     .touch-ast-literal {
     }

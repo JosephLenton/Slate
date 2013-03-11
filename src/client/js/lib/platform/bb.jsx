@@ -359,47 +359,50 @@ in a callback method.
             if ( isString(arg) ) {
                 assertString( arg, "expected string for add DOM class" );
 
-                if ( arg.indexOf(' ') !== -1 ) {
-                    var klasses = arg.split( ' ' );
+                arg = arg.trim();
+                if ( arg.length > 0 ) {
+                    if ( arg.indexOf(' ') !== -1 ) {
+                        var klasses = arg.split( ' ' );
 
-                    for ( var j = 0; j < klasses.length; j++ ) {
-                        var klass = klasses[j];
+                        for ( var j = 0; j < klasses.length; j++ ) {
+                            var klass = klasses[j];
 
-                        if ( klass !== '' ) {
-                            var dotI = klass.indexOf( '.' );
-                            if ( dotI === 0 ) {
-                                klass = klass.substring(1);
-                            }
-
-                            if ( klass.indexOf('.') !== -1 ) {
-                                var klassParts = klass.split('.');
-
-                                for ( var k = 0; k < klassParts.length; i++ ) {
-                                    if ( fun(klassParts[k]) === false ) {
-                                        return;
-                                    }
+                            if ( klass !== '' ) {
+                                var dotI = klass.indexOf( '.' );
+                                if ( dotI === 0 ) {
+                                    klass = klass.substring(1);
                                 }
-                            } else if ( fun(klass) === false ) {
-                                return;
+
+                                if ( klass.indexOf('.') !== -1 ) {
+                                    var klassParts = klass.split('.');
+
+                                    for ( var k = 0; k < klassParts.length; i++ ) {
+                                        if ( fun(klassParts[k]) === false ) {
+                                            return;
+                                        }
+                                    }
+                                } else if ( fun(klass) === false ) {
+                                    return;
+                                }
                             }
                         }
-                    }
-                } else {
-                    var dotI = arg.indexOf( '.' );
-                    if ( dotI === 0 ) {
-                        arg = arg.substring(1);
-                    }
-
-                    if ( arg.indexOf('.') !== -1 ) {
-                        var argParts = arg.split('.');
-
-                        for ( var k = 0; k < argParts.length; i++ ) {
-                            if ( fun(argParts[k]) === false ) {
-                                return;
-                            }
+                    } else {
+                        var dotI = arg.indexOf( '.' );
+                        if ( dotI === 0 ) {
+                            arg = arg.substring(1);
                         }
-                    } else if ( fun(arg) === false ) {
-                        return;
+
+                        if ( arg.indexOf('.') !== -1 ) {
+                            var argParts = arg.split('.');
+
+                            for ( var k = 0; k < argParts.length; i++ ) {
+                                if ( fun(argParts[k]) === false ) {
+                                    return;
+                                }
+                            }
+                        } else if ( fun(arg) === false ) {
+                            return;
+                        }
                     }
                 }
             } else if ( isArray(arg) ) {
@@ -1461,7 +1464,8 @@ false for the removed fun.
             dom = bb.get(dom, false);
             assert(dom instanceof Element, "falsy dom given");
 
-            if ( klass.trim().length > 0 ) {
+            klass = klass.trim();
+            if ( klass.length > 0 ) {
                 if ( klass.indexOf(' ') === -1 ) {
                     dom.classList.add( klass );
                 } else {

@@ -636,7 +636,7 @@ Deletes text from the input, as though you hit backspace.
         inputBackspace: function() {
             var input = this.input;
 
-            if ( input ) {
+            if ( input && input.value !== '' ) {
                 var start = input.selectionStart,
                     end = input.selectionEnd;
 
