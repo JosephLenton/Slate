@@ -363,7 +363,7 @@ exports.Server = (function() {
             return this;
         },
 
-        start: function( publicFolder, port ) {
+        start: function( publicFolder, port, dontQuitOnPortError ) {
             if ( port === undefined ) {
                 port = 80;
             }
@@ -376,7 +376,7 @@ exports.Server = (function() {
             }
 
             var self = this;
-            http.createServer(function(req, res) {
+            var server = http.createServer(function(req, res) {
                 req = new RockwallRequest(req);
                 res = new RockwallResponse(res);
 
@@ -390,9 +390,27 @@ exports.Server = (function() {
                 } else {
                     self.handleFileRequest( url, req, res );
                 }
-            }).listen( port );
+            });
 
-            console.log( 'server listening on port ' + port );
+            server.on('listening', function() {
+                console.log( 'server listening on port ' + port );
+            });
+
+            server.on('error', function(err) {
+                if ( err.code === 'EADDRINUSE' ) {
+                    console.error( ' - port ' + port + ' is unavailable' );
+
+                    if ( ! dontQuitOnPortError  ) {
+                        process.exit();
+                    }
+                } else {
+                    console.error( ' !!! ERROR !!! ' );
+                    console.error( err );
+                    console.error( err.stack );
+                }
+            });
+
+            server.listen( port );
         }
     }
 

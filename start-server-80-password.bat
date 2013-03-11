@@ -1,2 +1,2 @@
-node %~dp0\src\server\main.js --port=80 --password=abc123
+node %~dp0\src\server\main.js --port=80 --interactive --password=abc123
 

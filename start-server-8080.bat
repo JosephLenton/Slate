@@ -1,2 +1,2 @@
-node %~dp0\src\server\main.js --port=8080
+node %~dp0\src\server\main.js --interactive --port=8080
 

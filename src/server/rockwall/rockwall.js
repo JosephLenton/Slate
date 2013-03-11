@@ -12,6 +12,7 @@
  * specific bits being in other files.
  */
 
+exports.Application = require( './application.js' ).Application;
 exports.Server      = require( './server.js' ).Server;
 exports.Sessions    = require( './sessions.js' ).Sessions;
 exports.TimeStamper = require( './timestamper.js' ).TimeStamper;
