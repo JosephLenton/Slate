@@ -71,6 +71,8 @@ body.slate-touch {
     overflow: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+
+    z-index: 0;
 }
 body.touch > .slate-content {
     bottom: 100px;
