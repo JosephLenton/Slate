@@ -16,6 +16,10 @@
      */
 
     extend( Object.prototype, {
+            getProp: function( name ) {
+                return this[name];
+            },
+
             /**
              * Finds the method, and binds it to 'this' object.
              * This is so you can do:
