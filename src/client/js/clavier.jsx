@@ -387,7 +387,7 @@ This is that set of rows.
 
         pane.addBottom( '123'  , 'control numpad', self.right.method( 'toggleAlt', 'numpad' ) );
 
-        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', self.right.method('toggleAlt', 'symbols') );
+        pane.addBottom( '";+*/', 'control symbols-common', self.right.method('toggleAlt', 'symbols') );
 
         pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
     }
@@ -476,7 +476,7 @@ This is that set of rows.
         
         pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
 
-        pane.addBottom( '";+*/', 'control symbols-common', self.left.method('toggleAlt', 'symbols') );
+        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', self.left.method('toggleAlt', 'symbols') );
 
         pane.addBottom( '&#x25Be;', 'control close', options.onClose );
     }
