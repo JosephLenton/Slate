@@ -78,12 +78,14 @@ window.slate.UndoStack = (function(window) {
     }
 
     UndoStack.prototype.hasRedo = function() {
-        return this.index < this.stack.length;
+        return this.index < this.stack.length-1;
     }
 
     UndoStack.prototype.add = function( state ) {
         if ( this.index < this.stack.length ) {
-            this.stack.splice( this.index++, 0, state );
+            // replace all redo items, with the new item being added
+            this.stack.splice( this.index, this.stack.length-this.index, state );
+            this.index++;
 
             callFuns( this.target, this.redoChange, false );
         } else {
@@ -124,14 +126,15 @@ window.slate.UndoStack = (function(window) {
                 callFuns( this.target, this.undoChange, true );
             }
 
-            var temp = this.stack[ this.index ];
             this.index++;
+            var temp = this.stack[ this.index ];
 
             // If we now reached the front, update the events.
             if ( ! this.hasRedo() ) {
                 callFuns( this.target, this.redoChange, false );
             }
 
+console.log( 'stack undo', this.index );
             callFuns( this.target, this.redoFuns, temp );
 
             return temp;
