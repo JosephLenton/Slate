@@ -60,6 +60,8 @@
     bottom: 0;
 
     -webkit-transform: translate3d( 0, 390px, 0 );
+    -moz-transform: translate3d( 0, 390px, 0 );
+    transform: translate3d( 0, 390px, 0 );
 
     font-weight: 100;
     font-family: "Oxygen Mono", "segoe ui light", 'helvetica', 'Segoe UI', 'Segoe WP', 'Helvetica Neue', Roboto, sans-serif;
@@ -226,18 +228,21 @@
             -webkit-overflow-scrolling: touch;
         }
         .touch-bar-row.right > .touch-bar-row-inner {
-            top   : 100%;
+            -webkit-transform: translate3d( 0, 100%, 0 );
+            -moz-transform: translate3d( 0, 100%, 0 );
+            transform: translate3d( 0, 100%, 0 );
 
-            -webkit-transition: top 120ms linear;
-               -moz-transition: top 120ms linear;
-                 -o-transition: top 120ms linear;
-                    transition: top 120ms linear;
+            -webkit-transition: -webkit-transform 120ms linear;
+               -moz-transition: -moz-transform 120ms linear;
+                    transition: transform 120ms linear;
 
             white-space: nowrap;
             overflow-x: auto;
         }
         .touch-bar-row.right > .touch-bar-row-inner.show {
-            top: 0;
+            -webkit-transform: translate3d( 0, 0, 0 );
+            -moz-transform: translate3d( 0, 0, 0 );
+            transform: translate3d( 0, 0, 0 );
         }
         .touch-bar-row.left > .touch-bar-row-inner {
             top: 0;
@@ -653,13 +658,21 @@
         {
             color: #b51;
         }
+
+        .touch-ast-input.string:before,
+        .touch-ast-input.string:after {
+            content: '"';
+        }
         .slate.content-item-contents .touch-ast-literal >  input,
         .slate.content-item-contents .touch-ast-literal > .touch-ast-text,
+        .slate.content-item-contents .touch-ast-input.string,
         .slate.content-item-contents .touch-ast-input.string >  input,
         .slate.content-item-contents .touch-ast-input.string > .touch-ast-text,
                             .touch-ast-literal.select > .touch-ast-text,
+        .touch-ast.select > .touch-ast-input.string,
         .touch-ast.select > .touch-ast-input.string         >  input,
         .touch-ast.select > .touch-ast-input.string         > .touch-ast-text,
+                            .touch-ast-input.string.select,
                             .touch-ast-input.string.select  >  input,
                             .touch-ast-input.string.select  > .touch-ast-text
         {
