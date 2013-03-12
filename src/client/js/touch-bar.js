@@ -119,7 +119,7 @@ window.slate.TouchBar = (function() {
     /*
      * Reserved words from: https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Reserved_Words
      */
-    var isValidIdentifier = function( str ) {
+    var isIdentifier = function( str ) {
         return str.length > 0 &&
                 str.replace(/^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/, '') === '' &&
                 str !== 'break' &&
@@ -215,11 +215,11 @@ window.slate.TouchBar = (function() {
                     var view = this.maybeView();
                     
                     if ( view ) {
+                        view.storeChange();
+
                         if ( this.isSelected() ) {
                             view.setCurrent( newNode );
                         }
-
-                        view.storeChange();
                     } else {
                         newNode.updateViewChange();
                     }
@@ -285,6 +285,41 @@ window.slate.TouchBar = (function() {
              * to have them return different values.
              */
             extend({
+                /**
+                 * @return Returns a function, which when called, will return a copy of the tree in it's current state.
+                 */
+                toRestoreFunction: function() {
+                    var isSelected = this.isSelected();
+                    var restoreFun = this.toRestoreImplementation();
+
+                    if ( isSelected ) {
+                        console.log( 'i am selected', this.dom().className );
+                    }
+
+                    return function( view ) {
+                        console.log( ' > restore selection code' );
+
+                        var node = restoreFun( view );
+
+                        if ( isSelected && view ) {
+                            view.setCurrent( node );
+                        }
+
+                        console.log( ' < restore selection code' );
+
+                        return node;
+                    }
+                },
+
+                toRestoreImplementation: function() {
+                    var constructor = this.__proto__.constructor;
+
+                    return function(view) {
+                        console.log( ' - restore ast.node' );
+                        return new constructor();
+                    }
+                },
+
                 selectNode: function( dir ) {
                     assert(
                             dir === 'left'  ||
@@ -564,6 +599,10 @@ window.slate.TouchBar = (function() {
                 }
             })
 
+    var newEmpty = function() {
+        return new ast.Empty();
+    }
+
     ast.Empty = ast.Node.
             sub(function() {
                 this.addClass( 'touch-ast-empty' );
@@ -637,6 +676,7 @@ window.slate.TouchBar = (function() {
 
                 this.jsValue  = jsValue;
                 this.value    = value
+                this.displayValue = displayValue;
 
                 this.
                         addClass( 'touch-ast-literal' ).
@@ -665,6 +705,7 @@ window.slate.TouchBar = (function() {
                     this.replace( new ast.UndefinedLiteral() );
                 } );
             });
+
     ast.UndefinedLiteral = ast.Literal.
             params( undefined, 'touch-ast-undefined', 'undefined' ).
             sub(function() {
@@ -700,7 +741,18 @@ window.slate.TouchBar = (function() {
                         toJSValue || value
                 )
             }).
-            extend( ast.Literal )
+            extend( ast.Literal ).
+            override({
+                toRestoreImplementation: function() {
+                    var str = this.displayValue,
+                        value = this.value,
+                        jsValue = this.jsValue;
+
+                    return function(view) {
+                        return new ast.NumLiteral( str, value, jsValue );
+                    }
+                }
+            });
             
     /**
      * This is a generic operator, with a left
@@ -745,7 +797,9 @@ window.slate.TouchBar = (function() {
                 var metaIndex = 0,
                     countIndex = true;
 
-                if ( metas.length > 0 ) {
+                this.metas = metas;
+
+                if ( metas && metas.length > 0 ) {
                     for ( var i = 0; i < metas.length; i++ ) {
                         var temp = metas[i];
 
@@ -959,6 +1013,27 @@ window.slate.TouchBar = (function() {
                     } else {
                         return  leftEmpty || rightEmpty;
                     }
+                },
+
+                toRestoreImplementation: function() {
+                    var meta  = this.meta,
+                        metas = this.metas;
+
+                    var left  = this.left.toRestoreFunction(),
+                        right = this.right.toRestoreFunction();
+
+                    return function(view) {
+                        console.log( ' > restore ast.doubleOp' );
+
+                        var node = new ast.DoubleOp( meta, metas );
+
+                        node.setLeft( left(view) );
+                        node.setRight( right(view) );
+
+                        console.log( ' < restore ast.doubleOp' );
+
+                        return node;
+                    }
                 }
             }).
             extend({
@@ -1088,26 +1163,27 @@ window.slate.TouchBar = (function() {
                 }
             } );
 
-    ast.Range = ast.DoubleOp.params({
-            name    : 'range',
-            alt     : 'range',
-             
-            preHtml : '[',
-            html    : ', ',
-            postHtml: ')',
+    ast.Range = ast.DoubleOp.
+            params({
+                    name    : 'range',
+                    alt     : 'range',
+                     
+                    preHtml : '[',
+                    html    : ', ',
+                    postHtml: ')',
 
-            toJS: function( left, right ) {
-                return 'new slate.Range(' + left.toJS() + ', ' + right.toJS() + ') ';
-            },
+                    toJS: function( left, right ) {
+                        return 'new slate.Range(' + left.toJS() + ', ' + right.toJS() + ') ';
+                    },
 
-            evaluate: function( left, right ) {
-                return new slate.Range( left.evaluate(), right.evaluate() );
-            },
+                    evaluate: function( left, right ) {
+                        return new slate.Range( left.evaluate(), right.evaluate() );
+                    },
 
-            isAssignable: function() {
-                return false;
-            }
-    });
+                    isAssignable: function() {
+                        return false;
+                    }
+            });
 
     var descriptors = (function() {
         var newOps = function( name, alt, sym, print, fun ) {
@@ -1194,7 +1270,7 @@ window.slate.TouchBar = (function() {
                     postHtml: ']',
 
                     toJS: function( left, right ) {
-                        return '(' + left.toJS() + ')[' + right.toJS() + '] ';
+                        return '(' + left.toJS() + ').getProp(' + right.toJS() + ') ';
                     },
 
                     toJSAssignment: function( left, right, expr ) {
@@ -1229,10 +1305,7 @@ window.slate.TouchBar = (function() {
                     html: '.',
 
                     validate: function( onError, left, right ) {
-                        if (
-                                ! (right instanceof ast.VariableInput) &&
-                                ! (right instanceof ast.Command)
-                        ) {
+                        if ( right.toJSObj === undefined ) {
                             return onError( right, "invalid construct for property/method access" );
                         } else {
                             return left.validate( onError ) && right.validate( onError );
@@ -1250,7 +1323,13 @@ window.slate.TouchBar = (function() {
                     },
 
                     toJS: function( left, right ) {
-                        return '(' + left.toJS() + ').' + right.toJS() + ' ';
+                        var rightStr = right.toJS();
+
+                        if ( isIdentifier(right) ) {
+                            return '(' + left.toJS() + ').' + rightStr + ' ';
+                        } else {
+                            return '(' + left.toJS() + ').getProp(' + rightStr + ') ';
+                        }
                     },
 
                     toJSPipeReceive: function( left, right, pipe ) {
@@ -1769,7 +1848,7 @@ window.slate.TouchBar = (function() {
     }
 
     var emptyToJSObj = function( obj, str ) {
-        return obj + '[' + str + ']' ;
+        return obj + '.getProp(' + str + ')' ;
     }
 
     var newValidation = function( css, isAssignable, test, toJS, toJSObj ) {
@@ -1804,7 +1883,7 @@ window.slate.TouchBar = (function() {
 
 
     var inputValidations = [
-            newValidation( 'variable', true , '[a-zA-Z_]+[a-zA-Z_0-9]*',
+            newValidation( 'variable', true , isIdentifier,
                     null,
                     function( obj, str ) {
                         return obj + '.' + str;
@@ -1838,7 +1917,7 @@ window.slate.TouchBar = (function() {
                     },
 
                     function( obj, str ) {
-                        return obj + '[' + this.toJS(str) + ']';
+                        return obj + '.getProp(' + this.toJS(str) + ')';
                     }
             )
     ];
@@ -1850,7 +1929,7 @@ window.slate.TouchBar = (function() {
                     '',
                     false
             ).
-            sub(function() {
+            sub(function(value) {
                 this.lastValidation = null;
 
                 this.setDynamicValidation( inputValidations[0] );
@@ -1864,6 +1943,8 @@ window.slate.TouchBar = (function() {
                         this.updateDynamicValidation( val );
                     }
                 } );
+
+                this.setInputValue( value );
             }).
             override( ast.Input, {
                     setInputValue: function( str ) {
@@ -1890,6 +1971,15 @@ window.slate.TouchBar = (function() {
 
                     isAssignable: function() {
                         return this.lastValidation.isAssignable;
+                    },
+
+                    toRestoreImplementation: function() {
+                        var val = this.getInputValue();
+
+                        return function(view) {
+                            console.log( ' - ast.DynamicInput( ' + val + ' )' );
+                            return new ast.DynamicInput( val );
+                        }
                     }
             }).
             extend({
@@ -1901,6 +1991,7 @@ window.slate.TouchBar = (function() {
                             }
                         }
                     },
+
                     setDynamicValidation: function( v ) {
                         if ( this.lastValidation !== v ) {
                             if ( this.lastValidation !== null ) {
@@ -1914,7 +2005,7 @@ window.slate.TouchBar = (function() {
                     },
 
                     toJSObj: function( obj ) {
-                        return this.lastValidation.toJSObj( obj, this.getInputValue() );
+                        return this.lastValidation.toJSObj( '(' + obj + ')', this.getInputValue() );
                     },
 
                     toJSAssignment: function( obj, expr ) {
@@ -1952,7 +2043,7 @@ window.slate.TouchBar = (function() {
             ).
             sub(function() {
                 this.onInput( function() {
-                     if ( isValidIdentifier(val) ) {
+                     if ( isIdentifier(val) ) {
                          this.removeError()
                      } else {
                          this.setError()
@@ -1965,7 +2056,7 @@ window.slate.TouchBar = (function() {
 
                         if ( str.length === 0 ) {
                             return onError( this, "no variable name provided" )
-                         } else if ( ! isValidIdentifier(str) ) {
+                         } else if ( ! isIdentifier(str) ) {
                              return onError( this, "invalid variable name given" )
                         } else {
                             return true
@@ -1999,7 +2090,7 @@ window.slate.TouchBar = (function() {
                     },
 
                     toJSObj: function( obj ) {
-                        return obj + '.' + this.getInputValue();
+                        return '(' + obj + ').' + this.getInputValue();
                     },
 
                     toJSAssignment: function( obj, expr ) {
@@ -2121,6 +2212,28 @@ window.slate.TouchBar = (function() {
                 }
             }).
             override({
+                    toRestoreImplementation: function() {
+                        var value = value;
+                        var paramRestores = new Array( this.params.length );
+
+                        for ( var i = 0; i < this.params; i++ ) {
+                            paramRestores[i] = this.params[i].toRestoreFunction();
+                        }
+
+                        return function( view ) {
+                            var node = new ast.Command( value );
+                            var newParams = new Array( paramRestores.length );
+
+                            for ( var i = 0; i < newParams.length; i++ ) {
+                                newParams[i] = paramRestores[i]( view );
+                            }
+
+                            node.setParams( newParams );
+
+                            return node;
+                        }
+                    },
+
                     findPipeReceiver: function( callback ) {
                         return callback( this );
                     },
@@ -2151,11 +2264,12 @@ window.slate.TouchBar = (function() {
 
                     toJSObj: function( obj ) {
                         var args = new Array( arguments.length-1 );
+
                         for ( var i = 0; i < args.length; i++ ) {
                             args[i] = arguments[i+1];
                         }
 
-                        return obj + '.' + this.toJS.apply( this, args )
+                        return '(' + obj + ').' + this.toJS.apply( this, args )
                     },
 
                     validate: function( onError ) {
@@ -2472,6 +2586,29 @@ window.slate.TouchBar = (function() {
                     this.before( this.rightParen, empty );
                 },
 
+                setParams: function( newParams ) {
+                    var oldParams = this.params;
+
+                    this.params = newParams;
+
+                    var self = this;
+                    for ( var i = 0; i < newParams.length; i++ ) {
+                        var newParam = newParams[i];
+
+                        newParam.once( 'replace', function(newNode) {
+                            self.replaceChild( this, newNode );
+                        } );
+
+                        this.add( newParam );
+                    }
+
+                    for ( var i = 0; i < oldParams.length; i++ ) {
+                        var oldParam = oldParams[i];
+
+                        this.remove( oldParam );
+                    }
+                },
+
                 getFunction: function() {
                     return window[ this.getInputValue() ];
                 }
@@ -2574,6 +2711,7 @@ var viewCount = 1;
                 this.selectLater = null;
                 this.insertionFun = null;
 
+                this.ignoreChangesFlag = false;
                 this.changeDelay = null;
 
                 /* the bar where the AST nodes are shown */
@@ -2600,23 +2738,42 @@ var viewCount = 1;
                     input: function(ev) {
                         ev.preventDefault();
 
-                        var newAST = new ast.DynamicInput();
-
-                        newAST.setInputValue( this.value );
+                        var val = this.value;
                         this.value = '';
-
-                        self.insert( newAST );
+                        self.insert( new ast.DynamicInput(val) );
                     }
                 })
             }).
             extend({
-                    undo: function( state ) {
-                        // todo
-                    },
-                    redo: function( state ) {
-                        // todo
-                    },
+                    undoRestore: function( state ) {
+                        console.log( ' BEGIN #################' );
+                        this.ignoreChanges();
 
+                        /*
+                         * Track if the current node changes,
+                         * and if so, we need to ensure it is kept,
+                         * after we have called 'setAST'.
+                         */
+
+                        var oldCurrent = this.current;
+                        var node = state( this );
+
+                        var newCurrent = null;
+                        if ( this.current !== oldCurrent ) {
+                            console.log( 'state changed' );
+                            newCurrent = this.current;
+                        }
+
+console.log( node );
+                        this.setAST( node );
+
+                        if ( newCurrent ) {
+                            this.setCurrent( newCurrent );
+                        }
+
+                        console.log( ' END ----------------------' );
+                    },
+                    
                     onChange: function( fun ) {
                         assertFunction( fun );
 
@@ -2625,22 +2782,28 @@ var viewCount = 1;
                         return this;
                     },
 
-                    storeChange: function() {
-                        clearTimeout( this.changeDelay )
-                        this.changeDelay = this.storeChangeNow.later( this, 10 );
+                    ignoreChanges: function() {
+                        this.ignoreChangesFlag = true;
 
-                        return this;
+                        var self = this;
+                        clearTimeout( this.changeDelay )
+                        this.changeDelay = setTimeout( function() {
+                            self.ignoreChangesFlag = false;
+                            console.log( '@@ ignore reset' );
+                        }, 0 );
                     },
 
-                    storeChangeNow: function() {
-                        // get the tree structure as HTML doms,
-                        // translated to JSON
-                        // then store the JSON
-                        //
-                        var structure = 'foo';
-                        
-                        assert( this.insertionFun !== null, "no insertion fun set" );
-                        this.insertionFun( structure );
+                    storeChange: function() {
+                        console.log( '@@ store change', this.ignoreChangesFlag );
+                        if ( ! this.ignoreChangesFlag ) {
+                            console.log( '~~ RECORD' );
+                            this.ignoreChanges();
+
+                            assert( this.insertionFun !== null, "no insertion fun set" );
+                            this.insertionFun( this.getAST().toRestoreFunction() );
+                        }
+
+                        return this;
                     },
 
                     execute: function() {
@@ -2681,12 +2844,13 @@ var viewCount = 1;
                     },
 
                     clear: function() {
+                        console.log( '~~ CLEAR' );
                         this.setAST( new ast.Empty() );
                     },
 
                     validate: function( callback ) {
                         var self = this;
-                        var success = this.getRootAST().validate(function(node, errMsg) {
+                        var success = this.getAST().validate(function(node, errMsg) {
                             self.showError( node, errMsg );
 
                             // todo, display the error
@@ -2702,15 +2866,23 @@ var viewCount = 1;
                     },
 
                     toJS: function() {
-                        return this.getRootAST().toJS();
+                        return this.getAST().toJS();
                     },
 
                     evaluate: function( callback ) {
-                        this.getRootAST().evaluateCallback( callback );
+                        this.getAST().evaluateCallback( callback );
                     },
 
                     getCurrent: function() {
                         return this.current;
+                    },
+
+                    maybeSetCurrent: function( ast, isSelected ) {
+                        if ( isSelected ) {
+                            this.setCurrent( ast );
+                        }
+
+                        return ast;
                     },
 
                     setCurrent: function( ast ) {
@@ -2753,7 +2925,7 @@ var viewCount = 1;
                         }
                     },
 
-                    getRootAST: function() {
+                    getAST: function() {
                         assert( this.current !== null, "current should never be set to null" );
                         return this.bar.child( '.touch-ast' );
                     },
@@ -2763,8 +2935,11 @@ var viewCount = 1;
                      * with the ast node given.
                      */
                     setAST: function( ast ) {
+                        console.log( '~~ SET AST' );
                         if ( this.current ) {
-                            this.bar.remove( this.getRootAST() );
+                            this.storeChange();
+
+                            this.bar.remove( this.getAST() );
                             this.current = null;
                         }
 
@@ -2781,6 +2956,7 @@ var viewCount = 1;
                      * between them.
                      */
                     insertLeftRight: function( node, isLeft ) {
+                        this.storeChange();
                         var current = this.getCurrent();
 
                         current.isEmpty() && node.replaceRight !== undefined && current.parentAST( function(p) {
@@ -2810,8 +2986,6 @@ var viewCount = 1;
                          * when it searches for an empty node.
                          */
                         this.selectEmpty( node, isLeft );
-
-                        this.storeChange();
                     },
 
                     insertLeft: function( node ) {
@@ -2827,11 +3001,11 @@ var viewCount = 1;
                      * with the one given.
                      */
                     replaceCurrent: function( node ) {
+                        this.storeChange();
+
                         this.current.replace( node );
                         this.current.setView( this );
                         this.selectEmpty( node );
-
-                        this.storeChange();
                     },
 
                     setLeftDown: function( down ) {
@@ -3342,13 +3516,19 @@ var viewCount = 1;
             execute: function() {
                 var self = this;
 
+                /*
+                 * Store that the AST has changed, after the evaluation/execution.
+                 * That is for the undo/redo.
+                 */
                 this.view.validate( function() {
                     if ( false ) {
                         self.view.evaluate( function(r) {
+                            self.view.storeChange();
                             self.newTouchView();
                         } );
                     } else {
                         self.executeFun( 'touch-js', self.view, function() {
+                            self.view.storeChange();
                             self.newTouchView();
                         } );
                     }
@@ -3371,15 +3551,18 @@ var viewCount = 1;
 
                 this.keyboard.controlMove( this.view.method('selectNodeMove') );
 
+                var viewUndoRedo = this.view.method('undoRestore');
                 this.undo.
                         clearUndos().
                         clearRedos().
-                        onUndo( this.view.method('undo') ).
-                        onRedo( this.view.method('redo') );
+                        onUndo( viewUndoRedo ).
+                        onRedo( viewUndoRedo );
 
                 this.buttons.
                         onLeft( this.view.method('setLeftDown') ).
                         onReplace( this.view.method('setReplaceDown') );
+
+                return this.view;
             },
 
             showRow: function( row ) {
