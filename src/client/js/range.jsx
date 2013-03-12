@@ -31,6 +31,24 @@ Range
 
         this.lowerVal = lower;
         this.upperVal = upper;
+        this.length   = Math.max( 0, upper - lower );
+    }
+
+    Range.prototype.getProp = function( index ) {
+        if ( isNumber(index) {
+            index = index | 0;
+
+            if (
+                    index < 0 ||
+                    index >= this.length
+            ) {
+                return undefined;
+            } else {
+                return this.lowerVal + index;
+            }
+        } else {
+            return this[ index ];
+        }
     }
 
     Range.prototype.each = function( block ) {
