@@ -2213,10 +2213,10 @@ window.slate.TouchBar = (function() {
             }).
             override({
                     toRestoreImplementation: function() {
-                        var value = value;
+                        var value = this.getInputValue();
                         var paramRestores = new Array( this.params.length );
 
-                        for ( var i = 0; i < this.params; i++ ) {
+                        for ( var i = 0; i < paramRestores.length; i++ ) {
                             paramRestores[i] = this.params[i].toRestoreFunction();
                         }
 
@@ -2224,7 +2224,7 @@ window.slate.TouchBar = (function() {
                             var node = new ast.Command( value );
                             var newParams = new Array( paramRestores.length );
 
-                            for ( var i = 0; i < newParams.length; i++ ) {
+                            for ( var i = 0; i < paramRestores.length; i++ ) {
                                 newParams[i] = paramRestores[i]( view );
                             }
 
