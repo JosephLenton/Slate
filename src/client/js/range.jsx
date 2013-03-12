@@ -35,7 +35,7 @@ Range
     }
 
     Range.prototype.getProp = function( index ) {
-        if ( isNumber(index) {
+        if ( isNumber(index) ) {
             index = index | 0;
 
             if (
