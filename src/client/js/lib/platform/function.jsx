@@ -234,6 +234,8 @@ they will be executed in turn.
             }
         }
 
+        obj.constructor = src;
+
         return obj;
     }
 
@@ -291,23 +293,25 @@ as a prototype instead of a funtion.
             var errors = null;
 
             var proto = newPrototypeArray( this, arguments, function(dest, k, val) {
-                var val = isOkCallback(dest, k, val);
+                if ( k !== 'constructor' ) {
+                    var val = isOkCallback(dest, k, val);
 
-                if (
-                        val !== undefined &&
-                        val !== null &&
-                        val !== false &&
-                        val !== true
-                ) {
-                    return val;
-                } else if ( val !== true ) {
-                    if ( errors === null ) {
-                        errors = [ k ];
+                    if (
+                            val !== undefined &&
+                            val !== null &&
+                            val !== false &&
+                            val !== true
+                    ) {
+                        return val;
+                    } else if ( val !== true ) {
+                        if ( errors === null ) {
+                            errors = [ k ];
+                        } else {
+                            errors.push( k );
+                        }
                     } else {
-                        errors.push( k );
+                        return undefined;
                     }
-                } else {
-                    return undefined;
                 }
             } )
              
@@ -321,6 +325,8 @@ as a prototype instead of a funtion.
             }
 
             fun.prototype = proto;
+            proto.constructor = fun;
+
             return fun;
         }
     }
@@ -464,7 +470,7 @@ to also change the target as well.
 -------------------------------------------------------------------------------
 
     Function.prototype.curry = function() {
-        return newPartial( this, undefined, arguments, 0, false );
+        return newPartial( this, undefined, arguments, 0, false ).
                 proto( self );
     }
 
@@ -520,7 +526,7 @@ Variables inside f will be ...
 -------------------------------------------------------------------------------
 
     Function.prototype.postCurry = function() {
-        return newPartial( this, undefined, arguments, 0, true );
+        return newPartial( this, undefined, arguments, 0, true ).
                 proto( self );
     }
 
