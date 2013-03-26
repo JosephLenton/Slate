@@ -526,7 +526,11 @@ This is the keyboard it's self, and what the outside world interacts with.
 -------------------------------------------------------------------------------
 
     var Clavier = (function(options) {
-        assertObject( options, "no options provided" );
+        if ( arguments.length > 0 ) {
+            assertObject( options, "no options provided" );
+        } else {
+            options = {};
+        }
 
         var audio = new Audio();
         audio.loop = false;
