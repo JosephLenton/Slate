@@ -470,9 +470,6 @@ given.
 ```
     var f2 = someFunction.curry( _, 1, 2, 3 );
 
-Note you can also use 'bind' as an alterantive,
-to also change the target as well.
- 
 -------------------------------------------------------------------------------
 
     Function.prototype.curry = function() {
