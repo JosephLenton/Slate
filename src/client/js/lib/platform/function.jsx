@@ -461,8 +461,14 @@ when the function is called.
 
 ## function.curry
 
-Copies this function, and returns a new one,
-with the parameters given tacked on.
+This is essentially the same as 'bind', but with no target given.
+
+It copies this function, and returns a new one, with the parameters given tacked
+on at the start. You can also use the underscore to leave gaps for parameters
+given.
+
+```
+    var f2 = someFunction.curry( _, 1, 2, 3 );
 
 Note you can also use 'bind' as an alterantive,
 to also change the target as well.
