@@ -3192,7 +3192,7 @@ console.log( node );
                 wrapKlass,
                 barDom,
                 this.newControls( this.undo ),
-                this.keyboard
+                this.keyboard.getDom()
         )
 
         parentDom.appendChild( this.barWrap );

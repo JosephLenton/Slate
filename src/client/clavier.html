@@ -2,15 +2,7 @@
 
 <link rel="stylesheet" href="css/clavier.css">
 
-<script src="js/lib/platform/check.jsx"></script>
-<script src="js/lib/platform/shim.js"></script>
-<script src="js/lib/platform/function.jsx"></script>
-<script src="js/lib/platform/extras.js"></script>
-
-<script src="js/lib/jester.js"></script>
-<script src="js/lib/platform/bb.jsx"></script>
-<script src="js/lib/platform/bb-gun.js"></script>
-
+<script src="js/lib/touchy.js"></script>
 <script src="js/clavier.jsx"></script>
 
 <div class="main"></div>
@@ -28,13 +20,13 @@
 </style>
 
 <script>
-    (function() {
+    setTimeout( function() {
         var keyboard = new Clavier();
 
-        document.body.querySelector('.main').appendChild(keyboard.dom());
+        document.body.querySelector('.main').appendChild(keyboard.getDom());
 
-        (function() {
+        setTimeout( function() {
             keyboard.open();
-        }).later(1000);
-    }).later();
+        }, 1000);
+    }, 1 );
 </script>

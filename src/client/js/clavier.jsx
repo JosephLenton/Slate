@@ -15,7 +15,16 @@ These include
     var AUDIO_KEYBOARD_CLICK_SRC = '/keyboard-click.wav';
     var DEFAULT_POSITION = '300px';
 
+    var newElement = function( type, klass ) {
+        var el = document.createElement( type );
+        if ( type === 'a' ) {
+            el.setAttribute('href', '#');
+        }
 
+        el.className = klass || '';
+
+        return el;
+    }
 
 -------------------------------------------------------------------------------
 
@@ -39,12 +48,14 @@ that row.
             klass = args[1];
             fun   = args[2];
         } else {
-            logError( "invalid parameters", args );
+            throw new Error( "invalid parameters");
         }
 
-        var key = bb.a('clavier-key', klass, { html: html, click: fun } );
+        var key = newElement( 'a', 'clavier-key ' + klass );
+        touchy.click( key, fun );
+        key.innerHTML = html;
 
-        bb.add( row, key );
+        row.appendChild( key );
 
         return key;
     }
@@ -62,16 +73,21 @@ This is that set of rows.
 
 -------------------------------------------------------------------------------
 
-    var InnerKeyPane = (function(klass) {
-        BBGun.call(this, 'clavier-keys-inner', klass || '');
+    var InnerKeyPane = function(klass) {
+        this.dom = newElement( 'div', 'clavier-keys-inner ' + (klass || '') );
 
-        this.add(
-                this.superTop = bb('clavier-keys-row super-top'),
-                this.top    = bb('clavier-keys-row top'),
-                this.middle = bb('clavier-keys-row middle'),
-                this.bottom = bb('clavier-keys-row bottom')
-        )
-    }).extend( BBGun, {
+        this.superTop = newElement('div', 'clavier-keys-row super-top');
+        this.top      = newElement('div', 'clavier-keys-row top');
+        this.middle   = newElement('div', 'clavier-keys-row middle');
+        this.bottom   = newElement('div', 'clavier-keys-row bottom');
+
+        this.dom.appendChild( this.superTop );
+        this.dom.appendChild( this.top );
+        this.dom.appendChild( this.middle );
+        this.dom.appendChild( this.bottom );
+    }
+
+    InnerKeyPane.prototype = {
 
 
 
@@ -120,7 +136,7 @@ This is that set of rows.
         addBottom: function( html, fun ) {
             return addRow(this.bottom, arguments);
         }
-    })
+    }
 
 
 
@@ -145,7 +161,7 @@ This is that set of rows.
     }
 
     var highlightKeyPane = function( pane ) {
-        var keys = pane.dom().querySelectorAll( '.clavier-key' );
+        var keys = pane.dom.querySelectorAll( '.clavier-key' );
 
         for ( var i = 0; i < keys.length; i++ ) {
             highlightKeyInner( keys[i], 'highlight-border' );
@@ -153,157 +169,101 @@ This is that set of rows.
     }
 
     var KeyPane = (function() {
-        BBGun.call( this, 'clavier-keys' );
+        this.dom = newElement( 'div', 'clavier-keys' );
 
-        this.add( 
-                this.mainPane =
-                        new InnerKeyPane( 'main' )
-        );
+        this.mainPane = new InnerKeyPane( 'main' );
+        this.dom.appendChild( this.mainPane.dom );
 
         var alts = [];
         for ( var i = 0; i < arguments.length; i++ ) {
-            alts.push(
-                    new InnerKeyPane( arguments[i] ).
-                            addTo( this )
-            )
+            var innerPane = new InnerKeyPane( arguments[i] );
+            this.dom.appendChild( innerPane.dom );
+
+            alts.push( innerPane );
         }
 
         this.alts = alts;
 
         this.showMain();
-    }).
-    extend( BBGun,
-        (function() {
-            var newMainAltMethod = function( mainMeth, altMeth ) {
-                return function( klass ) {
-                    this.mainPane[mainMeth]( 'show' );
+    });
+    KeyPane.prototype = {
+            showMain : function( klass ) {
+                this.mainPane.dom.classList.add('show');
+                highlightKeyPane( this.mainPane );
 
-                    var found = false;
-                    for ( var i = 0; i < this.alts.length; i++ ) {
-                        var alt = this.alts[i];
+                this.alts.forEach( function(alt) {
+                    alt.dom.classList.remove( 'show' )
+                } );
 
-                        if ( klass && alt.hasClass(klass) ) {
-                            this.alts[i][altMeth]( 'show' );
-                            found = true;
+                return this;
+            },
+
+            showAlt  : function( klass ) {
+                var self = this;
+
+                this.alts.forEach( function(alt) {
+                    if ( alt.dom.classList.contains(klass) ) {
+                        if ( ! alt.dom.classList.contains('show') ) {
+                            alt.dom.classList.add('show');
+                            self.mainPane.dom.classList.remove('show');
+
+                            highlightKeyPane( alt );
+                        }
+                    } else {
+                        alt.dom.classList.remove( 'show' )
+                    }
+                } );
+            },
+
+            toggleAlt: function( klass ) {
+                var self = this;
+
+                this.alts.forEach( function(alt) {
+                    if ( alt.dom.classList.contains(klass) ) {
+                        if ( alt.dom.classList.contains('show') ) {
+                            alt.dom.classList.remove('show');
+                            self.mainPane.dom.classList.add('show');
+
+                            highlightKeyPane( self.mainPane );
                         } else {
-                            this.alts[i].removeClass( 'show' );
+                            alt.dom.classList.add('show');
+                            self.mainPane.dom.classList.remove('show');
+
+                            highlightKeyPane( alt );
                         }
+                    } else {
+                        alt.dom.classList.remove( 'show' )
                     }
+                } );
 
-                    if ( klass ) {
-                        assert( found, klass + ", was not found" );
+                return this;
+            },
+
+
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
+            main: function() {
+                return this.mainPane;
+            },
+
+-------------------------------------------------------------------------------
+
+### 
+
+-------------------------------------------------------------------------------
+
+            alt: function( klass ) {
+                for ( var i = 0; i < this.alts.length; i++ ) {
+                    if ( this.alts[i].dom.classList.contains(klass) ) {
+                        return this.alts[i];
                     }
-
-                    return this;
                 }
-            };
-
-            return {
-                    //showMain: newMainAltMethod(    'addClass', 'removeClass' ),
-                    showMain : function( klass ) {
-                        this.mainPane.addClass('show');
-                        highlightKeyPane( this.mainPane );
-
-                        return this.alts.each( this, function(alt) {
-                            alt.removeClass( 'show' )
-                        } );
-                    },
-
-                    //showalt: newMainAltMethod( 'removeClass', 'addClass'    ),
-                    showAlt  : function( klass ) {
-                        return this.alts.each( this, function(alt) {
-                            if ( alt.hasClass(klass) ) {
-                                if ( ! alt.hasClass('show') ) {
-                                    alt.addClass('show');
-                                    this.mainPane.removeClass('show');
-
-                                    highlightKeyPane( alt );
-                                }
-                            } else {
-                                alt.removeClass( 'show' )
-                            }
-                        } );
-                    },
-
-                    toggleAlt: function( klass ) {
-                        return this.alts.each( this, function(alt) {
-                            if ( alt.hasClass(klass) ) {
-                                if ( alt.hasClass('show') ) {
-                                    alt.removeClass('show');
-                                    this.mainPane.addClass('show');
-
-                                    highlightKeyPane( this.mainPane );
-                                } else {
-                                    alt.addClass('show');
-                                    this.mainPane.removeClass('show');
-
-                                    highlightKeyPane( alt );
-                                }
-                            } else {
-                                alt.removeClass( 'show' )
-                            }
-                        } );
-                    }
             }
-        })(),
-        {
-
-
-
--------------------------------------------------------------------------------
-
-### 
-
--------------------------------------------------------------------------------
-
-                main: function() {
-                    return this.mainPane;
-                },
-
--------------------------------------------------------------------------------
-
-### 
-
--------------------------------------------------------------------------------
-
-                alt: function( klass ) {
-                    assert( klass, "no klass name provided" );
-
-                    for ( var i = 0; i < this.alts.length; i++ ) {
-                        if ( this.alts[i].hasClass(klass) ) {
-                            return this.alts[i];
-                        }
-                    }
-
-                    assertUnreachable();
-                }
-        }
-    )
-
--------------------------------------------------------------------------------
-
-##
-
--------------------------------------------------------------------------------
-
-    var setupTextMoveControlButtons = function( clavier ) {
-        clavier.
-                rightControl(bb.div('clavier-key-move-home'), function() {
-                    // todo
-                }).
-                rightControl(bb.div('clavier-key-move-left'), function() {
-                    // todo
-                }).
-                rightControl(bb.div('clavier-key-move-right'), function() {
-                    // todo
-                }).
-                rightControl(bb.div('clavier-key-move-end'), function() {
-                    // todo
-                }).
-                rightControl(bb.div('clavier-key-delete'), function() {
-                    // todo
-                })
-        ;
     }
 
 -------------------------------------------------------------------------------
@@ -345,7 +305,7 @@ This is that set of rows.
                 } else if ( i === argsStart+3 ) {
                     buttons.push( pane.addBottom( k, fun ) );
                 } else {
-                    logError( "more than 4 rows is not supported" )
+                    throw new Error( "more than 4 rows is not supported" )
                 }
             }
         }
@@ -378,18 +338,34 @@ This is that set of rows.
 -------------------------------------------------------------------------------
 
     var setupLeftLower = function( self, pane, options ) {
-        pane.addSuperTop( '&#x21d0;', 'control left-node' , self.method('controlMove', 'left' ) );
-        pane.addSuperTop( '&#x21d2;', 'control right-node', self.method('controlMove', 'right') );
-        pane.addTop(      '&#x21d3;', 'control down-node' , self.method('controlMove', 'down' ) );
-        pane.addTop(      '&#x21d1;', 'control up-node'   , self.method('controlMove', 'up'   ) );
+        pane.addSuperTop( '&#x21d0;', 'control left-node' , function() {
+            self.controlMove( 'left' );
+        });
+        pane.addSuperTop( '&#x21d2;', 'control right-node', function() {
+            self.controlMove( 'right');
+        });
+        pane.addTop(      '&#x21d3;', 'control down-node' , function() {
+            self.controlMove( 'down' );
+        });
+        pane.addTop(      '&#x21d1;', 'control up-node'   , function() {
+            self.controlMove( 'up'   );
+        });
 
-        pane.addMiddle( 'shift', 'control shift', self.method('toggleShift') );
+        pane.addMiddle( 'shift', 'control shift', function() {
+            self.toggleShift();
+        });
 
-        pane.addBottom( '123'  , 'control numpad', self.right.method( 'toggleAlt', 'numpad' ) );
+        pane.addBottom( '123'  , 'control numpad', function() {
+            self.right.toggleAlt( 'numpad' );
+        });
 
-        pane.addBottom( '";+*/', 'control symbols-common', self.right.method('toggleAlt', 'symbols') );
+        pane.addBottom( '";+*/', 'control symbols-common', function() {
+            self.right.toggleAlt( 'symbols');
+        });
 
-        pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
+        pane.addBottom( '&nbsp;', 'space', function() {
+            self.inputCharacter( ' ');
+        });
     }
 
 -------------------------------------------------------------------------------
@@ -466,17 +442,29 @@ This is that set of rows.
 -------------------------------------------------------------------------------
 
     var setupRightLower = function( self, pane, options ) {
-        pane.addSuperTop( '&#x25C4;', 'control left' , self.method('inputLeft') );
+        pane.addSuperTop( '&#x25C4;', 'control left', function() {
+            self.inputLeft();
+        });
 
-        pane.addSuperTop( '&#x25Ba;', 'control right', self.method('inputRight') );
+        pane.addSuperTop( '&#x25Ba;', 'control right', function() {
+            self.inputRight();
+        });
 
-        pane.addTop( 'back', 'control backspace', self.method( 'inputBackspace' ) );
+        pane.addTop( 'back', 'control backspace', function() {
+            self.inputBackspace();
+        });
 
-        pane.addMiddle( 'shift', 'control shift', self.method('toggleShift') );
+        pane.addMiddle( 'shift', 'control shift', function() {
+            self.toggleShift();
+        });
         
-        pane.addBottom( '&nbsp;', 'space', self.method('inputCharacter', ' ') );
+        pane.addBottom( '&nbsp;', 'space', function() {
+            self.inputCharacter(' ');
+        });
 
-        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', self.left.method('toggleAlt', 'symbols') );
+        pane.addBottom( '&amp;[]&lt;&gt;', 'control symbols-special', function() {
+            self.left.toggleAlt('symbols');
+        });
 
         pane.addBottom( '&#x25Be;', 'control close', options.onClose );
     }
@@ -527,7 +515,9 @@ This is the keyboard it's self, and what the outside world interacts with.
 
     var Clavier = (function(options) {
         if ( arguments.length > 0 ) {
-            assertObject( options, "no options provided" );
+            if ( ! options ) {
+                throw new Error( "no options provided" );
+            }
         } else {
             options = {};
         }
@@ -539,10 +529,17 @@ This is the keyboard it's self, and what the outside world interacts with.
 
         this.input = null;
 
-        this.left  = new KeyPane( 'symbols' ).addClass( 'clavier-left clavier-background' );
-        this.right = new KeyPane( 'symbols', 'numpad' ).addClass( 'clavier-right clavier-background' );
+        this.left  = new KeyPane( 'symbols' );
+        this.left.dom.classList.add( 'clavier-left' );
+        this.left.dom.classList.add( 'clavier-background' );
 
-        BBGun.call( this, 'clavier', this.left, this.right );
+        this.right = new KeyPane( 'symbols', 'numpad' )
+        this.right.dom.classList.add( 'clavier-right' );
+        this.right.dom.classList.add( 'clavier-background' );
+
+        this.dom = newElement( 'div', 'clavier' );
+        this.dom.appendChild( this.left.dom );
+        this.dom.appendChild( this.right.dom );
 
         this.lastPosition = DEFAULT_POSITION;
 
@@ -559,7 +556,7 @@ This is the keyboard it's self, and what the outside world interacts with.
 
         this.focusEvent = newDoubleFocusEvent();
 
-        this.on( 'dblclick', function(ev) {
+        this.dom.addEventListener( 'dblclick', function(ev) {
             ev.preventDefault();
         } );
         
@@ -573,10 +570,14 @@ This is the keyboard it's self, and what the outside world interacts with.
             ev.preventDefault();
         };
 
-        this.on( 'touchend', onButtonClick );
-        this.on( 'mouseup', onButtonClick );
-    }).
-    extend( BBGun, {
+        this.dom.addEventListener( 'touchend', onButtonClick );
+        this.dom.addEventListener( 'mouseup', onButtonClick );
+    });
+
+    Clavier.prototype = {
+        getDom: function() {
+            return this.dom;
+        },
 
 -------------------------------------------------------------------------------
 
@@ -682,7 +683,9 @@ The string is inserted, after the current cursor position.
 -------------------------------------------------------------------------------
 
         inputCharacter: function( char ) {
-            assert( char !== undefined, "undefined character given" );
+            if ( char === undefined ) {
+                throw new Error( "undefined character given" );
+            }
 
             var input = this.input;
 
@@ -756,7 +759,9 @@ Sets the input object the Clavier object will insert characters into.
 -------------------------------------------------------------------------------
 
         setInput: function( input ) {
-            assert( input instanceof Element );
+            if ( !(input instanceof Element) ) {
+                throw new Error("non-element given");
+            }
 
             if ( this.input !== null ) {
                 this.input.removeEventListener( 'focus', this.focusEvent, true );
@@ -803,7 +808,7 @@ the HTML.
 -------------------------------------------------------------------------------
 
         fixed: function() {
-            this.addClass( 'fixed' );
+            this.dom.classList.add( 'fixed' );
         },
 
 -------------------------------------------------------------------------------
@@ -813,7 +818,7 @@ the HTML.
 -------------------------------------------------------------------------------
 
         open: function() {
-            this.style('top', this.lastPosition);
+            this.dom.style.top = this.lastPosition ;
         },
 
 -------------------------------------------------------------------------------
@@ -823,9 +828,9 @@ the HTML.
 -------------------------------------------------------------------------------
 
         close: function() {
-            this.style('top', '100%');
+            this.dom.style.top = '100%';
         }
-    })
+    };
 
 
 Finally, make the Clavier public.
