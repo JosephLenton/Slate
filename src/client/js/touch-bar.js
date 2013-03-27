@@ -3461,6 +3461,8 @@ console.log( node );
                     style.MozTransform =
                     style.transform = 'translate3d( 0, 390px, 0 )' ;
                 }
+
+                return false;
             },
 
             newControls: function( undo ) {

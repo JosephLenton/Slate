@@ -1,19 +1,53 @@
+"use strict";
 
-# Clavier
-@author Joseph Lenton
+(function() {
+    /* 
+      ============================================================================= 
+        # Clavier
+        @author Joseph Lenton
 
-A virtual keyboard for tablets, with a few extra programming centric additions.
-These include
+        A virtual keyboard for tablets, with a few extra programming centric 
+        additions. 
+        
+        These include:
 
- - a numpad
- - more symbols
- - symbols are in blocks (similar to a numpad)
- - move left/right on text
+         - a numpad
+         - more symbols
+         - symbols are in blocks (similar to a numpad)
+         - move left/right on text
 
-===============================================================================
+      ==============================================================================
+    */
 
-    var AUDIO_KEYBOARD_CLICK_SRC = '/keyboard-click.wav';
-    var DEFAULT_POSITION = '300px';
+    var ENABLE_AUDIO = false;
+
+    var AUDIO_KEYBOARD_CLICK_SRC = './keyboard-click.wav',
+        NUM_AUDIO_SOUNDS = 5;
+
+    var DEFAULT_POSITION = 'translate3d(0, -300px, 0)';
+
+    var Audios = function( src, count ) {
+        this.audios = new Array( count );
+
+        for ( var i = 0; i < count; i++ ) {
+            var audio = new Audio();
+
+            audio.loop = false;
+            audio.preload = 'auto';
+            audio.src = src;
+
+            this.audios[i] = audio;
+        }
+
+        this.offset = 0;
+    }
+
+    Audios.prototype.play = function() {
+        this.audios[ this.offset ].play();
+        this.offset = (this.offset + 1) % this.audios.length;
+
+        return this;
+    }
 
     var newElement = function( type, klass ) {
         var el = document.createElement( type );
@@ -26,14 +60,16 @@ These include
         return el;
     }
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### addRow
+     ### addRow
 
-A helper function; given an array, this will create a new button, and add it to
-that row.
+    A helper function; given an array, this will create a new button, and add it to
+    that row.
 
--------------------------------------------------------------------------------
+    ------------------------------------------------------------------------------- 
+    */
 
     var addRow = function( row, args ) {
         var html,
@@ -62,16 +98,17 @@ that row.
 
 
 
--------------------------------------------------------------------------------
-
-## Inner Key Pane
-
-Inside the left/right key panes, there are a set of rows, holding the keys.
-This is that set of rows.
-
-@param klass An extra, optional css class, for this pane.
-
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
+    
+     ## Inner Key Pane
+    
+    Inside the left/right key panes, there are a set of rows, holding the keys.
+    This is that set of rows.
+    
+    @param klass An extra, optional css class, for this pane.
+    
+    ------------------------------------------------------------------------------- */
 
     var InnerKeyPane = function(klass) {
         this.dom = newElement( 'div', 'clavier-keys-inner ' + (klass || '') );
@@ -91,11 +128,12 @@ This is that set of rows.
 
 
 
--------------------------------------------------------------------------------
-
-### 
-
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
+    
+     ### 
+    
+    ------------------------------------------------------------------------------- */
 
         addSuperTop: function( html, klass, fun ) {
             return addRow( this.superTop, arguments );
@@ -103,11 +141,12 @@ This is that set of rows.
 
 
 
--------------------------------------------------------------------------------
-
-### 
-
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
+    
+     ### 
+    
+    ------------------------------------------------------------------------------- */
 
         addTop: function( html, klass, fun ) {
             return addRow(this.top, arguments);
@@ -115,11 +154,13 @@ This is that set of rows.
 
 
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-### 
+     ### 
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
         addMiddle: function( html, fun ) {
             return addRow(this.middle, arguments);
@@ -127,11 +168,13 @@ This is that set of rows.
 
 
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-### 
+     ### 
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
         addBottom: function( html, fun ) {
             return addRow(this.bottom, arguments);
@@ -140,11 +183,13 @@ This is that set of rows.
 
 
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var highlightKey = function( key ) {
         highlightKeyInner( key, 'highlight' );
@@ -241,21 +286,25 @@ This is that set of rows.
 
 
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-### 
+     ### 
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
             main: function() {
                 return this.mainPane;
             },
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-### 
+     ### 
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
             alt: function( klass ) {
                 for ( var i = 0; i < this.alts.length; i++ ) {
@@ -266,11 +315,13 @@ This is that set of rows.
             }
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var newKeyPress = function( self ) {
         return function() {
@@ -278,11 +329,13 @@ This is that set of rows.
         }
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupButtonKeys = function( self, pane ) {
         var buttons = [];
@@ -313,11 +366,13 @@ This is that set of rows.
         return buttons;
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupLeftKeys = function( self, pane, options ) {
         setupLeftLower( self, pane, options );
@@ -331,11 +386,13 @@ This is that set of rows.
         return buttons;
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupLeftLower = function( self, pane, options ) {
         pane.addSuperTop( '&#x21d0;', 'control left-node' , function() {
@@ -368,11 +425,13 @@ This is that set of rows.
         });
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupRightKeys = function( self, pane, options ) {
         var buttons = setupButtonKeys( self, pane,
@@ -386,11 +445,13 @@ This is that set of rows.
         return buttons;
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupLeftSymbols = function( self, pane, options ) {
         setupLeftLower( self, pane, options );
@@ -402,11 +463,13 @@ This is that set of rows.
         )
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     // missing: %
     var setupRightSymbols = function( self, pane, options ) {
@@ -419,11 +482,13 @@ This is that set of rows.
         setupRightLower( self, pane, options );
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupRightNumpad = function( self, pane, options ) {
         setupButtonKeys( self, pane,
@@ -435,11 +500,13 @@ This is that set of rows.
         setupRightLower( self, pane, options );
     }
 
--------------------------------------------------------------------------------
+    /*
+     -------------------------------------------------------------------------------
 
-##
+     ##
 
--------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------
+     */
 
     var setupRightLower = function( self, pane, options ) {
         pane.addSuperTop( '&#x25C4;', 'control left', function() {
@@ -466,19 +533,23 @@ This is that set of rows.
             self.left.toggleAlt('symbols');
         });
 
-        pane.addBottom( '&#x25Be;', 'control close', options.onClose );
+        pane.addBottom( '&#x25Be;', 'control close', function() {
+            self.close();
+        } );
     }
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-## newDoubleFocusEvent
+     ## newDoubleFocusEvent
 
-This 'double-focus', is to lose and then regain
-focus artificially.
+    This 'double-focus', is to lose and then regain
+    focus artificially.
 
-Artificial focus, closes the iOS keyboard.
+    Artificial focus, closes the iOS keyboard.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
     var newDoubleFocusEvent = function() {
         var isDoubleFocusing = false;
@@ -505,15 +576,34 @@ Artificial focus, closes the iOS keyboard.
         }
     }
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-## Clavier 
+     ## Clavier 
 
-This is the keyboard it's self, and what the outside world interacts with.
+    This is the keyboard it's self, and what the outside world interacts with.
 
--------------------------------------------------------------------------------
+     ### Options:
+
+        - onClose, run when the 'close' method is called. This includes pressing
+          the close button on the keyboard.
+
+        - onOpen, run when this is asked to open.
+
+        - onInput, called when a character is hit on the keyboard.
+
+        - onBackspace, called when the backspace key is hit.
+
+        If you return 'false' from 'onClose' or 'onOpen', then those methods
+        default behaviour will be skipped entirely. This is to allow you to have
+        custom open/close behaviour.
+
+    -------------------------------------------------------------------------------
+    */
 
     var Clavier = (function(options) {
+        this.isOpenFlag = false;
+
         if ( arguments.length > 0 ) {
             if ( ! options ) {
                 throw new Error( "no options provided" );
@@ -522,10 +612,14 @@ This is the keyboard it's self, and what the outside world interacts with.
             options = {};
         }
 
-        var audio = new Audio();
-        audio.loop = false;
-        audio.preload = 'auto';
-        audio.src = AUDIO_KEYBOARD_CLICK_SRC;
+        this.onCloseFun = options.onClose || null;
+        this.onOpenFun  = options.onOpen  || null;
+        this.onInputFun = options.onInput || null;
+        this.onBackspaceFun = options.onBackspace || null;
+
+        var audio = ENABLE_AUDIO ?
+                new Audios( AUDIO_KEYBOARD_CLICK_SRC, NUM_AUDIO_SOUNDS ) :
+                null ;
 
         this.input = null;
 
@@ -562,7 +656,9 @@ This is the keyboard it's self, and what the outside world interacts with.
         
         var onButtonClick = function(ev) {
             if ( ev.target.classList.contains('clavier-key') ) {
-                audio.play();
+                if ( audio !== null ) {
+                    audio.play();
+                }
 
                 highlightKey( ev.target );
             }
@@ -579,13 +675,15 @@ This is the keyboard it's self, and what the outside world interacts with.
             return this.dom;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.toggleShift()
+     ### Clavier.toggleShift()
 
-Turns the shift keys on and off.
+    Turns the shift keys on and off.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         toggleShift: function() {
             this.shiftDown = ! this.shiftDown;
@@ -599,11 +697,13 @@ Turns the shift keys on and off.
             }
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.
+     ### Clavier.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         inputLeft: function() {
             var input = this.input;
@@ -615,11 +715,13 @@ Turns the shift keys on and off.
             }
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.
+     ### Clavier.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         inputRight: function() {
             var input = this.input;
@@ -631,15 +733,23 @@ Turns the shift keys on and off.
             }
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.inputBackspace()
+     ### Clavier.inputBackspace()
 
-Deletes text from the input, as though you hit backspace.
+    Deletes text from the input, as though you hit backspace.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         inputBackspace: function() {
+            if ( this.onBackspaceFun ) {
+                if ( this.onBackspaceFun.call(this) === false ) {
+                    return this;
+                }
+            }
+
             var input = this.input;
 
             if ( input && input.value !== '' ) {
@@ -669,22 +779,32 @@ Deletes text from the input, as though you hit backspace.
 
                 this.informInput();
             }
+
+            return this;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.inputCharacter( String )
+     ### Clavier.inputCharacter( String )
 
-Sets a new string to the end of the input. If the input has an area selected,
-then it will be replaced with the string given.
+    Sets a new string to the end of the input. If the input has an area selected,
+    then it will be replaced with the string given.
 
-The string is inserted, after the current cursor position.
+    The string is inserted, after the current cursor position.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
-        inputCharacter: function( char ) {
-            if ( char === undefined ) {
+        inputCharacter: function( c ) {
+            if ( c === undefined ) {
                 throw new Error( "undefined character given" );
+            }
+
+            if ( this.onInputFun ) {
+                if ( this.onInputFun.call(this, c) === false ) {
+                    return this;
+                }
             }
 
             var input = this.input;
@@ -701,27 +821,31 @@ The string is inserted, after the current cursor position.
 
                 input.value =
                         input.value.substring( 0, start ) +
-                        char +
+                        c +
                         input.value.substring( end );
 
                 input.selectionEnd =
                         input.selectionStart =
-                                start + char.length;
+                                start + c.length;
 
                 this.informInput();
             }
+
+            return this;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.informInput()
+     ### Clavier.informInput()
 
-Sends an event to the HTMLInput current set to this Clavier, to tell it that
-it's value has been updated.
+    Sends an event to the HTMLInput current set to this Clavier, to tell it that
+    it's value has been updated.
 
-This is a HTMLEvent of type 'input'.
+    This is a HTMLEvent of type 'input'.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         informInput: function() {
             if ( this.input ) {
@@ -731,16 +855,18 @@ This is a HTMLEvent of type 'input'.
             }
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.clearInput()
+     ### Clavier.clearInput()
 
-Removes the HTMLInput currently stored, so this will no longer interact with
-any input.
+    Removes the HTMLInput currently stored, so this will no longer interact with
+    any input.
 
-A new input would need to be set using 'setInput'.
+    A new input would need to be set using 'setInput'.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         clearInput: function() {
             this.input = null;
@@ -748,15 +874,17 @@ A new input would need to be set using 'setInput'.
             return this;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.setInput( HTMLInput )
+     ### Clavier.setInput( HTMLInput )
 
-Sets the input object the Clavier object will insert characters into.
+    Sets the input object the Clavier object will insert characters into.
 
-@param input The new input object.
+    @param input The new input object.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         setInput: function( input ) {
             if ( !(input instanceof Element) ) {
@@ -774,19 +902,21 @@ Sets the input object the Clavier object will insert characters into.
             return this;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.controlMove( "up" | "down" | "left" | "right" )
+     ### Clavier.controlMove( "up" | "down" | "left" | "right" )
 
-Calls the currently set control move function, with the direction given. The
-direction signifies which button was pressed.
+    Calls the currently set control move function, with the direction given. The
+    direction signifies which button was pressed.
 
-### Clavier.controlMove( fun )
+     ### Clavier.controlMove( fun )
 
-Allows you to set the callback, for the movement buttons on the left side of
-the clavier keyboard.
+    Allows you to set the callback, for the movement buttons on the left side of
+    the clavier keyboard.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         controlMove: function( fun ) {
             if ( isFunction(fun) ) {
@@ -798,43 +928,107 @@ the clavier keyboard.
             return this;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.fixed()
+     ### Clavier.fixed()
 
-When called, this makes the Clavier a fixed component, on top of the rest of 
-the HTML.
+    When called, this makes the Clavier a fixed component, on top of the rest of 
+    the HTML.
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         fixed: function() {
             this.dom.classList.add( 'fixed' );
+
+            return this;
         },
 
--------------------------------------------------------------------------------
+        isOpen: function() {
+            return this.isOpenFlag;
+        },
 
-### Clavier.open()
+    /*
+    -------------------------------------------------------------------------------
 
--------------------------------------------------------------------------------
+     ### Clavier.open()
+
+    -------------------------------------------------------------------------------
+    */
 
         open: function() {
-            this.dom.style.top = this.lastPosition ;
+            if ( this.onOpenFun ) {
+                if ( this.onOpenFun() === false ) {
+                    return this;
+                }
+            }
+
+            if ( ! this.isOpenFlag ) {
+                this.isOpenFlag = true;
+                this.dom.style.transform = this.dom.style.WebkitTransform = this.lastPosition;
+            }
+
+            return this;
         },
 
--------------------------------------------------------------------------------
+    /*
+    -------------------------------------------------------------------------------
 
-### Clavier.close()
+     ### Clavier.close()
 
--------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    */
 
         close: function() {
-            this.dom.style.top = '100%';
+            if ( this.onCloseFun ) {
+                if ( this.onCloseFun(this.isOpenFlag) === false ) {
+                    return this;
+                }
+            }
+
+            if ( this.isOpenFlag ) {
+                this.isOpenFlag = false;
+
+                this.lastPosition = this.dom.style.transform || this.dom.style.WebkitTransform;
+                this.dom.style.transform = this.dom.style.WebkitTransform = 'translate3d(0, 0, 0)' ;
+            }
+
+            return this;
+        },
+
+        toggle: function() {
+            if ( this.isOpen() ) {
+                this.close();
+            } else {
+                this.open();
+            }
+
+            return this;
+        },
+
+        attach: function() {
+            this.fixed();
+
+            if ( document.body ) {
+                document.body.appendChild( this.getDom() );
+            } else {
+                var self = this;
+
+                setTimeout( function() {
+                    document.body.appendChild( self.getDom() );
+                }, 1 );
+            }
+
+            return this;
         }
     };
 
 
-Finally, make the Clavier public.
-
+    /*
+     * Finally, make the Clavier public.
+     */
 
     window['Clavier'] = Clavier;
+})();
 

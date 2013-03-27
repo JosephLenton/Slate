@@ -14,9 +14,7 @@
         FAST_CLICK_DIST = 20,
         SLOW_CLICK_DIST = 15;
 
-    var startTouch = function( ev, xy ) {
-        var touch = ev.changedTouches[ 0 ];
-        
+    var startTouch = function( xy, touch ) {
         if ( touch ) {
             xy.finger = touch.identifier;
             xy.timestart = Date.now();
@@ -69,7 +67,7 @@
         xy.y = y;
     }
 
-    var pressBuilder = function( el, onDown, onUp, onClick ) {
+    var pressBuilder = function( el, onDown, onMove, onUp ) {
         if ( ! (el instanceof HTMLElement) ) {
             throw new Error( "non-html element given" );
         }
@@ -86,11 +84,30 @@
         };
 
         if ( IS_TOUCH ) {
-            el.addEventListener( 'touchstart', function(ev) {
-                if ( startTouch(ev, xy) ) {
-                    onDown.call( el );
+            var touchstart = function( ev ) {
+                var touch = ev.changedTouches[ 0 ];
+        
+                if ( startTouch(xy, touch) ) {
+                    onDown.call( el, ev, touch );
                 }
-            }, false )
+            }
+
+            el.addEventListener( 'touchstart', touchstart, false );
+
+            el.addEventListener( 'touchmove', function(ev) {
+                if ( xy.finger === -1 ) {
+                    touchstart( ev );
+                } else {
+                    for ( var i = 0; i < ev.changedTouches.length; i++ ) {
+                        var touch = ev.changedTouches[ i ];
+                    
+                        if ( touch && touch.identifier === xy.finger ) {
+                            onMove.call( el, ev, touch );
+                            return;
+                        }
+                    }
+                }
+            }, false );
 
             var touchEnd = function(ev) {
                 for ( var i = 0; i < ev.changedTouches.length; i++ ) {
@@ -105,14 +122,14 @@
                         var dist = Math.sqrt( xy.moveX*xy.moveX + xy.moveY*xy.moveY )
 
                         if (
-                                onClick && (
-                                        ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
-                                          dist < SLOW_CLICK_DIST
-                                )
+                                ( dist < FAST_CLICK_DIST && duration < FAST_CLICK_DURATION ) ||
+                                  dist < SLOW_CLICK_DIST
                         ) {
-                            onClick.call( el, ev );
+                            // true is a click
+                            onUp.call( el, ev, touch, true );
                         } else {
-                            onUp.call( el, ev );
+                            // false is a hold
+                            onUp.call( el, ev, touch, false );
                         }
 
                         return;
@@ -120,13 +137,15 @@
                 }
             }
 
-            document.getElementsByTagName( 'body' )[0].
+            document.getElementsByTagName('body')[0].
                     addEventListener( 'touchend', touchEnd );
-            el.addEventListener( 'touchend', touchEnd, false )
+            el.addEventListener( 'touchend', touchEnd, false );
 
             el.addEventListener( 'click', function(ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
+                if ( (ev.which || ev.button) === 1 ) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
             } );
         } else {
             var isDown = false;
@@ -135,10 +154,16 @@
                 ev = ev || window.event;
 
                 if ( (ev.which || ev.button) === 1 ) {
-                    ev.preventDefault();
-                
                     isDown = true;
-                    onDown.call( el, ev );
+                    onDown.call( el, ev, ev );
+                }
+            } );
+
+            el.addEventListener( 'mousemove', function(ev) {
+                ev = ev || window.event;
+
+                if ( (ev.which || ev.button) === 1 && isDown ) {
+                    onMove.call( el, ev, ev );
                 }
             } );
 
@@ -146,10 +171,8 @@
                 ev = ev || window.event;
 
                 if ( (ev.which || ev.button) === 1 && isDown ) {
-                    ev.preventDefault();
-                
                     isDown = false;
-                    onUp.call( el, ev );
+                    onUp.call( el, ev, ev );
                 }
             } );
         }
@@ -165,13 +188,15 @@
         var xy = { finger: -1, timestart: 0, x: 0, y: 0, moveX: 0, moveY: 0 };
 
         if ( IS_TOUCH ) {
-            el.addEventListener( 'touchstart', function(ev) {
-                startTouch( ev, xy );
-            }, false )
+            var touchstart = function(ev) {
+                startTouch( xy, ev.changedTouches[0] );
+            };
+
+            el.addEventListener( 'touchstart', touchstart, false );
 
             el.addEventListener( 'touchmove', function(ev) {
                 if ( xy.finger === -1 ) {
-                    startTouch( ev, xy );
+                    touchstart( ev );
                 } else {
                     for ( var i = 0; i < ev.changedTouches.length; i++ ) {
                         var touch = ev.changedTouches[ i ];
@@ -210,8 +235,10 @@
             }, false )
 
             var killEvent = function(ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
+                if ( (ev.which || ev.button) === 1 ) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
             }
 
             el.addEventListener( 'click'    , killEvent );
@@ -224,7 +251,7 @@
                 if ( (ev.which || ev.button) === 1 ) {
                     ev.preventDefault();
                 
-                    callback.call( el, ev );
+                    callback.call( el, ev, ev );
                 }
             } );
         }
@@ -237,12 +264,18 @@
                 pressBuilder(
                         el,
 
+                        // goes down
                         function(ev) {
-                            fun.call( el, ev, true );
+                            fun.call( el, ev, true, false );
                         },
 
+                        // moves
                         function(ev) {
-                            fun.call( el, ev, false );
+                            // do nothing
+                        },
+
+                        function(ev, touchEv, isClick) {
+                            fun.call( el, ev, false, isClick );
                         }
                 )
 

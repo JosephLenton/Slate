@@ -1,4 +1,5 @@
-@charset "utf-8";
+
+@import url(http://fonts.googleapis.com/css?family=Oxygen+Mono);
 
 /*
  * Standard colours for all keys.
@@ -6,7 +7,8 @@
  * Override these to get different highlighting.
  */
 .clavier-background {
-    background: #eee;
+    background: #1a1a1a;
+    color: #fff;
 }
 
 .clavier-key,
@@ -15,11 +17,17 @@
 .clavier-key:focus,
 .clavier-key:visited {
     background: #ff2377;
-    color: #fff;
+
+    color: #111;
+    background: #aa0f33;
+
+    font-family: "Oxygen Mono", "segoe ui light", "helvetica";
+    font-weight: 900;
+    font-size: 21px;
 }
 .clavier-key.highlight {
-    background: #ccc;
-    color: #000;
+    background: #fff;
+    color: #aa0f33;
 }
 
 .clavier-key.control,
@@ -27,10 +35,21 @@
 .clavier-key.control:focus,
 .clavier-key.control:visited {
     background: transparent;
-    color: #ff2377;
+    color: #666;
+
+    font-weight: 400;
+
+    border: 1px solid #1a1a1a;
+    border-radius: 2px;
 }
 .clavier-key.control.highlight {
-    color: #000;
+    border-color: #fff;
+    color: #fff;
+}
+
+.clavier-key.control.highlight-border {
+    background: #666;
+    color: #fff;
 }
 
 /*
@@ -46,9 +65,9 @@
 .clavier.fixed {
     position: fixed;
 
-    -webkit-transition: top 200ms ease-out;
-    -moz-transition: top 200ms ease-out;
-    transition: top 200ms ease-out;
+    -webkit-transition: -webkit-transform 200ms ease-out;
+    -moz-transition: -moz-transform 200ms ease-out;
+    transition: transform 200ms ease-out;
 
     top: 100%;
 }
@@ -127,10 +146,6 @@
                         text-decoration: none;
                     }
                     .clavier-key {
-                        font-family: "segoe ui light", "helvetica";
-                        font-weight: 900;
-                        font-size: 18px;
-
                         -webkit-touch-callout: none !important;
                         -webkit-user-select: none !important;
                          -khtml-user-select: none !important;
@@ -138,24 +153,26 @@
                                 user-select: none !important;
 
                         -webkit-transition:
-                                background 150ms linear, 
-                                color 150ms linear; 
+                                background 100ms linear, 
+                                color 100ms linear; 
                         -moz-transition:
-                                background 150ms linear, 
-                                color 150ms linear; 
+                                background 100ms linear, 
+                                color 100ms linear; 
                         transition:
-                                background 150ms linear, 
-                                color 150ms linear; 
+                                background 100ms linear, 
+                                color 100ms linear; 
 
                         text-align: center;
                         width: 44px;
 
                         vertical-align: middle;
-                        line-height: 55px;
+                        line-height: 53px;
                         margin: 2px;
                         -moz-box-sizing: border-box;
-                        box-sizing: border-box;
+                             box-sizing: border-box;
                         display: inline-block;
+
+                        padding-bottom: 2px;
                     }
 
                     .clavier-key.control {
@@ -173,7 +190,9 @@
                     .clavier-key.up-node,
                     .clavier-key.down-node,
                     .clavier-key.left,
-                    .clavier-key.right {
+                    .clavier-key.right,
+                    .clavier-key.close {
+                        font-family: "segoe ui light", "helvetica";
                         padding: 0;
                     }
                     .clavier-key.left-node,
@@ -191,6 +210,19 @@
                     }
                     .clavier-key.control {
                         background: transparent;
+
+                        -webkit-transition:
+                                border 30ms linear,
+                                background 30ms linear,
+                                color 30ms linear;
+                        -moz-transition:
+                                border 30ms linear,
+                                background 30ms linear,
+                                color 30ms linear;
+                        transition:
+                                border 30ms linear,
+                                background 30ms linear,
+                                color 30ms linear;
                     }
                     .clavier-keys-row > .clavier-key.highlight,
                     .clavier-key.highlight {
@@ -210,10 +242,13 @@
                     .clavier-key.close {
                         margin-left: 19px;
                         min-width: 50px;
+                        font-size: 32px;
+                        line-height: 48px;
+                        padding-bottom: 7px;
                     }
                     .clavier-key.space {
                         position: absolute;
-                        width: 160px;
+                        width: 150px;
                     }
                     .clavier-left .clavier-key.space {
                         right: 0;
