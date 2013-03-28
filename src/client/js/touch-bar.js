@@ -312,7 +312,7 @@ window.slate.TouchBar = (function() {
                 },
 
                 toRestoreImplementation: function() {
-                    var constructor = this.__proto__.constructor;
+                    var constructor = this.constructor;
 
                     return function(view) {
                         console.log( ' - restore ast.node' );
