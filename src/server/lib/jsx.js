@@ -252,7 +252,7 @@ exports.jsx = (function() {
             }
         }
 
-        code.push( '})()' );
+        code.push( '})();' );
         code.push( '' );
 
         return code.join( "\n" );
