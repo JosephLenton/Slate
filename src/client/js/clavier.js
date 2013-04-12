@@ -374,8 +374,8 @@
      -------------------------------------------------------------------------------
      */
 
-    var setupLeftKeys = function( self, pane, options ) {
-        setupLeftLower( self, pane, options );
+    var setupLeftKeys = function( self, pane ) {
+        setupLeftLower( self, pane );
 
         var buttons = setupButtonKeys( self, pane,
                 [ 'q', 'w', 'e', 'r', 't' ],
@@ -394,7 +394,7 @@
      -------------------------------------------------------------------------------
      */
 
-    var setupLeftLower = function( self, pane, options ) {
+    var setupLeftLower = function( self, pane ) {
         pane.addSuperTop( '&#x21d0;', 'control left-node' , function() {
             self.controlMove( 'left' );
         });
@@ -433,14 +433,14 @@
      -------------------------------------------------------------------------------
      */
 
-    var setupRightKeys = function( self, pane, options ) {
+    var setupRightKeys = function( self, pane ) {
         var buttons = setupButtonKeys( self, pane,
                 [ 'y', 'u', 'i', 'o', 'p' ],
                 [ 'h', 'j', 'k', 'l' ],
                 [ 'n', 'm', ',', '.' ]
         )
 
-        setupRightLower( self, pane, options );
+        setupRightLower( self, pane );
 
         return buttons;
     }
@@ -453,8 +453,8 @@
      -------------------------------------------------------------------------------
      */
 
-    var setupLeftSymbols = function( self, pane, options ) {
-        setupLeftLower( self, pane, options );
+    var setupLeftSymbols = function( self, pane ) {
+        setupLeftLower( self, pane );
 
         setupButtonKeys( self, pane,
                 [  '{', '}', '`', ':', '-' ],
@@ -472,14 +472,14 @@
      */
 
     // missing: %
-    var setupRightSymbols = function( self, pane, options ) {
+    var setupRightSymbols = function( self, pane ) {
         setupButtonKeys( self, pane,
                 [ '!', '\'', '"', '-', '*' ],
                 [ '?',  '(', ')', '+', '/' ],
                 [ '=',  '<', '>', ';', ':' ]
         )
 
-        setupRightLower( self, pane, options );
+        setupRightLower( self, pane );
     }
 
     /*
@@ -490,14 +490,14 @@
      -------------------------------------------------------------------------------
      */
 
-    var setupRightNumpad = function( self, pane, options ) {
+    var setupRightNumpad = function( self, pane ) {
         setupButtonKeys( self, pane,
                 [ '7', '8', '9', '-', '*' ],
                 [ '4', '5', '6', '+', '/' ],
                 [ '1', '2', '3', '0', '.' ]
         )
 
-        setupRightLower( self, pane, options );
+        setupRightLower( self, pane );
     }
 
     /*
@@ -508,7 +508,7 @@
      -------------------------------------------------------------------------------
      */
 
-    var setupRightLower = function( self, pane, options ) {
+    var setupRightLower = function( self, pane ) {
         pane.addSuperTop( '&#x25C4;', 'control left', function() {
             self.inputLeft();
         });
@@ -604,18 +604,14 @@
     var Clavier = (function(options) {
         this.isOpenFlag = false;
 
-        if ( arguments.length > 0 ) {
-            if ( ! options ) {
-                throw new Error( "no options provided" );
-            }
-        } else {
-            options = {};
+        if ( arguments.length > 0 ! options ) {
+            throw new Error( "no options provided" );
         }
 
-        this.onCloseFun = options.onClose || null;
-        this.onOpenFun  = options.onOpen  || null;
-        this.onInputFun = options.onInput || null;
-        this.onBackspaceFun = options.onBackspace || null;
+        this.onCloseFun     = options && options.onClose        || null ;
+        this.onOpenFun      = options && options.onOpen         || null ;
+        this.onInputFun     = options && options.onInput        || null ;
+        this.onBackspaceFun = options && options.onBackspace    || null ;
 
         var audio = ENABLE_AUDIO ?
                 new Audios( AUDIO_KEYBOARD_CLICK_SRC, NUM_AUDIO_SOUNDS ) :
@@ -637,16 +633,16 @@
 
         this.lastPosition = DEFAULT_POSITION;
 
-        var rightButtons = setupRightKeys( this, this.right.main(), options );
-        var leftButtons = setupLeftKeys( this, this.left.main(), options );
+        var rightButtons = setupRightKeys( this, this.right.main() );
+        var leftButtons = setupLeftKeys( this, this.left.main() );
 
         this.shiftButtons = rightButtons.concat( leftButtons );
         this.shiftDown = false;
 
-        setupLeftSymbols( this, this.left.alt( 'symbols' ), options );
+        setupLeftSymbols( this, this.left.alt( 'symbols' ) );
 
-        setupRightNumpad( this, this.right.alt( 'numpad' ), options );
-        setupRightSymbols( this, this.right.alt( 'symbols' ), options );
+        setupRightNumpad( this, this.right.alt( 'numpad' ) );
+        setupRightSymbols( this, this.right.alt( 'symbols' ) );
 
         this.focusEvent = newDoubleFocusEvent();
 
@@ -968,6 +964,12 @@
                 this.isOpenFlag = true;
                 this.dom.style.transform = this.dom.style.WebkitTransform = this.lastPosition;
             }
+
+            return this;
+        },
+
+        onClose: function( fun ) {
+            this.onCloseFun = fun;
 
             return this;
         },
