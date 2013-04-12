@@ -2694,15 +2694,12 @@ window.slate.TouchBar = (function() {
         return bb.a( 'touch-bar-button', { html: item, click: callback } );
     }
 
-var viewCount = 1;
     /**
      * The area that displays the AST.
      */
     var TouchView = BBGun.
             params( 'touch-bar-view' ).
             sub(function( touchBar ) {
-                this.viewCounter = viewCount++;
-
                 this.isLeftDown    = false;
                 this.isReplaceDown = false;
 
@@ -3167,33 +3164,28 @@ console.log( node );
         this.row   = null;
         this.view  = null;
 
-        var closeThis = this.method('close');
+        this.isOpen = false;
 
         this.undo = new slate.UndoStack();
-        this.keyboard = new Clavier({
-                onClose: closeThis
-        });
+        this.keyboard = new Clavier();
 
-        this.upper  = bb( 'touch-bar-row right' );
-        this.lower  = bb( 'touch-bar-row left'  );
+        this.barWrap = bb( 'touch-bar-wrap', wrapKlass,
+                function() {
+                    this.on( 'mouseup focus dblclick touchend click', self.method('open') );
 
-        this.buttons = new ShiftButtons();
+                    self.bar = bb( 'touch-bar', function() {
+                            self.upper   = bb( 'touch-bar-row right' );
+                            self.lower   = bb( 'touch-bar-row left'  );
+                            self.buttons = new ShiftButtons();
+                        },
 
-        var barDom = bb( 'touch-bar',
-                this.upper,
-                this.lower,
-                this.buttons
-        )
+                        this.newTouchView().getDom(),
+                    );
+                },
 
-        this.bar = barDom;
-        this.newTouchView();
-
-        this.barWrap = bb( 'touch-bar-wrap',
-                wrapKlass,
-                barDom,
                 this.newControls( this.undo ),
-                this.keyboard.getDom()
-        )
+                this.keyboard = new Clavier()
+        );
 
         parentDom.appendChild( this.barWrap );
 
@@ -3201,24 +3193,12 @@ console.log( node );
          * Setup opening / closing this pane.
          */
 
+        var closeThis = this.method('close');
+
+        this.keyboard.onClose( closeThis );
+
         document.body.addEventListener( 'click', closeThis, false );
         document.body.addEventListener( 'touchend', closeThis, false );
-
-        this.isOpen = false;
-        var openThis = function( ev ) {
-            ev.stopPropagation();
-            ev.preventDefault();
-
-            if ( ! self.isOpen ) {
-                self.open();
-            }
-        }
-
-        this.barWrap.addEventListener( 'mouseup', openThis, false );
-        this.barWrap.addEventListener( 'focus', openThis, false );
-        this.barWrap.addEventListener( 'dblclick', openThis, false );
-        this.barWrap.addEventListener( 'touchend', openThis, false );
-        this.barWrap.addEventListener( 'click', openThis, false );
 
         var commandDescriptionToButton = function( cmd, fun ) {
             if ( cmd ) {
@@ -3439,7 +3419,12 @@ console.log( node );
     }
 
     TouchBar.prototype = {
-            open: function() {
+            open: function( ev ) {
+                if ( ev ) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+
                 if ( ! this.isOpen ) {
                     this.isOpen = true;
                     this.barWrap.classList.add( 'open' );
@@ -3452,6 +3437,11 @@ console.log( node );
             },
 
             close: function(ev) {
+                if ( ev ) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+
                 if ( this.isOpen ) {
                     this.isOpen = false;
                     this.barWrap.classList.remove('open');
@@ -3526,12 +3516,12 @@ console.log( node );
                     if ( false ) {
                         self.view.evaluate( function(r) {
                             self.view.storeChange();
-                            self.newTouchView();
+                            this.bar.appendChild( self.newTouchView().getDom() );
                         } );
                     } else {
                         self.executeFun( 'touch-js', self.view, function() {
                             self.view.storeChange();
-                            self.newTouchView();
+                            this.bar.appendChild( self.newTouchView().getDom() );
                         } );
                     }
                 } );
@@ -3548,8 +3538,6 @@ console.log( node );
                 this.view = new TouchView( this ).
                         onChange( this.undo.method('add') ).
                         onSetCurrent( this.keyboard.method('setInput') );
-
-                this.bar.appendChild( this.view.dom() );
 
                 this.keyboard.controlMove( this.view.method('selectNodeMove') );
 
