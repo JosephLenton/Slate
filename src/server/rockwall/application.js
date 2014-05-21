@@ -122,7 +122,7 @@ exports.Application = (function() {
         start: function() {
             setTimeout( (function() {
                 var options = ( this.optionsDesc ) ?
-                        new require( './options.js' ).parse( this.optionsDesc ) :
+                        new require( './command-line-options.js' ).parse( this.optionsDesc ) :
                         {} ;
 
                 if ( options.interactive ) {

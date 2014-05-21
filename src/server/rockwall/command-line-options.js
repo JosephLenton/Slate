@@ -77,7 +77,7 @@
         return result;
     }
 
-    var parseOptions = function( setup ) {
+    var parseOptions = function( setup, arr ) {
         var options  = {};
 
         var shorts   = splitOptions( setup, 'short', true );
@@ -85,11 +85,25 @@
         var defaults = splitOptions( setup, 'default' );
         var takesVal = splitOptions( setup, 'value' );
 
-        process.argv.forEach( function(val, index, arr) {
-            var ops = {};
-            parseCommand( val, shorts, function(k, v, valueGiven) {
-                var check = checks[k];
+        if ( arr === undefined ) {
+            arr = process.argv;
+        }
 
+        arr.forEach( function(val, index, arr) {
+            var ops = {};
+
+            parseCommand( val, shorts, function(k, v, valueGiven) {
+                if ( takesVal.hasOwnProperty(k) ) {
+                    if ( takesVal[k] ) {
+                        if ( ! valueGiven ) {
+                            throw new Error("No value provided for option '" + k + "'.");
+                        }
+                    } else if ( valueGiven ) { 
+                        throw new Error("Option '" + k + "' does not take a value.");
+                    }
+                }
+
+                var check = checks[k];
                 if ( check ) {
                     var newV = check(v);
 
