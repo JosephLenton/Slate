@@ -9,7 +9,7 @@
     var startOption = function( currentOption, options, key, errors ) {
         var nextOption = options[key];
 
-        if ( nextOption === null ) {
+        if ( nextOption === undefined ) {
             errors.push( "unknown option given " + key );
 
             return options['default'];
